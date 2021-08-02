@@ -485,6 +485,9 @@ class DataProcessor(object){
                     cve['weaponized_modules_types'].append(k)
                     cve['weaponized_modules_count'].append(v)
                 }
+            }else{
+                cve['weaponized_modules_types']=[]
+                cve['weaponized_modules_count']=[]
             }
 
             if 'Comments' in cve{
