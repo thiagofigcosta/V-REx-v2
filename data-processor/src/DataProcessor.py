@@ -1011,22 +1011,45 @@ class DataProcessor(object){
                 if 'Demonstrative_Examples' in cwe{
                     examples=[]
                     for ex in cwe['Demonstrative_Examples']{
-                        if 'Body_Text' in ex{
-                            key='Body_Text'
-                        }elif 'Intro_Text' in ex{
-                            key='Intro_Text'
-                        }else{
-                           key='value'
-                        }
-                        for el in list(ex[key]){
-                            if type(el) is dict{
-                                ex[key].remove(el)
-                            }elif type(el) is list{
-                                examples.append('\n'.join(el))
-                                ex[key].remove(el)
+                        if type(ex) is dict {
+                            if 'Body_Text' in ex{
+                                key='Body_Text'
+                            }elif 'Intro_Text' in ex{
+                                key='Intro_Text'
+                            }else{
+                            key='value'
+                            }
+                            for el in list(ex[key]){
+                                if type(el) is dict{
+                                    ex[key].remove(el)
+                                }elif type(el) is list{
+                                    examples.append('\n'.join(el))
+                                    ex[key].remove(el)
+                                }
+                            }
+                            examples.append('\n'.join(ex[key]))
+                        }elif type(ex) is list{
+                            for ex_el in ex {
+                                if type(ex_el) is dict {
+                                    if 'Body_Text' in ex_el{
+                                        key='Body_Text'
+                                    }elif 'Intro_Text' in ex_el{
+                                        key='Intro_Text'
+                                    }else{
+                                    key='value'
+                                    }
+                                    for el in list(ex_el[key]){
+                                        if type(el) is dict{
+                                            ex_el[key].remove(el)
+                                        }elif type(el) is list{
+                                            examples.append('\n'.join(el))
+                                            ex_el[key].remove(el)
+                                        }
+                                    }
+                                    examples.append('\n'.join(ex_el[key]))
+                                }
                             }
                         }
-                        examples.append('\n'.join(ex[key]))
                     }
                     cwe['Demonstrative_Examples']=examples
                 }
