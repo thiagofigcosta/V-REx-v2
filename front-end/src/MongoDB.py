@@ -263,7 +263,11 @@ class MongoDB(object){
                     }
                 }
                 if job['locked_by'] is None and job['locked_at'] is None and job['attempts'] < self.queues[queue_name].max_attempts{
-                    status='WAITING'
+                    if job['attempts']==0{
+                        status='WAITING'
+                    }else{
+                        status='FAILED PREVIOUSLY'
+                    }
                 }else{
                     status='RUNNING'
                     locked_at=job['locked_at']

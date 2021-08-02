@@ -262,15 +262,19 @@ class MongoDB(object){
                         job_dict['args']=job['payload']['args']
                     }
                 }
-                if job['locked_by'] is None{
-                    status='WAITING'
+                if job['locked_by'] is None and job['locked_at'] is None and job['attempts'] < self.queues[queue_name].max_attempts{
+                    if job['attempts']==0{
+                        status='WAITING'
+                    }else{
+                        status='FAILED PREVIOUSLY'
+                    }
                 }else{
                     status='RUNNING'
                     locked_at=job['locked_at']
                     end_date=locked_at+datetime.timedelta(0,self.queues[queue_name].timeout+3)
                     if end_date<datetime.datetime.now(){
                         query={"_id": job['_id']}
-                        if job['attempts'] > self.queues[queue_name].max_attempts{
+                        if job['attempts'] >= self.queues[queue_name].max_attempts{
                             status='FAILED ALL ATTEMPS'
                             queue.remove(query)
                         }else{
