@@ -1,0 +1,16 @@
+-- Install configuration: "Release"
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/share/cmake/core/core-config-version.cmake
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/share/cmake/core/core-config.cmake
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/memory.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/variant.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/utility.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/numeric.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/string.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/type_traits.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/algorithm.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/iterator.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/functional.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/range.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/any.hpp
+-- Installing: /usr/local/include/bsoncxx/v_noabi/bsoncxx/third_party/mnmlstc/./core/optional.hpp

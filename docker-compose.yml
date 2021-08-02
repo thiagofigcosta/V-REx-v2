@@ -1,0 +1,93 @@
+version: '3.3'
+
+services:
+    core:
+        build: 
+            context: core
+            dockerfile: Dockerfile
+        restart: always
+        depends_on:
+            - mongo
+        networks:
+            - mongo-network
+        deploy:
+            resources:
+                limits:
+                    memory: 60G
+                reservations:
+                    memory: 10G
+    data-crawler:
+        build: 
+            context: data-crawler
+            dockerfile: Dockerfile
+        restart: always
+        depends_on:
+            - mongo
+        networks:
+            - mongo-network
+
+    data-processor:
+        build: 
+            context: data-processor
+            dockerfile: Dockerfile
+        restart: always
+        depends_on:
+            - mongo
+        networks:
+            - mongo-network
+
+    front-end:
+        build: 
+            context: front-end
+            dockerfile: Dockerfile
+        restart: always
+        depends_on:
+            - mongo
+        networks:
+            - mongo-network
+
+    mongo:
+        image: mongo:4.0.20
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+        ports:
+            - "27017:27017"
+        volumes:
+            - ./docker_volumes/mongo:/data/db
+        networks:
+            - mongo-network
+
+    mongo-express:
+        image: mongo-express:0.54.0
+        ports:
+            - 8081:8081
+        environment:
+            ME_CONFIG_BASICAUTH_USERNAME: user
+            ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPR_USER_PASSWORD}
+            ME_CONFIG_MONGODB_PORT: 27017
+            ME_CONFIG_MONGODB_ADMINUSERNAME: root
+            ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD}
+        depends_on:
+            - mongo
+        networks:
+            - mongo-network
+
+    portainer:
+        image: portainer/portainer
+        command: ["--admin-password", "$$2y$$05$$kp6qqEIb3lJSNSKKcGZ/weYPZ6KXLACAXfjU8O0aQdnIpjQcz3EDa"] #12345678
+        ports:
+            - "9000:9000"
+        volumes:
+            - ./docker_volumes/portainer_data:/data
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /var/lib/docker/volumes:/var/lib/docker/volumes
+        # deploy:
+        #     mode: replicated
+        #     replicas: 1
+        #     placement:
+        #         constraints: [node.role == manager]
+    
+networks: 
+    mongo-network:
+        driver: bridge
