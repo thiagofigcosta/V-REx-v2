@@ -134,9 +134,11 @@ class DataProcessor(object){
                         }
                     }else{
                         ref_idx=cve['References'].index(ref_url)
-                        for tag in ref['tags']{
-                            if tag.strip() not in cve['References_class'][ref_idx]{
-                                cve['References_class'][ref_idx].append(tag.strip())
+                        if 'tags' in ref{
+                            for tag in ref['tags']{
+                                if tag.strip() not in cve['References_class'][ref_idx]{
+                                    cve['References_class'][ref_idx].append(tag.strip())
+                                }
                             }
                         }
                     }
