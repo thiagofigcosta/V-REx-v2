@@ -918,6 +918,7 @@ class DataCrawler(object){
     }
 
     def downloadRawDataFromSources(self,sources=None,update_callback=None){
+        DELETE_DOWNLOADED_SOURCES_AFTER_PARSE=False
         failed=[]
         for source in DataCrawler.SOURCES{
             if sources is None or source['id'] in sources{
@@ -925,7 +926,9 @@ class DataCrawler(object){
                     documents,tmp_path=self.downloadRawDataAndParseFrom(source['id'],update_callback=update_callback)
                     if documents is not None{
                         self.mongo.insertManyOnDB(self.mongo.getRawDB(),documents,source['id'],source['index'])
-                        Utils.deletePath(tmp_path)
+                        if DELETE_DOWNLOADED_SOURCES_AFTER_PARSE{
+                            Utils.deletePath(tmp_path)
+                        }
                     }else{
                         failed.append(source['id'])
                     }

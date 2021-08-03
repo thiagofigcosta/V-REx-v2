@@ -60,13 +60,13 @@ class DataProcessor(object){
                 }
             }
             if update_callback { update_callback() }
+            lock.refresh()
             iter_count+=1
             if len(merged_entry)>0{
                 self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),merged_entry,'merged_cve','cve',verbose=False,ignore_lock=True)
                 data_size+=Utils.sizeof(merged_entry)
             }
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -508,13 +508,13 @@ class DataProcessor(object){
                 }
             }
             if update_callback { update_callback() }
+            lock.refresh()
             if cve['Status']!='RESERVED'{
                 self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),cve,'flat_cve','cve',verbose=False,ignore_lock=True)
                 data_size+=Utils.sizeof(cve)
             }
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -581,9 +581,9 @@ class DataProcessor(object){
                 data_size+=Utils.sizeof(oval_parsed)
             }
             if update_callback { update_callback() }
+            lock.refresh()
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -855,12 +855,12 @@ class DataProcessor(object){
                     }
                 }
                 if update_callback { update_callback() }
+                lock.refresh()
                 self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),capec,'flat_capec','capec',verbose=False,ignore_lock=True)
                 data_size+=Utils.sizeof(capec)
             }
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -1215,12 +1215,12 @@ class DataProcessor(object){
                     }
                 }
                 if update_callback { update_callback() }
+                lock.refresh()
                 self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),cwe,'flat_cwe','cwe',verbose=False,ignore_lock=True)
                 data_size+=Utils.sizeof(cwe)
             }
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -1244,12 +1244,12 @@ class DataProcessor(object){
         for exploit in exploit_data{
             if exploit['exploit']!='__metadata__' and 'cve' in exploit{
                 if update_callback { update_callback() }
+                lock.refresh()
                 self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),exploit,'exploits','exploit',verbose=False,ignore_lock=True)
                 data_size+=Utils.sizeof(exploit)
             }
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -1345,9 +1345,9 @@ class DataProcessor(object){
                 }
             }
             if update_callback { update_callback() }
+            lock.refresh()
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}%'.format((float(iter_count)/total_iters*100)))
             }
         }
@@ -1399,6 +1399,7 @@ class DataProcessor(object){
         # }
         self.logger.info('Optimized and cached data...OK')
         verbose_frequency=1333
+        lock.refresh()
         for cve_ref in cves_refs{
             cve=self.mongo.findOneOnDBFromIndex(self.mongo.getProcessedDB(),'flat_cve','cve',cve_ref)
             # _id - OK
@@ -1650,11 +1651,11 @@ class DataProcessor(object){
             compressed_cve['data']=featured_cve
 
             if update_callback { update_callback() }
+            lock.refresh()
             self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),compressed_cve,'features_cve','cve',verbose=False,ignore_lock=True)
             data_size+=Utils.sizeof(compressed_cve)
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -1693,11 +1694,11 @@ class DataProcessor(object){
             }
             featured_oval['oval']=oval['oval']
             if update_callback { update_callback() }
+            lock.refresh()
             self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),featured_oval,'features_oval','oval',verbose=False,ignore_lock=True)
             data_size+=Utils.sizeof(featured_oval)
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -1794,9 +1795,9 @@ class DataProcessor(object){
                 }
             }
             if update_callback { update_callback() }
+            lock.refresh()
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}%'.format((float(iter_count)/total_iters*100)))
             }
         }
@@ -1998,11 +1999,11 @@ class DataProcessor(object){
 
 
             if update_callback { update_callback() }
+            lock.refresh()
             self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),featured_capec,'features_capec','capec',verbose=False,ignore_lock=True)
             data_size+=Utils.sizeof(featured_capec)
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -2126,9 +2127,9 @@ class DataProcessor(object){
                 }
             }
             if update_callback { update_callback() }
+            lock.refresh()
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}%'.format((float(iter_count)/total_iters*100)))
             }
         }
@@ -2355,11 +2356,11 @@ class DataProcessor(object){
             }
 
             if update_callback { update_callback() }
+            lock.refresh()
             self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),featured_cwe,'features_cwe','cwe',verbose=False,ignore_lock=True)
             data_size+=Utils.sizeof(featured_cwe)
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -2397,11 +2398,11 @@ class DataProcessor(object){
             featured_exploit['exploit']=exploit['exploit']
 
             if update_callback { update_callback() }
+            lock.refresh()
             self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),featured_exploit,'features_exploit','exploit',verbose=False,ignore_lock=True)
             data_size+=Utils.sizeof(featured_exploit)
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
@@ -2676,10 +2677,10 @@ class DataProcessor(object){
                 compressed_cve['cve']=cve_id
                 compressed_cve['data']=full_cve
                 if update_callback { update_callback() }
+                lock.refresh()
                 self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),compressed_cve,'full_dataset','cve',verbose=False,ignore_lock=True)
                 data_size+=Utils.sizeof(compressed_cve)
                 if iter_count%verbose_frequency==0{
-                    lock.refresh()
                     self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
                 }
             }   
@@ -2742,9 +2743,9 @@ class DataProcessor(object){
                 }
             }
             if update_callback { update_callback() }
+            lock.refresh()
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 data_size=Utils.sizeof(field_precesence)+Utils.sizeof(field_values_compressed)+Utils.sizeof(field_vendor_values_compressed)
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
@@ -2899,11 +2900,11 @@ class DataProcessor(object){
             }
             entry={'index':iter_count,'cve':cve,'features':features,'labels':labels}
             if update_callback { update_callback() }
+            lock.refresh()
             self.mongo.insertOneOnDB(self.mongo.getProcessedDB(),entry,'dataset','cve',verbose=False,ignore_lock=True)
             data_size+=Utils.sizeof(entry)
             iter_count+=1
             if iter_count%verbose_frequency==0{
-                lock.refresh()
                 self.logger.verbose('Percentage done {:.2f}% - Total data size: {}'.format((float(iter_count)/total_iters*100),Utils.bytesToHumanReadable(data_size)))
             }
         }
