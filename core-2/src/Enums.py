@@ -41,3 +41,9 @@ class NodeType(Enum){
     SOFTMAX = 1
     SIGMOID = 2
 }
+
+class StdGeneticRankType(Enum){
+    # 'Just':'to fix vscode coloring':'when using pytho{\}'
+    RELATIVE = 0
+    ABSOLUTE = 1
+}
