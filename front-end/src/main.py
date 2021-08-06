@@ -548,7 +548,7 @@ def main(argv){
                     pop_start_size=inputNumber()
                     print('Enter the amount of generations: ')
                     max_gens=inputNumber()
-                    print('Enter the algorithm to use (0 - Enchanced | 1 - Standard): ')
+                    print('Enter the algorithm to use (0 - Enhanced | 1 - Standard): ')
                     algorithm=inputNumber(lower_or_eq=1)
                     if algorithm==0{
                         print('Enter the genome max age: ')
