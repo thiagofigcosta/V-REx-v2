@@ -486,8 +486,8 @@ class DataProcessor(object){
                     cve['weaponized_modules_count'].append(v)
                 }
             }else{
-                cve['weaponized_modules_types']=[]
-                cve['weaponized_modules_count']=[]
+                cve['weaponized_modules_types']=[FeatureGenerator.ABSENT_FIELD_FOR_ENUM]
+                cve['weaponized_modules_count']=[0]
             }
 
             if 'Comments' in cve{
@@ -1518,11 +1518,7 @@ class DataProcessor(object){
             if 'weaponized_modules_count' not in cve{
                 cve['weaponized_modules_count']=[0]
             }
-            weaponized_modules_types_value=None
-            if 'weaponized_modules_types' in cve {
-                weaponized_modules_types_value=cve['weaponized_modules_types'];
-            }
-            weapon_exp=FeatureGenerator.buildFeaturesFromEnum('exploits_weaponized_type',weaponized_modules_types_value,fields_and_values['weaponized_modules_types'])
+            weapon_exp=FeatureGenerator.buildFeaturesFromEnum('exploits_weaponized_type',cve['weaponized_modules_types'],fields_and_values['weaponized_modules_types'])
             for i in range(len(cve['weaponized_modules_types'])){
                 for k,v in weapon_exp.items(){
                     if cve['weaponized_modules_types'][i].lower() in k and v==1{
