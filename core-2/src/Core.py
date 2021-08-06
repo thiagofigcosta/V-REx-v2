@@ -5,7 +5,7 @@ from Logger import Logger
 from MongoDB import MongoDB
 from SearchSpace import SearchSpace
 from Hyperparameters import Hyperparameters
-from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithm,NodeType
+from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType
 
 class Core(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -153,7 +153,7 @@ class Core(object){
         max_notables=int(data['max_notables'])
         cross_validation=CrossValidation(data['cross_validation'])
         metric_mode=Metric(data['metric'])
-        algorithm=GeneticAlgorithm(data['algorithm'])
+        algorithm=GeneticAlgorithmType(data['algorithm'])
         label_encoding=LabelEncoding(data['label_type'])
         return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_encoding
     }

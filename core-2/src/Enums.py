@@ -28,7 +28,7 @@ class LabelEncoding(Enum){
     NEURON_BY_N_LOG_LOSS = 2
 }
 
-class GeneticAlgorithm(Enum){
+class GeneticAlgorithmType(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     ENHANCED = 0
     STANDARD = 1

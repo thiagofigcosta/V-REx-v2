@@ -15,7 +15,38 @@ class StandardGenetic(GeneticAlgorithm){
     }
 
     def select(self, individuals){
-        raise Exception('Not implemented yet!')
+        # roulette wheel
+        individuals.sort()
+        min_fitness=individuals[0].fitness
+        offset=0
+        fitness_sum=0
+        if min_fitness<0 {
+            offset=abs(min_fitness)
+        }
+        for individual in individuals{
+            fitness_sum+=individual.fitness+offset
+        }
+        next_gen=[]
+        for i in range(int(len(individuals)/2)){
+            parents=[]
+            for c in range(2){
+                roulette_number=Utils.randomFloat(0,fitness_sum)
+                current_roulette=0
+                for individual in individuals {
+                    current_roulette+=individual.fitness+offset
+                    if current_roulette>=roulette_number {
+                        parents.append(individual)
+                        break
+                    }
+                }
+            }
+            children=self.sex(parents[0],parents[1])
+            next_gen+=children
+        }
+        for individual in individuals {
+            del individual
+        }
+        individuals=None
     }
 
     def fit(self, individuals){
