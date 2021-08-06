@@ -14,6 +14,7 @@ class SearchSpace(object){
         # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
         def __init__(self,min_value,max_value,data_type,name=''){
+            self.name=name
             self.data_type=data_type
             self.min_value=min_value
             self.max_value=max_value
@@ -34,6 +35,11 @@ class SearchSpace(object){
                 return self.min_value
             }
             return value
+        }
+
+        def copy(self){
+            that=Dimension(self.min_value,self.max_value,self.data_type,self.name)
+            return that
         }
     }
 
@@ -61,6 +67,13 @@ class SearchSpace(object){
         return self.search_space[i]
     }
     
+    def copy(self){
+        that=SearchSpace()
+        for dimension in self.search_space {
+            that.search_space.append(dimension.copy())
+        } 
+        return that
+    }
 }
 
 class SearchSpaceIterator{

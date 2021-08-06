@@ -21,7 +21,6 @@ class Metric(Enum){
     PRECISION = 4
 }
 
-
 class LabelEncoding(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     INT_CLASS = 0
@@ -31,7 +30,7 @@ class LabelEncoding(Enum){
 
 class GeneticAlgorithm(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
-    ENCHANCED = 0
+    ENHANCED = 0
     STANDARD = 1
 }
 

@@ -101,7 +101,11 @@ class PopulationManager(object){
                 self.genetic_algorithm.select(self.population)
                 if verbose{
                     Core.LOGGER.info('\tSelected and breed individuals...OK')
-                    Core.LOGGER.info('\tMutating (and aging if Enhanced) individuals...')
+                    enhanced_str=' and aging'
+                    if type(self.genetic_algorithm) is not EnhancedGenetic{
+                        enhanced_str=''
+                    }
+                    Core.LOGGER.info('\tMutating{} individuals...'.format(enhanced_str))
                 }
                 self.genetic_algorithm.select(self.population)
                 if g%PopulationManager.MT_DNA_VALIDITY==0{
@@ -110,7 +114,11 @@ class PopulationManager(object){
                     }
                 }
                 if verbose{
-                    Core.LOGGER.info('\tMutated individuals...OK')
+                    enhanced_str=' and aged'
+                    if type(self.genetic_algorithm) is not EnhancedGenetic{
+                        enhanced_str=''
+                    }
+                    Core.LOGGER.info('\tMutated{} individuals...OK'.format(enhanced_str))
                 }
             }else{
                 self.population.sort()

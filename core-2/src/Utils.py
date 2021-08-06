@@ -287,11 +287,11 @@ class Utils(object){
     def bytesToHumanReadable(num, suffix='B'){
         for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']{
             if abs(num) < 1024.0{
-                return "%3.1f%s%s" % (num, unit, suffix)
+                return '{:3.1f}{}{}'.format(num,unit,suffix)
             }
             num /= 1024.0
         }
-        return "%.1f%s%s" % (num, 'Yi', suffix)
+        return '{:.1f}{}{}'.format(num,'Yi',suffix)
     }
 
     @staticmethod
@@ -355,6 +355,11 @@ class Utils(object){
 	@staticmethod
 	def moveFile(src_path,dst_path){
 		os.replace(src_path, dst_path)
+    }
+
+    @staticmethod
+	def copyFile(src_path,dst_path){
+		shutil.copy(src_path, dst_path)
     }
 
 	@staticmethod

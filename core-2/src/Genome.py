@@ -53,9 +53,14 @@ class Genome(object){
         return self.toString()
     }
 
-    @staticmethod
-    def makeChild(mother, dna){
-        return Genome()
+    def makeChild(self, dna){
+        mother=self
+        child=mother.copy()
+        child.id=Utils.randomUUID()
+        child.dna=dna+[] # deep copy
+        child.fitness=0
+        child.output=0
+        return child
     }
 
     def evaluate(self){
@@ -147,6 +152,22 @@ class Genome(object){
     }
 
     def copy(self){
-        raise Exception('Not implemented yet!')
+        that=Genome([], self.eval_callback, is_neural=self.is_neural)
+        that.limits=self.limits.copy()
+        that.dna=self.dna+[] # deep copy
+        that.mt_dna=self.mt_dna
+        that.fitness=self.fitness
+        that.output=self.output
+        that.age=self.age
+        that.id=self.id
+        if self.is_neural {
+            that._weights=self._weights.copy() # TODO code me
+            that.cached=self.cached
+            that.cache_file=self.genCacheFilename()
+            if self.cached and Genome.CACHE_WEIGHTS {
+                Utils.copyFile(self.cache_file,that.cache_file)
+            }
+        }
+        return that
     }
 }
