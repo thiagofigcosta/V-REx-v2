@@ -7,39 +7,42 @@ from Enums import StdGeneticRankType
 class StandardGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
-    def __init__(self, mutation_rate, sex_rate, rankType=StdGeneticRankType.RELATIVE){
-        self.looking_highest_fitness=None
+    def __init__(self, looking_highest_fitness, mutation_rate, sex_rate, rankType=StdGeneticRankType.RELATIVE){
+        super().__init__(looking_highest_fitness)
         self.mutation_rate=mutation_rate
         self.sex_rate=sex_rate
         self.rank_type=rankType
     }
 
-    def select(self, currentGen){
-        pass
+    def select(self, individuals){
+        raise Exception('Not implemented yet!')
     }
 
-    def fit(self, currentGen){
-        pass
+    def fit(self, individuals){
+        raise Exception('Not implemented yet!')
     }
 
     def sex(self, father, mother){
-        pass
+        raise Exception('Not implemented yet!')
     }
 
     def mutate(self, individuals){
-        pass
+        raise Exception('Not implemented yet!')
     }
 
+    def mutateIndividual(self, individual, force=False){
+        raise Exception('Not implemented yet!')
+    }
 
     def enrichSpace(self, space){
-        pass
+        raise Exception('Not implemented yet!')
     }
 
     def copy(self){
-        pass
+        raise Exception('Not implemented yet!')
     }
 
-    def genRandomFactor(self){
-        pass
+    def randomize(self){
+        raise Exception('Not implemented yet!')
     }
 }

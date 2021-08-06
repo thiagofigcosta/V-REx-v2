@@ -4,16 +4,21 @@
 import shutil
 import re
 import os
+import time
 import codecs
 import zipfile
 from datetime import datetime
+import datetime as dt
+import joblib
 import gzip
 import json
 import sys
+import uuid
 from pympler.asizeof import asizeof
 import random as rd
 from bson.json_util import dumps as bdumps
 from bson.json_util import loads as bloads
+from numpy.random import Generator, MT19937
 
 class Utils(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -23,8 +28,11 @@ class Utils(object){
     }else{
         FILE_SEPARATOR='/'
     }
+    DATETIME_FORMAT='%d/%m/%Y %H:%M:%S'
+	FIRST_DATE='01/01/1970'
     TMP_FOLDER=None
     LOGGER=None
+    RNG=Generator(MT19937(int(time.time()*rd.random())))
 
     def __init__(self,tmp_folder,logger){
         Utils.LOGGER=logger
@@ -32,9 +40,40 @@ class Utils(object){
     }
 
     @staticmethod
+    def random(){
+        return Utils.RNG.random()
+    }
+
+    @staticmethod
+    def randomInt(min_inclusive,max_inclusive,size=1){
+        out=Utils.RNG.integers(low=min_inclusive, high=max_inclusive+1, size=size)
+        if size == 1{
+            out=out[0]
+        } 
+        return out
+    }
+
+    @staticmethod
+    def randomFloat(min_value,max_value,size=1){
+        out=[]
+        for _ in range(size){
+            out.append(min_value + (Utils.random() * (max_value - min_value)))
+        }
+        if size == 1{
+            out=out[0]
+        } 
+        return out
+    }
+
+    @staticmethod
+    def randomUUID(){
+        return uuid.uuid4().hex
+    }
+
+    @staticmethod
     def createFolderIfNotExists(path){
         if not os.path.exists(path){
-            os.makedirs(path, exist_ok=True)
+            os.makedirs(path)
         }
     }
 
@@ -47,7 +86,7 @@ class Utils(object){
     def deletePath(path){
         if os.path.isdir(path){
             Utils.deleteFolder(path)
-        }elif os.path.isfile(path){
+        }elif os.path.isfile(path) or os.path.islink(path){
             Utils.deleteFile(path)
         }else{
             Utils.LOGGER.fatal('File {} is a special file.'.format(path))
@@ -285,5 +324,147 @@ class Utils(object){
             os.path.exists('/.dockerenv') or
             os.path.isfile(path) and any('docker' in line for line in open(path))
         )
+    }
+
+    @staticmethod
+	def getPythonVersion(getTuple=False){
+		version=sys.version_info
+		version_tuple=(version.major,version.minor,version.micro)
+		if getTuple{
+			return version.major,version.minor,version.micro
+		}else{
+			return '.'.join([str(el) for el in version_tuple])
+        }
+    }
+	
+	@staticmethod
+	def getPythonExecName(){
+		version=Utils.getPythonVersion(getTuple=True)
+		full_name='python{}.{}'.format(version[0],version[1])
+		short_name='python{}'.format(version[0])
+		default_name='python'
+		if shutil.which(full_name) is not None{
+			return full_name
+        }
+		if shutil.which(short_name) is not None{
+			return short_name
+        }
+		return default_name
+    }
+
+	@staticmethod
+	def moveFile(src_path,dst_path){
+		os.replace(src_path, dst_path)
+    }
+
+	@staticmethod
+	def createFolder(path){
+		if not os.path.exists(path){
+			os.makedirs(path, exist_ok=True)
+        }
+    }
+
+
+	@staticmethod
+	def getFolderPathsThatMatchesPattern(folder,pattern){
+		paths=[]
+		if os.path.exists(folder){
+			for filename in os.listdir(folder){
+				if re.match(pattern,filename){
+					file_path = Utils.joinPath(folder,filename)
+					paths.append(file_path)
+                }
+            }
+        }
+		return paths
+    }
+
+	@staticmethod
+	def deleteFolderContents(folder){
+		if os.path.exists(folder){
+			for filename in os.listdir(folder){
+				file_path = Utils.joinPath(folder,filename)
+				Utils.deletePath(file_path)
+            }
+        }
+    }
+
+    @staticmethod
+	def timestampByExtensive(timestamp,seconds=True){
+        if seconds {
+            timestamp_ms=timestamp*1000
+        }else{
+            timestamp_ms=timestamp
+        }
+		timestamp_ms=int(timestamp_ms)
+		D=int(timestamp_ms/1000/60/60/24)
+		H=int(timestamp_ms/1000/60/60%24)
+		M=int(timestamp_ms/1000/60%60)
+		S=int(timestamp_ms/1000%60)
+		MS=int(timestamp_ms%1000)
+		out='' if timestamp_ms > 0 else 'FINISHED'
+		if D > 0{
+			out+='{} days '.format(D)
+        }
+		if D > 0 and MS == 0 and S == 0 and M == 0 and H > 0{
+			out+='and '
+        }
+		if H > 0{
+			out+='{} hours '.format(H)
+        }
+		if (D > 0 or H > 0) and MS == 0 and S == 0 and M > 0{
+			out+='and '
+        }
+		if M > 0{
+			out+='{} minutes '.format(M)
+        }
+		if (D > 0 or H > 0 or M > 0) and MS == 0 and S > 0{
+			out+='and '
+        }
+		if S > 0{
+			out+='{} seconds '.format(S)
+        }
+		if (D > 0 or H > 0 or M > 0 or S > 0) and MS > 0{
+			out+='and '
+        }
+		if MS > 0{
+			out+='{} milliseconds '.format(MS)
+        }
+		return out
+    }
+
+    @staticmethod
+	def getNextNWorkDays(from_date, add_days){
+		business_days_to_add = add_days
+		current_date = from_date
+		dates=[]
+		while business_days_to_add > 0{
+			current_date += dt.timedelta(days=1)
+			weekday = current_date.weekday()
+			if weekday >= 5{ # sunday = 6
+				continue
+            }
+			business_days_to_add -= 1
+			dates.append(current_date)
+        }
+		return dates
+    }
+
+	@staticmethod
+	def getStrNextNWorkDays(from_date, add_days, date_format=DATE_FORMAT){
+		from_date=datetime.strptime(from_date,date_format)
+		dates=Utils.getNextNWorkDays(from_date,add_days)
+		dates=[date.strftime(date_format) for date in dates]
+		return dates
+    }
+
+    @staticmethod
+	def saveObj(obj,path){
+		joblib.dump(obj, path)
+    }
+
+	@staticmethod
+	def loadObj(path){
+		return joblib.load(path)
     }
 }

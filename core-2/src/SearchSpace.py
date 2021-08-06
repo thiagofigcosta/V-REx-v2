@@ -13,7 +13,7 @@ class SearchSpace(object){
     class Dimension(object){
         # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-        def __init__(self,min_value,max_value,data_type){
+        def __init__(self,min_value,max_value,data_type,name=''){
             self.data_type=data_type
             self.min_value=min_value
             self.max_value=max_value
@@ -25,14 +25,56 @@ class SearchSpace(object){
                 self.max_value=float(self.max_value)
             }
         }
+
+        def fixValue(self,value){
+            if value > self.max_value {
+                return self.max_value
+            }
+            if value < self.min_value {
+                return self.min_value
+            }
+            return value
+        }
     }
 
     def __init__(self){
-        self.search_space={}
+        self.search_space=[]
     }
 
-    def add(self,name,min_value,max_value,data_type){
-        self.search_space[name]=SearchSpace.Dimension(min_value,max_value,data_type)
+    def __len__(self){
+        return len(self.search_space)
+    }
+
+    def __getitem__(self, i){
+        return self.search_space[i]
+    }
+
+    def __iter__(self){
+       return SearchSpaceIterator(self)
+    }
+
+    def add(self,min_value,max_value,data_type,name=''){
+        self.search_space.append(SearchSpace.Dimension(min_value,max_value,data_type,name))
+    }
+
+    def get(self,i){
+        return self.search_space[i]
     }
     
+}
+
+class SearchSpaceIterator{
+   def __init__(self,search_space){
+       self._search_space=search_space
+       self._index=0
+   }
+
+   def __next__(self){
+       if self._index < len(self._search_space){
+           result=self._search_space.get(self._index)
+           self._index+=1
+           return result
+       }
+       raise StopIteration
+   }
 }

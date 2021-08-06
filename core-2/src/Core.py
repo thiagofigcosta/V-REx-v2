@@ -10,81 +10,83 @@ from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithm,NodeType
 class Core(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
+    LOGGER=None
+
     def __init__(self, mongo, logger){
-        self.logger=logger
+        Core.LOGGER=logger
 		self.mongo=mongo
     }
 
     def runGeneticSimulation(self,simulation_id){
-        self.logger.info('Running genetic simulation {}...'.format(simulation_id))
-        self.logger.info('Loading simulation...')
+        Core.LOGGER.info('Running genetic simulation {}...'.format(simulation_id))
+        Core.LOGGER.info('Loading simulation...')
         environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_encoding = self.fetchGeneticSimulationData(simulation_id)
-        self.logger.info('Loaded simulation...OK')
-        self.logger.info('Loading search space...')
+        Core.LOGGER.info('Loaded simulation...OK')
+        Core.LOGGER.info('Loading search space...')
         search_space=self.fetchEnvironmentData(environment_name)
-        self.logger.info('Loaded search space...OK')
-        self.logger.info('Loading dataset...')
+        Core.LOGGER.info('Loaded search space...OK')
+        Core.LOGGER.info('Loading dataset...')
         train_data_ids,train_data_features,train_data_labels=self.loadDataset(cve_years,train_data_limit)
         # TODO encode dataset
         # TODO balance dataset
-        self.logger.info('Loaded dataset...OK')
+        Core.LOGGER.info('Loaded dataset...OK')
         shuffle_train_data=False
         adam_optimizer=True
         use_neural_genome=True
         search_maximum=metric_mode!=Metric.RAW_LOSS
-        self.logger.info('Starting natural selection...')
+        Core.LOGGER.info('Starting natural selection...')
         # TODO code me
-        self.logger.info('Finished natural selection...OK')
-        self.logger.info('Runned genetic simulation {}...OK'.format(simulation_id))
+        Core.LOGGER.info('Finished natural selection...OK')
+        Core.LOGGER.info('Runned genetic simulation {}...OK'.format(simulation_id))
     }
 
     def trainNeuralNetwork(self,independent_net_id,load=False,just_train=False){
-        self.logger.info('Training neural network {}...'.format(independent_net_id))
-        self.logger.info('Parsing train settings...')
+        Core.LOGGER.info('Training neural network {}...'.format(independent_net_id))
+        Core.LOGGER.info('Parsing train settings...')
         hyper_name, cve_years_train, train_data_limit, cve_years_test, test_data_limit, epochs, cross_validation, train_metric, test_metric = self.fetchNeuralNetworkMetadata(independent_net_id)
         hyperparameters=self.fetchHyperparametersData(hyper_name)
-        self.logger.info('Parsed train settings...OK')
-        self.logger.info('Loading dataset...')
+        Core.LOGGER.info('Parsed train settings...OK')
+        Core.LOGGER.info('Loading dataset...')
         train_data_ids,train_data_features,train_data_labels=self.loadDataset(cve_years_train,train_data_limit)
         # TODO encode dataset
         # TODO balance dataset
-        self.logger.info('Loaded dataset...OK')
+        Core.LOGGER.info('Loaded dataset...OK')
         if load {
-            self.logger.info('Loading weights...')
+            Core.LOGGER.info('Loading weights...')
             # TODO code me
-            self.logger.info('Loaded weights...OK')
+            Core.LOGGER.info('Loaded weights...OK')
         }else{
-            self.logger.info('Training network...')
+            Core.LOGGER.info('Training network...')
             # TODO code me 
-            self.logger.info('Trained network...OK')
+            Core.LOGGER.info('Trained network...OK')
         }
         if not just_train {
-            self.logger.info('Evaluating network...')
-            self.logger.info('Loading dataset...')
+            Core.LOGGER.info('Evaluating network...')
+            Core.LOGGER.info('Loading dataset...')
             test_data_ids,test_data_features,test_data_labels=self.loadDataset(cve_years_test,test_data_limit)
             # TODO encode dataset
             # TODO balance dataset
-            self.logger.info('Loaded dataset...OK')
+            Core.LOGGER.info('Loaded dataset...OK')
             # TODO code me 
-            self.logger.info('Evaluated network...OK')
+            Core.LOGGER.info('Evaluated network...OK')
         }
         # TODO code me
-        self.logger.info('Trained neural network {}...OK'.format(independent_net_id))
+        Core.LOGGER.info('Trained neural network {}...OK'.format(independent_net_id))
     }
 
     def evalNeuralNetwork(self,independent_net_id,result_id,eval_data){
-        self.logger.info('Evaluating neural network {}...'.format(independent_net_id))
-        self.logger.info('Parsing evaluate settings...')
+        Core.LOGGER.info('Evaluating neural network {}...'.format(independent_net_id))
+        Core.LOGGER.info('Parsing evaluate settings...')
         hyper_name,_,_,_,_,_,cross_validation,_,test_metric = self.fetchNeuralNetworkMetadata(independent_net_id)
         hyperparameters=self.fetchHyperparametersData(hyper_name)
         cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(eval_data)
-        self.logger.info('Parsed evaluate settings...OK')
-        self.logger.info('Loading dataset...')
+        Core.LOGGER.info('Parsed evaluate settings...OK')
+        Core.LOGGER.info('Loading dataset...')
         test_data_ids,test_data_features,test_data_labels=self.loadDataset(cve_years_test,test_data_limit)
         # TODO encode dataset
-        self.logger.info('Loaded dataset...OK')
+        Core.LOGGER.info('Loaded dataset...OK')
         # TODO code me
-        self.logger.info('Evaluated neural network {}...OK'.format(independent_net_id))
+        Core.LOGGER.info('Evaluated neural network {}...OK'.format(independent_net_id))
     }
 
     def loadDataset(self,years,limit){

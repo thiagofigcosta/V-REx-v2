@@ -8,8 +8,6 @@ from MongoDB import MongoDB
 
 TMP_FOLDER='tmp/core/'
 
-ITERATIVE=False
-
 Utils.createFolderIfNotExists(TMP_FOLDER)
 LOGGER=Logger(TMP_FOLDER,name='core')
 Utils(TMP_FOLDER,LOGGER)
