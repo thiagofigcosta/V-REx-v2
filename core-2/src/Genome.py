@@ -85,7 +85,20 @@ class Genome(object){
         if self.age is not None{
             out+=' age: {}'.format(self.age)
         }
-        out+=' DNA: {}'.format(self.dna)
+        out+=' DNA: ['
+        for i in range(len(self.dna)){
+            out+=' '
+            if self.limits[i].name is not None{
+                out+=self.limits[i].name+': '
+            }
+            out+=str(self.dna[i])
+            if i+1<len(self.dna){
+                out+=','
+            }else{
+                out+=' '
+            }
+        }
+        out+=']'
         return out
     }
 
