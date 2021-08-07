@@ -11,6 +11,7 @@ COPY --from=builder /root/.local /root/.local
 COPY Pytho{N}.py .
 COPY entrypoint.sh .
 COPY src/ .
+COPY res/ res
 
 RUN chmod +x entrypoint.sh
 

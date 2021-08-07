@@ -39,7 +39,7 @@ class Genome(object){
     }
 
     def __del__(self){
-        if self.cached and Genome.CACHE_WEIGHTS {
+        if self.is_neural and self.cached and Genome.CACHE_WEIGHTS {
             Utils.deleteFile(self.cache_file)
         }
         self._weights=None
@@ -64,18 +64,25 @@ class Genome(object){
     }
 
     def evaluate(self){
-        self.output=self.eval_callback() 
+        self.output=self.eval_callback(self) 
     }
 
     def fixlimits(self){
         for i in range(len(self.dna)){
             self.dna[i]=self.limits[i].fixValue(self.dna[i])
+            if self.limits[i].data_type==SearchSpace.Type.INT {
+                self.dna[i]=int(self.dna[i])
+            }elif self.limits[i].data_type==SearchSpace.Type.FLOAT{
+                self.dna[i]=float(self.dna[i])
+            }else{
+                raise Exception('Unkown search space data type {}'.format(self.limits[i].data_type))
+            }
         }
     }
 
     def toString(self){
         out='Output: {} Fitness: {}'.format(self.output,self.fitness)
-        if age is not None{
+        if self.age is not None{
             out+=' age: {}'.format(self.age)
         }
         out+=' DNA: {}'.format(self.dna)
@@ -139,7 +146,7 @@ class Genome(object){
 
     def clearWeights(self){
         self._weights=None
-        if self.cached and Genome.CACHE_WEIGHTS {
+        if self.is_neural and self.cached and Genome.CACHE_WEIGHTS {
             Utils.deleteFile(self.cache_file)
             self.cached=False
         }
@@ -164,7 +171,7 @@ class Genome(object){
             that._weights=self._weights.copy() # TODO code me
             that.cached=self.cached
             that.cache_file=self.genCacheFilename()
-            if self.cached and Genome.CACHE_WEIGHTS {
+            if self.is_neural and self.cached and Genome.CACHE_WEIGHTS {
                 Utils.copyFile(self.cache_file,that.cache_file)
             }
         }

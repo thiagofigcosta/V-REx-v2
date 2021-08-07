@@ -3,6 +3,8 @@
 
 import time
 from Core import Core
+from Genome import Genome
+from Utils import Utils
 from StandardGenetic import StandardGenetic
 from EnhancedGenetic import EnhancedGenetic
 
@@ -13,17 +15,11 @@ class PopulationManager(object){
     PRINT_REL_FREQUENCY=10
     MT_DNA_VALIDITY=15
     
-    def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,looking_highest_fitness,neural_genome=False,print_deltas=False,after_gen_callback=None){
+    def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None){
         self.genetic_algorithm=genetic_algorithm
-        self.looking_highest_fitness=looking_highest_fitness
-        self.genetic_algorithm.looking_highest_fitness=looking_highest_fitness
-        if type(self.genetic_algorithm) is StandardGenetic {
-            self.space=self.genetic_algorithm.enrichSpace(space)
-        }elif type(self.genetic_algorithm) is EnhancedGenetic{
-            self.space=self.genetic_algorithm.enrichSpace(space)
+        self.space=self.genetic_algorithm.enrichSpace(search_space)
+        if type(self.genetic_algorithm) is EnhancedGenetic{
             self.genetic_algorithm.max_population=population_start_size*2
-        }else{
-            raise Exception('Unknown genetic algorithm of type {}'.format(type(self.genetic_algorithm)))
         }
         self.population=[]
         for i in range(population_start_size){
@@ -36,9 +32,8 @@ class PopulationManager(object){
 
     def __del__(self){
         self.genetic_algorithm=None
-        self.looking_highest_fitness=None
         self.space=None
-        for individual in population{
+        for individual in self.population{
             del individual
         }
         self.population=None
@@ -48,9 +43,9 @@ class PopulationManager(object){
     }
 
     def naturalSelection(self, gens, verbose=False){
-        for g in range(1,gen+1){
+        for g in range(1,gens+1){
             t1=time.time()
-            if self.looking_highest_fitness{
+            if self.genetic_algorithm.looking_highest_fitness{
                 best_out=float('-inf')
             }else{
                 best_out=float('inf')
@@ -61,7 +56,7 @@ class PopulationManager(object){
             for p,individual in enumerate(self.population){
                 individual.evaluate()
                 output=individual.output
-                if self.looking_highest_fitness{
+                if self.genetic_algorithm.looking_highest_fitness{
                     if output>best_out {
                         best_out=output
                     }
@@ -71,9 +66,9 @@ class PopulationManager(object){
                     }
                 }
                 if verbose{
-                    percent=(p+1)/float(len(population))*100.0
+                    percent=(p+1)/float(len(self.population))*100.0
                     if int(percent)%PopulationManager.PRINT_REL_FREQUENCY==0 {
-                        Core.LOGGER.info('\t\tprogress: {:2.f}%'.format(percent))
+                        Core.LOGGER.info('\t\tprogress: {:2.2f}%'.format(percent))
                     }
                 }
             }
@@ -81,7 +76,7 @@ class PopulationManager(object){
                 Core.LOGGER.info('\tEvaluated individuals...OK')
                 Core.LOGGER.info('\tCalculating fitness...')
             }
-            self.genetic_algorithm.fit(self.population)
+            self.population=self.genetic_algorithm.fit(self.population)
             if verbose{
                 Core.LOGGER.info('\tCalculated fitness...OK')
             }
@@ -98,7 +93,7 @@ class PopulationManager(object){
                 if verbose{
                     Core.LOGGER.info('\tSelecting and breeding individuals...')
                 }
-                self.genetic_algorithm.select(self.population)
+                self.population=self.genetic_algorithm.select(self.population)
                 if verbose{
                     Core.LOGGER.info('\tSelected and breed individuals...OK')
                     enhanced_str=' and aging'
@@ -107,7 +102,7 @@ class PopulationManager(object){
                     }
                     Core.LOGGER.info('\tMutating{} individuals...'.format(enhanced_str))
                 }
-                self.genetic_algorithm.select(self.population)
+                self.population=self.genetic_algorithm.mutate(self.population)
                 if g%PopulationManager.MT_DNA_VALIDITY==0{
                     for individual in self.population{
                         individual.resetMtDna()

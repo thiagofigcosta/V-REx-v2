@@ -38,7 +38,7 @@ class SearchSpace(object){
         }
 
         def copy(self){
-            that=Dimension(self.min_value,self.max_value,self.data_type,self.name)
+            that=SearchSpace.Dimension(self.min_value,self.max_value,self.data_type,self.name)
             return that
         }
     }

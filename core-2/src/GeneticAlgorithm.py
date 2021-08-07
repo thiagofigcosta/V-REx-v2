@@ -44,10 +44,4 @@ class GeneticAlgorithm(ABC){
     def randomize(self){
         pass
     }
-
-    @abstractmethod
-    def copy(self){
-        pass
-    }
-
 }

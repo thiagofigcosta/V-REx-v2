@@ -95,7 +95,7 @@ class Core(object){
         data_features=[]
         data_labels=[]
         for year in years {
-            cur_cves=mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}]).sort('cve',1)
+            cur_cves=mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
             if cur_cves is None {
                 raise Exception('Unable to find cves from {}:{}'.format(year,limit))
             }
@@ -130,7 +130,7 @@ class Core(object){
         }
         cve_years_arr=cve_years_arr.split(',')
         cve_years=[int(el) for el in cve_years_arr]
-        return ,limit
+        return cve_years,limit
     }
 
     def fetchGeneticSimulationData(self,simulation_id){

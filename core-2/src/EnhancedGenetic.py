@@ -44,10 +44,6 @@ class EnhancedGenetic(GeneticAlgorithm){
         raise Exception('Not implemented yet!')
     }
 
-    def copy(self){
-        raise Exception('Not implemented yet!')
-    }
-
     def age(self, individual, cur_population_size){
         raise Exception('Not implemented yet!')
     }

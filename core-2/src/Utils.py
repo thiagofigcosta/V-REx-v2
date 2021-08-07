@@ -28,6 +28,7 @@ class Utils(object){
     }else{
         FILE_SEPARATOR='/'
     }
+    DATE_FORMAT='%d/%m/%Y'
     DATETIME_FORMAT='%d/%m/%Y %H:%M:%S'
 	FIRST_DATE='01/01/1970'
     TMP_FOLDER=None
@@ -471,5 +472,17 @@ class Utils(object){
 	@staticmethod
 	def loadObj(path){
 		return joblib.load(path)
+    }
+
+    @staticmethod
+	def printDict(dictionary,name=None,tabs=0){
+		start=''
+		if name is not None{
+			print('{}{}:'.format('\t'*tabs,name))
+			start='\t'
+        }
+		for key,value in dictionary.items(){
+			print('{}{}{}: {}'.format('\t'*tabs,start,key,value))
+        }
     }
 }

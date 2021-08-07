@@ -3,6 +3,7 @@
 
 from GeneticAlgorithm import GeneticAlgorithm
 from Enums import StdGeneticRankType
+from Utils import Utils
 
 class StandardGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -46,34 +47,87 @@ class StandardGenetic(GeneticAlgorithm){
         for individual in individuals {
             del individual
         }
-        individuals=None
+        individuals=[]
+        return next_gen
     }
 
     def fit(self, individuals){
-        raise Exception('Not implemented yet!')
+        signal=1
+        if not self.looking_highest_fitness{
+            signal=-1
+        }
+        for individual in individuals{
+            if self.rank_type in (StdGeneticRankType.ABSOLUTE,StdGeneticRankType.RELATIVE){
+                individual.fitness=individual.output*signal
+            }
+        }
+        if self.rank_type==StdGeneticRankType.RELATIVE{
+            individuals.sort()
+            for i in range(len(individuals)){
+                individuals[i].fitness=100.0/float(len(individuals)-i+2)
+            }
+        }
+        return individuals
     }
 
     def sex(self, father, mother){
-        raise Exception('Not implemented yet!')
+        if Utils.random()<self.sex_rate{
+            amount_of_children=2
+            children=[[] for _ in range(amount_of_children)]
+            for i in range(len(father.dna)){
+                gene_share=Utils.random()
+                children[0].append(gene_share*father.dna[i]+(1-gene_share)*mother.dna[i])
+                children[1].append((1-gene_share)*father.dna[i]+gene_share*mother.dna[i])
+            }
+            for i in range(len(children)){
+                children[i]=mother.makeChild(children[i])
+            }
+        }else{
+            children=[]
+            children.append(father.copy())
+            children.append(mother.copy())
+        }
+        return children
     }
 
     def mutate(self, individuals){
-        raise Exception('Not implemented yet!')
+        for individual in individuals{
+            self.mutateIndividual(individual,False)
+        }
+        return individuals
     }
 
     def mutateIndividual(self, individual, force=False){
-        raise Exception('Not implemented yet!')
+        for i in range(len(individual.dna)){
+            if force or Utils.random()<self.mutation_rate{
+                individual.dna[i]*=self.randomize()
+            }
+        }
+        individual.fixlimits()
     }
 
     def enrichSpace(self, space){
-        raise Exception('Not implemented yet!')
-    }
-
-    def copy(self){
-        raise Exception('Not implemented yet!')
+        return space
     }
 
     def randomize(self){
-        raise Exception('Not implemented yet!')
+        r=Utils.random()
+        if (r<=0.3){
+            r=Utils.randomFloat(0,0.06)
+        }elif (r<=0.8){
+            r=Utils.randomFloat(0,0.11)
+        }elif (r<=0.9){
+            r=Utils.randomFloat(0.09,0.16)
+        }elif (r<=0.97){
+            r=Utils.randomFloat(0.15,0.23)
+        }else{
+            r=Utils.randomFloat(0.333,0.666)
+        }
+        if (Utils.random()>0.5){
+            r=-(1+r);
+        }else{
+            r=(1+r);
+        }
+        return r
     }
 }
