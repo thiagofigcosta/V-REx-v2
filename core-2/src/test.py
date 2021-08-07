@@ -118,6 +118,8 @@ def testStdVsEnhGenetic(){
         std_population.naturalSelection(max_gens)
         std_result=std_elite.best
         results['standard'].append(std_result)
+        del std_elite
+        del std_population
 
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
@@ -126,8 +128,8 @@ def testStdVsEnhGenetic(){
         enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
         results['enhanced'].append(enh_result)
-        del std_elite
         del enh_elite
+        del enh_population
     }
     std_mean=(0.0,0.0)
     for std_result in results['standard']{
