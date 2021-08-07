@@ -52,9 +52,9 @@ pair<string,pair<vector<int>, vector<float>>> MongoDB::bsonToDatasetEntry(const 
             string key=el.key().data();
             features_map[key]=getFloatFromEl(el);
         }
-        if((int)features_map.size()!=features_size){
-            throw runtime_error("Error features sizes for "+cve_id+" should be: "+to_string(features_size)+" but is: "+to_string(features_map.size())+"\n");
-        }
+        // if((int)features_map.size()!=features_size){
+        //     throw runtime_error("Error features sizes for "+cve_id+" should be: "+to_string(features_size)+" but is: "+to_string(features_map.size())+"\n");
+        // }
         for(map<string,float>::const_iterator it=features_map.begin();it!=features_map.end();it++){
             features.push_back(it->second);
         }
@@ -70,9 +70,9 @@ pair<string,pair<vector<int>, vector<float>>> MongoDB::bsonToDatasetEntry(const 
             string key=el.key().data();
             labels_map[key]=getFloatFromEl(el);
         }
-        if((int)labels_map.size()!=labels_size){
-            throw runtime_error("Error labels sizes for "+cve_id+" should be: "+to_string(labels_size)+" but is: "+to_string(labels_map.size())+"\n");
-        }
+        // if((int)labels_map.size()!=labels_size){
+        //     throw runtime_error("Error labels sizes for "+cve_id+" should be: "+to_string(labels_size)+" but is: "+to_string(labels_map.size())+"\n");
+        // }
         labels.push_back(((int) labels_map["exploits_has"]));
     }else{
         throw runtime_error("Error unkown labels type for "+cve_id+": "+bsoncxx::to_string(labels_el.type())+"\n");

@@ -7,6 +7,7 @@ from Logger import Logger
 from Core import Core
 from HallOfFame import HallOfFame
 from StandardGenetic import StandardGenetic
+from EnhancedGenetic import EnhancedGenetic
 from PopulationManager import PopulationManager
 
 TMP_FOLDER='tmp/core/'
@@ -83,4 +84,71 @@ def testStdGenetic(){
     Utils.printDict(elite_max.best,'Elite')
 }
 
-testStdGenetic()
+def testStdVsEnhGenetic(){
+    def eggHolder(genome){
+        # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
+        x=genome.dna[0]
+        y=genome.dna[1]
+        return -(y+47)*math.sin(math.sqrt(abs(y+(x/2)+47)))-x*math.sin(math.sqrt(abs(x-(y+47))))
+    }
+
+    verbose=False
+    print('Standard vs Enhanced:')
+    tests=50
+    limits=SearchSpace()
+    limits.add(-512,512,SearchSpace.Type.FLOAT,name='x')
+    limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
+    population_start_size_enh=300
+    population_start_size_std=720
+    max_gens=100
+    max_age=10
+    max_children=4
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    search_maximum=False
+    max_notables=5
+    results={'standard':[],'enhanced':[]}
+    for x in range(tests){
+        print('Test {} of {}'.format(x+1,tests))
+        std_elite=HallOfFame(max_notables, search_maximum)
+        std_ga=StandardGenetic(search_maximum,mutation_rate, sex_rate)
+        std_population=PopulationManager(std_ga,limits,eggHolder,population_start_size_std)
+        std_population.hall_of_fame=std_elite
+        std_population.naturalSelection(max_gens)
+        std_result=std_elite.best
+        results['standard'].append(std_result)
+
+        enh_elite=HallOfFame(max_notables, search_maximum)
+        en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh)
+        enh_population.hall_of_fame=enh_elite
+        enh_population.naturalSelection(max_gens)
+        enh_result=enh_elite.best
+        results['enhanced'].append(enh_result)
+    }
+    std_mean=(0.0,0.0)
+    for std_result in results['standard']{
+        std_mean[0]+=std_result['generation']
+        std_mean[1]+=std_result['output']
+        print('Standard Best ({}): {}'.format(std_result['generation'],std_result['output']))
+    }
+    std_mean[0]/=tests
+    std_mean[1]/=tests
+
+    enh_mean=(0,0)
+    for enh_result in results['enhanced']{
+        enh_mean[0]+=enh_result['generation']
+        enh_mean[1]+=enh_result['output']
+        print('Enhanced Best ({}): {}'.format(enh_result['generation'],enh_result['output']))
+    }
+    enh_mean[0]/=tests
+    enh_mean[1]/=tests
+    print('Standard Mean ({}): {} | Enhanced Mean ({}): {}'.format(std_mean[0],std_mean[1],enh_mean[0],enh_mean[1]))
+
+    # Utils.printDict(elite_min.best,'Elite')
+}
+
+
+# testStdGenetic()
+testStdVsEnhGenetic()

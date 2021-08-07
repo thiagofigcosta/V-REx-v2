@@ -11,7 +11,7 @@ class Genome(object){
     CACHE_WEIGHTS=True
     CACHE_FOLDER='neural_genome_cache'
     
-    def __init__(self, search_space, eval_callback, is_neural=False){
+    def __init__(self, search_space, eval_callback, is_neural=False, has_age=False){
         self.limits=search_space
         self.dna=[]
         for limit in search_space{
@@ -28,7 +28,11 @@ class Genome(object){
         self.mt_dna=''
         self.fitness=0
         self.output=0
-        self.age=None
+        if has_age {
+            self.age=0
+        }else{
+            self.age=None
+        }
         self.id=Utils.randomUUID()
         self.resetMtDna()
         if self.is_neural {
@@ -60,6 +64,9 @@ class Genome(object){
         child.dna=dna+[] # deep copy
         child.fitness=0
         child.output=0
+        if child.age is not None{
+            child.age=0
+        }
         return child
     }
 

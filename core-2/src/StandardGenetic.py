@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 
 from GeneticAlgorithm import GeneticAlgorithm
-from Enums import StdGeneticRankType
+from Enums import GeneticRankType
 from Utils import Utils
 
 class StandardGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
-    def __init__(self, looking_highest_fitness, mutation_rate, sex_rate, rankType=StdGeneticRankType.RELATIVE){
+    def __init__(self, looking_highest_fitness, mutation_rate, sex_rate, rank_type=GeneticRankType.RELATIVE){
         super().__init__(looking_highest_fitness)
         self.mutation_rate=mutation_rate
         self.sex_rate=sex_rate
-        self.rank_type=rankType
+        self.rank_type=rank_type
     }
 
     def select(self, individuals){
@@ -29,25 +29,25 @@ class StandardGenetic(GeneticAlgorithm){
         }
         next_gen=[]
         for i in range(int(len(individuals)/2)){
-            parents=[]
+            potential_parents=[]
             for c in range(2){
                 roulette_number=Utils.randomFloat(0,fitness_sum)
                 current_roulette=0
                 for individual in individuals {
                     current_roulette+=individual.fitness+offset
                     if current_roulette>=roulette_number {
-                        parents.append(individual)
+                        potential_parents.append(individual)
                         break
                     }
                 }
             }
-            children=self.sex(parents[0],parents[1])
+            children=self.sex(potential_parents[0],potential_parents[1])
             next_gen+=children
         }
         for individual in individuals {
             del individual
         }
-        individuals=[]
+        individuals.clear()
         return next_gen
     }
 
@@ -57,20 +57,24 @@ class StandardGenetic(GeneticAlgorithm){
             signal=-1
         }
         for individual in individuals{
-            if self.rank_type in (StdGeneticRankType.ABSOLUTE,StdGeneticRankType.RELATIVE){
-                individual.fitness=individual.output*signal
-            }
+            individual.fitness=individual.output*signal
         }
-        if self.rank_type==StdGeneticRankType.RELATIVE{
+        if self.rank_type==GeneticRankType.RELATIVE{
             individuals.sort()
             for i in range(len(individuals)){
                 individuals[i].fitness=100.0/float(len(individuals)-i+2)
+            }
+        }elif self.rank_type==GeneticRankType.INCREMENTAL{
+            individuals.sort()
+            for i in range(len(individuals)){
+                individuals[i].fitness=i+1
             }
         }
         return individuals
     }
 
     def sex(self, father, mother){
+        family=[]
         if Utils.random()<self.sex_rate{
             amount_of_children=2
             children=[[] for _ in range(amount_of_children)]
@@ -82,17 +86,17 @@ class StandardGenetic(GeneticAlgorithm){
             for i in range(len(children)){
                 children[i]=mother.makeChild(children[i])
             }
+            family+=children
         }else{
-            children=[]
-            children.append(father.copy())
-            children.append(mother.copy())
+            family.append(father.copy())
+            family.append(mother.copy())
         }
-        return children
+        return family
     }
 
     def mutate(self, individuals){
         for individual in individuals{
-            self.mutateIndividual(individual,False)
+            self.mutateIndividual(individual,force=False)
         }
         return individuals
     }

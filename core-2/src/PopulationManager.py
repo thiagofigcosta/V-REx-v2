@@ -18,12 +18,14 @@ class PopulationManager(object){
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None){
         self.genetic_algorithm=genetic_algorithm
         self.space=self.genetic_algorithm.enrichSpace(search_space)
+        has_age=False
         if type(self.genetic_algorithm) is EnhancedGenetic{
             self.genetic_algorithm.max_population=population_start_size*2
+            has_age=True
         }
         self.population=[]
         for i in range(population_start_size){
-            self.population.append(Genome(search_space,eval_callback,neural_genome))
+            self.population.append(Genome(search_space,eval_callback,neural_genome,has_age=has_age))
         }
         self.print_deltas=print_deltas
         self.hall_of_fame=None

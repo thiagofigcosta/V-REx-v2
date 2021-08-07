@@ -41,8 +41,9 @@ class NodeType(Enum){
     SIGMOID = 2
 }
 
-class StdGeneticRankType(Enum){
+class GeneticRankType(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     RELATIVE = 0
     ABSOLUTE = 1
+    INCREMENTAL = 1
 }
