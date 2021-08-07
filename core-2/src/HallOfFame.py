@@ -11,6 +11,12 @@ class HallOfFame(object){
         self.best={'output':0,'generation':-1}
     }
 
+    def __del__(self){
+        for notable in self.notables {
+            del notable
+        }
+    }
+
     def update(self,candidates,gen=-1){
         notables_to_select=candidates+self.notables
         notables_to_select.sort(key=lambda k: k.output, reverse=self.looking_highest_fitness)

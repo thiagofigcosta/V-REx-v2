@@ -126,6 +126,8 @@ def testStdVsEnhGenetic(){
         enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
         results['enhanced'].append(enh_result)
+        del std_elite
+        del enh_elite
     }
     std_mean=(0.0,0.0)
     for std_result in results['standard']{
