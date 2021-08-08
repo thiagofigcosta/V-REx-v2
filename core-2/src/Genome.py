@@ -51,7 +51,7 @@ class Genome(object){
     }
 
     def __lt__(self, other){
-        return self.fitness < other.fitness or (self.age < other.age and self.fitness == other.fitness)
+        return self.fitness < other.fitness or (self.fitness == other.fitness and self.age is not None and other.age is not None and self.age < other.age)
     }
 
     def __str__(self){

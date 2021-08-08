@@ -239,6 +239,11 @@ def testStdVsEnhGenetic(){
 }
 
 
+def testNNIntLabel(){
+
+}
+
 # testStdGenetic()
-testEnhGenetic()
-#testStdVsEnhGenetic()
+# testEnhGenetic()
+testStdVsEnhGenetic()
+testNNIntLabel()
