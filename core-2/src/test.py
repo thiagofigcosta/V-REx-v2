@@ -240,7 +240,7 @@ def testStdVsEnhGenetic(){
 
 
 def testNNIntLabel(){
-
+    pass
 }
 
 # testStdGenetic()
