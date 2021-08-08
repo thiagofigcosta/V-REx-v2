@@ -8,7 +8,7 @@ class HallOfFame(object){
         self.max_notables=max_notables
         self.looking_highest_fitness=looking_highest_fitness
         self.notables=[]
-        self.best={'output':0,'generation':-1}
+        self.best={'output':0,'generation':-1,'genome': None}
     }
 
     def __del__(self){
@@ -35,6 +35,7 @@ class HallOfFame(object){
         if ((self.looking_highest_fitness and self.notables[0].output>self.best['output']) or (not self.looking_highest_fitness and self.notables[0].output<self.best['output'])){
             self.best['output']=self.notables[0].output
             self.best['generation']=gen
+            self.best['genome']=str(self.notables[0])
         }
     }
 }

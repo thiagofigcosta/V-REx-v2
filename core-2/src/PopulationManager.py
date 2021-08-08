@@ -44,7 +44,7 @@ class PopulationManager(object){
         self.after_gen_callback=None
     }
 
-    def naturalSelection(self, gens, verbose=False){
+    def naturalSelection(self, gens, verbose=False, verbose_generations=None){
         for g in range(1,gens+1){
             t1=time.time()
             if self.genetic_algorithm.looking_highest_fitness{
@@ -57,6 +57,7 @@ class PopulationManager(object){
             }
             for p,individual in enumerate(self.population){
                 individual.evaluate()
+                individual.gen=g
                 output=individual.output
                 if self.genetic_algorithm.looking_highest_fitness{
                     if output>best_out {
@@ -125,9 +126,9 @@ class PopulationManager(object){
             if self.after_gen_callback is not None {
                 self.after_gen_callback()
             }
-        }
-        if self.print_deltas {
-            Core.LOGGER.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
+            if verbose_generations or self.print_deltas {
+                Core.LOGGER.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
+            }
         }
     }
 

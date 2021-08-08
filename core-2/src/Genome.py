@@ -28,6 +28,7 @@ class Genome(object){
         self.mt_dna=''
         self.fitness=0
         self.output=0
+        self.gen=-1
         if has_age {
             self.age=0
         }else{
@@ -50,7 +51,7 @@ class Genome(object){
     }
 
     def __lt__(self, other){
-        return self.fitness < other.fitness
+        return self.fitness < other.fitness or (self.age < other.age and self.fitness == other.fitness)
     }
 
     def __str__(self){
@@ -89,6 +90,9 @@ class Genome(object){
 
     def toString(self){
         out='Output: {} Fitness: {}'.format(self.output,self.fitness)
+        if self.gen > -1{
+            out+=' gen: {}'.format(self.gen)
+        }
         if self.age is not None{
             out+=' age: {}'.format(self.age)
         }
@@ -187,6 +191,7 @@ class Genome(object){
         that.output=self.output
         that.age=self.age
         that.id=self.id
+        that.gen=self.gen
         if self.is_neural {
             that._weights=self._weights.copy() # TODO code me
             that.cached=self.cached

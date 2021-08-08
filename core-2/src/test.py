@@ -84,6 +84,91 @@ def testStdGenetic(){
     Utils.printDict(elite_max.best,'Elite')
 }
 
+def testEnhGenetic(){
+    def eggHolder(genome){
+        # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
+        x=genome.dna[0]
+        y=genome.dna[1]
+        return -(y+47)*math.sin(math.sqrt(abs(y+(x/2)+47)))-x*math.sin(math.sqrt(abs(x-(y+47))))
+    }
+
+    def easom(genome){
+        # https://www.sfu.ca/~ssurjano/easom.html TIME MINUS ONE // maximum -> x1=x2=pi -> y(x1,x2)=1
+        x=genome.dna[0]
+        y=genome.dna[1]
+        return -(-math.cos(x)*math.cos(y)*math.exp(-(math.pow(x-math.pi,2)+math.pow(y-math.pi,2))))
+    }
+
+    PopulationManager.PRINT_REL_FREQUENCY=0
+
+    verbose_natural_selection=False
+    verbose_population_details=True
+    add_callback_after_gen=False
+    print('Minimization')
+    limits=SearchSpace()
+    limits.add(-512,512,SearchSpace.Type.FLOAT,name='x')
+    limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
+    population_start_size_enh=300
+    population_start_size_std=780
+    max_gens=100
+    max_age=10
+    max_children=4
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    search_maximum=False
+    max_notables=5
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details,after_gen_callback=lambda:print('After gen') if add_callback_after_gen else None)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+    
+
+    
+    print('Expected: (x: 512, y: 404.2319) = -959.6407')
+    for individual in enh_elite.notables{
+        print(str(individual))
+    }
+    Utils.printDict(enh_elite.best,'Elite')
+
+    runned_after_gen=False
+    def afterGen(){
+        nonlocal runned_after_gen
+        if not runned_after_gen {
+            print('After gen - only once')
+            runned_after_gen=True
+        }
+    }
+    del enh_elite
+    del enh_population
+
+    print('Maximization')
+    limits=SearchSpace()
+    limits.add(-100,100,SearchSpace.Type.FLOAT,name='x')
+    limits.add(-100,100,SearchSpace.Type.FLOAT,name='y')
+    population_size=100
+    max_gens=100
+    max_age=10
+    max_children=4
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    search_maximum=True
+    max_notables=5
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details,after_gen_callback=afterGen if add_callback_after_gen else None)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+
+    print('Expected: (x: 3.141592, y: 3.141592) = 1')
+    for individual in enh_elite.notables{
+        print(str(individual))
+    }
+    Utils.printDict(enh_elite.best,'Elite')
+}
+
 def testStdVsEnhGenetic(){
     def eggHolder(genome){
         # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
@@ -99,7 +184,7 @@ def testStdVsEnhGenetic(){
     limits.add(-512,512,SearchSpace.Type.FLOAT,name='x')
     limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
     population_start_size_enh=300
-    population_start_size_std=720
+    population_start_size_std=780
     max_gens=100
     max_age=10
     max_children=4
@@ -155,4 +240,5 @@ def testStdVsEnhGenetic(){
 
 
 # testStdGenetic()
-testStdVsEnhGenetic()
+testEnhGenetic()
+#testStdVsEnhGenetic()
