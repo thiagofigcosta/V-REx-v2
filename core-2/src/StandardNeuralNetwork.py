@@ -47,31 +47,40 @@ class StandardNeuralNetwork(object){
 	} 
 
 	def _metricsFactory(self){
-		def binary_PFA(y_true, y_pred, threshold=K.variable(value=0.5)){
-			y_pred = K.cast(y_pred >= threshold, 'float32')
-			# N = total number of negative labels
-			N = K.sum(1 - y_true)
-			# FP = total number of false alerts, alerts from the negative class labels
-			FP = K.sum(y_pred - y_pred * y_true)    
-			return FP/N
-		}
-
-		def binary_PTA(y_true, y_pred, threshold=K.variable(value=0.5)){
-			y_pred = K.cast(y_pred >= threshold, 'float32')
-			# P = total number of positive labels
-			P = K.sum(y_true)
-			# TP = total number of correct alerts, alerts from the positive class labels
-			TP = K.sum(y_pred * y_true)    
-			return TP/P
-		}
-
 		def auc(y_true, y_pred){
-			ptas = tf.stack([binary_PTA(y_true,y_pred,k) for k in np.linspace(0, 1, 1000)],axis=0)
-			pfas = tf.stack([binary_PFA(y_true,y_pred,k) for k in np.linspace(0, 1, 1000)],axis=0)
-			pfas = tf.concat([tf.ones((1,)) ,pfas],axis=0)
-			binSizes = -(pfas[1:]-pfas[:-1])
-			s = ptas*binSizes
-			return K.sum(s, axis=0)
+			weight = None
+			N = tf.size(y_true, name="N")
+			y_true = K.reshape(y_true, shape=(N,))
+			y_pred = K.reshape(y_pred, shape=(N,))
+			if weight is None{
+				weight = tf.fill(K.shape(y_pred), 1.0)
+			}
+			sort_result = tf.nn.top_k(y_pred, N, sorted=False, name="sort")
+			y = K.gather(y_true, sort_result.indices)
+			y_hat = K.gather(y_pred, sort_result.indices)
+			w = K.gather(weight, sort_result.indices)
+			is_negative = K.equal(y, tf.constant(0.0))
+			is_positive = K.equal(y, tf.constant(1.0))
+			w_zero = tf.fill(K.shape(y_pred), 0.0)
+			w_negative = tf.where(is_positive, w_zero, w, name="w_negative")
+			w_positive = tf.where(is_negative, w_zero, w)
+			cum_positive = K.cumsum(w_positive)
+			cum_negative = K.cumsum(w_negative)
+			is_diff = K.not_equal(y_hat[:-1], y_hat[1:])
+			is_end = tf.concat([is_diff, tf.constant([True])], 0)
+			total_positive = cum_positive[-1]
+			total_negative = cum_negative[-1]
+			TP = tf.concat([
+				tf.constant([0.]),
+				tf.boolean_mask(cum_positive, is_end),
+				], 0)
+			FP = tf.concat([
+				tf.constant([0.]),
+				tf.boolean_mask(cum_negative, is_end),
+				], 0)
+			FPR = FP / total_negative
+			TPR = TP / total_positive
+			return K.sum((FPR[1:]-FPR[:-1])*(TPR[:-1]+TPR[1:])/2)
 		}
 
 		def precision(y_true, y_pred){
@@ -103,11 +112,13 @@ class StandardNeuralNetwork(object){
 			return f1_score
 		}
 
-		auc.__name__ = 'roc_auc'
+		auc_original=keras.metrics.AUC(name='roc_auc-1')
+
+		auc.__name__ = 'roc_auc-2'
 		precision.__name__ = 'precision'
 		recall.__name__ = 'recall'
 		f1_score.__name__ = 'f1_score'
-		return [auc,precision,recall,f1_score]
+		return [auc_original,auc,precision,recall,f1_score]
 	}
 
 	def _buildModel(self,input_size){
