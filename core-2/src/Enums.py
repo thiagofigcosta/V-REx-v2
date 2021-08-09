@@ -23,9 +23,15 @@ class Metric(Enum){
 
 class LabelEncoding(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
-    INT_CLASS = 0
-    NEURON_BY_NEURON = 1
-    NEURON_BY_N_LOG_LOSS = 2
+    INCREMENTAL = 0
+    BINARY = 1
+    # yes, will jump 2
+    BINARY_PLUS_ONE = 3
+    SPARSE = 4
+    DISTINCT_SPARSE = 5
+    DISTINCT_SPARSE_PLUS_ONE = 6
+    INCREMENTAL_PLUS_ONE = 7
+    EXPONENTIAL = 8
 }
 
 class GeneticAlgorithmType(Enum){

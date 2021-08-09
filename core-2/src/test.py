@@ -5,7 +5,11 @@ from SearchSpace import SearchSpace
 from Utils import Utils
 from Logger import Logger
 from Core import Core
+from Dataset import Dataset
+from Enums import LabelEncoding,NodeType
+from Hyperparameters import Hyperparameters
 from HallOfFame import HallOfFame
+from StandardNeuralNetwork import StandardNeuralNetwork
 from StandardGenetic import StandardGenetic
 from EnhancedGenetic import EnhancedGenetic
 from PopulationManager import PopulationManager
@@ -249,7 +253,40 @@ def testStdVsEnhGenetic(){
 
 
 def testNNIntLabel(){
-    pass
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,LabelEncoding.INCREMENTAL)
+    print('First label:',Dataset.translateLabelFromOutput(labels[0],label_map,label_map_2))
+    print('First label enum:',Dataset.translateLabelFromOutput(labels[0],label_map_2))
+    print('First label encoding:',labels[0])
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    print('First feature',features[0])
+    print('First labels',labels[:4])
+    features,labels=Dataset.shuffleDataset(features,labels)
+    print('First labels randomized',labels[:4])
+    train,test=Dataset.splitDataset(features,labels,.7)
+    train,val=Dataset.splitDataset(train[0],train[1],.7)
+
+    input_size=len(train[0][0])
+    output_size=len(train[1][0])
+    layers=1
+    layer_sizes=[output_size]
+    dropouts=[0]
+    batch_size=5
+    alpha=0.01
+    shuffle=True
+    adam=True
+    label_type=LabelEncoding.INCREMENTAL
+    node_types=[NodeType.SOFTMAX]
+    patience_epochs=10
+    max_epochs=100
+    bias=[True]
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias)
+
+    nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
+    nn.buildModel(input_size)
+    nn.train(train[0],train[1],val[0],val[1])
+    print(nn.history)
 }
 
 # testStdGenetic()

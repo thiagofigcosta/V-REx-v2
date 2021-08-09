@@ -14,3 +14,5 @@ core/src/vrex/bin
 core/src/vrex/obj
 core/src/vrex/*.o
 sensitive_files_ignore/
+core-2/models/
+core-2/res/models/

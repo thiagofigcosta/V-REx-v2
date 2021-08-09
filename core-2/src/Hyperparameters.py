@@ -3,14 +3,14 @@
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    def __init__(self, batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patient_epochs, max_epochs, bias, model_checkpoint=True){
+    def __init__(self, batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, model_checkpoint=True){
         self.batch_size=batch_size
 		self.alpha=alpha
 		self.shuffle=shuffle
 		self.adam=adam
 		self.label_type=label_type
 		self.model_checkpoint=model_checkpoint
-		self.patient_epochs=patient_epochs
+		self.patience_epochs=patience_epochs
 		self.max_epochs=max_epochs
 		self.layers=layers
 		self.layer_sizes=layer_sizes

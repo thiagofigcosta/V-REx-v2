@@ -28,6 +28,7 @@ class Utils(object){
     }else{
         FILE_SEPARATOR='/'
     }
+    RESOURCES_FOLDER='res'
     DATE_FORMAT='%d/%m/%Y'
     DATETIME_FORMAT='%d/%m/%Y %H:%M:%S'
 	FIRST_DATE='01/01/1970'
@@ -38,6 +39,14 @@ class Utils(object){
     def __init__(self,tmp_folder,logger){
         Utils.LOGGER=logger
 		Utils.TMP_FOLDER=tmp_folder
+        Utils.createFolderIfNotExists(Utils.RESOURCES_FOLDER)
+    }
+
+    @staticmethod
+    def shuffle(list_to_shuffle){
+        list_to_shuffle=list_to_shuffle.copy()
+        Utils.RNG.shuffle(list_to_shuffle)
+        return list_to_shuffle
     }
 
     @staticmethod
@@ -81,6 +90,11 @@ class Utils(object){
     @staticmethod
     def checkIfPathExists(path){
         return os.path.exists(path)
+    }
+
+    @staticmethod
+    def getResource(path){
+        return Utils.joinPath(Utils.RESOURCES_FOLDER,path)
     }
 
     @staticmethod
