@@ -222,7 +222,7 @@ def testStdVsEnhGenetic(){
             del enh_population
         }
     }
-    std_mean=(0.0,0.0)
+    std_mean=[0.0,0.0]
     for std_result in results['standard']{
         std_mean[0]+=std_result['generation']
         std_mean[1]+=std_result['output']
@@ -230,8 +230,8 @@ def testStdVsEnhGenetic(){
     }
     std_mean[0]/=tests
     std_mean[1]/=tests
-
-    enh_mean=(0,0)
+    print()
+    enh_mean=[0,0]
     for enh_result in results['enhanced']{
         enh_mean[0]+=enh_result['generation']
         enh_mean[1]+=enh_result['output']
@@ -239,6 +239,7 @@ def testStdVsEnhGenetic(){
     }
     enh_mean[0]/=tests
     enh_mean[1]/=tests
+    print()
     print('Standard Mean ({}): {} | Enhanced Mean ({}): {}'.format(std_mean[0],std_mean[1],enh_mean[0],enh_mean[1]))
 
     # Utils.printDict(elite_min.best,'Elite')

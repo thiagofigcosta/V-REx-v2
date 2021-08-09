@@ -39,6 +39,35 @@ class NodeType(Enum){
     RELU = 0
     SOFTMAX = 1
     SIGMOID = 2
+    TANH = 3
+    SOFTPLUS = 4
+    SOFTSIGN = 5
+    SELU = 6
+    ELU = 7
+    EXPONENTIAL = 8
+
+    def toKerasName(self){
+        if self == NodeType.RELU{
+            return 'relu'
+        }elif self == NodeType.SOFTMAX{
+            return 'softmax'
+        }elif self == NodeType.SIGMOID{
+            return 'sigmoid'
+        }elif self == NodeType.TANH{
+            return 'tanh'
+        }elif self == NodeType.SOFTPLUS{
+            return 'softplus'
+        }elif self == NodeType.SOFTSIGN{
+            return 'softsign'
+        }elif self == NodeType.SELU{
+            return 'selu'
+        }elif self == NodeType.ELU{
+            return 'elu'
+        }elif self == NodeType.EXPONENTIAL{
+            return 'exponential'
+        }
+        return None
+    }
 }
 
 class GeneticRankType(Enum){
