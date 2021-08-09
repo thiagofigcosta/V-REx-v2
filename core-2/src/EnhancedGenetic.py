@@ -6,6 +6,7 @@ from GeneticAlgorithm import GeneticAlgorithm
 from Enums import GeneticRankType
 from SearchSpace import SearchSpace
 from Utils import Utils
+from Core import Core
 
 class EnhancedGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -69,7 +70,9 @@ class EnhancedGenetic(GeneticAlgorithm){
         }
         non_selected_beings_set=set(individuals)-selected_beings_set
         for useless_being in non_selected_beings_set{
-            del useless_being
+            if Core.FREE_MEMORY_MANUALLY==True{
+                del useless_being
+            }
         }
         non_selected_beings_set.clear()
         next_gen=[]
@@ -80,7 +83,9 @@ class EnhancedGenetic(GeneticAlgorithm){
             self.current_population_size+=len(children)-2
         }
         for useful_being in selected_beings_set{
-            del useful_being
+            if Core.FREE_MEMORY_MANUALLY==True{
+                del useful_being
+            }
         }
         selected_beings_set.clear()
         individuals.clear()
@@ -120,13 +125,17 @@ class EnhancedGenetic(GeneticAlgorithm){
                     if self.rank_type==GeneticRankType.RELATIVE{
                         for e in range(len(individuals),len(individuals)-to_cut_off,-1){
                             individual=individuals[e]
-                            del individual
+                            if Core.FREE_MEMORY_MANUALLY==True{ 
+                                del individual
+                            }
                         }
                         individuals=individuals[:-to_cut_off]
                     }else{
                         for e in range(to_cut_off){
                             individual=individuals[e]
-                            del individual
+                            if Core.FREE_MEMORY_MANUALLY==True{
+                                del individual
+                            }
                         }
                         individuals=individuals[to_cut_off:]
                     }
@@ -190,7 +199,9 @@ class EnhancedGenetic(GeneticAlgorithm){
             individual.age+=1
             if self.getLifeLeft(individual)<0 {
                 if (individual.fitness<=(1-EnhancedGenetic.WILL_OF_D_PERCENT)*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>=EnhancedGenetic.WILL_OF_D_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
-                    del individual # dead
+                    if Core.FREE_MEMORY_MANUALLY==True{
+                        del individual # dead
+                    }
                     cemetery.append(i)
                 }else{
                     individual.resetMtDna() # keeping alive extremely good ones
@@ -198,7 +209,7 @@ class EnhancedGenetic(GeneticAlgorithm){
             }
         }
         for corpse in sorted(cemetery, reverse=True){
-            del individuals[corpse]
+            del individuals[corpse] # remove from list
         }
         self.current_population_size=len(individuals)
         return individuals
@@ -258,7 +269,9 @@ class EnhancedGenetic(GeneticAlgorithm){
         for i in custom_range {
             individual=individuals[i]
             if (individual.fitness<EnhancedGenetic.RECYCLE_THRESHOLD_PERCENT*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>EnhancedGenetic.RECYCLE_THRESHOLD_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
-                del individual
+                if Core.FREE_MEMORY_MANUALLY==True{
+                    del individual
+                }
                 idx_of_amazing_individual=int(EnhancedGenetic.WILL_OF_D_PERCENT*len(individuals)*Utils.random())
                 if self.rank_type!=GeneticRankType.RELATIVE{
                     idx_of_amazing_individual=(len(individuals)-1)-idx_of_amazing_individual

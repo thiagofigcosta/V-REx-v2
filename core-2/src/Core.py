@@ -11,6 +11,7 @@ class Core(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
     LOGGER=None
+    FREE_MEMORY_MANUALLY=True
 
     def __init__(self, mongo, logger){
         Core.LOGGER=logger

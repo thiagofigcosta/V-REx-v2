@@ -36,7 +36,9 @@ class PopulationManager(object){
         self.genetic_algorithm=None
         self.space=None
         for individual in self.population{
-            del individual
+            if Core.FREE_MEMORY_MANUALLY==True{
+                del individual
+            }
         }
         self.population=None
         self.print_deltas=None

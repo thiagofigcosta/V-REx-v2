@@ -177,6 +177,8 @@ def testStdVsEnhGenetic(){
         return -(y+47)*math.sin(math.sqrt(abs(y+(x/2)+47)))-x*math.sin(math.sqrt(abs(x-(y+47))))
     }
 
+    Core.FREE_MEMORY_MANUALLY=False
+
     verbose=False
     print('Standard vs Enhanced:')
     tests=50
@@ -203,8 +205,10 @@ def testStdVsEnhGenetic(){
         std_population.naturalSelection(max_gens)
         std_result=std_elite.best
         results['standard'].append(std_result)
-        del std_elite
-        del std_population
+        if Core.FREE_MEMORY_MANUALLY==True{
+            del std_elite
+            del std_population
+        }
 
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
@@ -213,8 +217,10 @@ def testStdVsEnhGenetic(){
         enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
         results['enhanced'].append(enh_result)
-        del enh_elite
-        del enh_population
+        if Core.FREE_MEMORY_MANUALLY==True{
+            del enh_elite
+            del enh_population
+        }
     }
     std_mean=(0.0,0.0)
     for std_result in results['standard']{
@@ -236,6 +242,8 @@ def testStdVsEnhGenetic(){
     print('Standard Mean ({}): {} | Enhanced Mean ({}): {}'.format(std_mean[0],std_mean[1],enh_mean[0],enh_mean[1]))
 
     # Utils.printDict(elite_min.best,'Elite')
+
+    Core.FREE_MEMORY_MANUALLY=True
 }
 
 
@@ -245,5 +253,5 @@ def testNNIntLabel(){
 
 # testStdGenetic()
 # testEnhGenetic()
-testStdVsEnhGenetic()
+#testStdVsEnhGenetic()
 testNNIntLabel()

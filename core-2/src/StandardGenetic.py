@@ -4,6 +4,7 @@
 from GeneticAlgorithm import GeneticAlgorithm
 from Enums import GeneticRankType
 from Utils import Utils
+from Core import Core
 
 class StandardGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -45,7 +46,9 @@ class StandardGenetic(GeneticAlgorithm){
             next_gen+=children
         }
         for individual in individuals {
-            del individual
+            if Core.FREE_MEMORY_MANUALLY==True{
+                del individual
+            }
         }
         individuals.clear()
         return next_gen
