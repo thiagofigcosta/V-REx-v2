@@ -6,7 +6,8 @@ from Utils import Utils
 from Logger import Logger
 from Core import Core
 from Dataset import Dataset
-from Enums import LabelEncoding,NodeType
+from Genome import Genome
+from Enums import LabelEncoding,NodeType,Loss,Metric
 from Hyperparameters import Hyperparameters
 from HallOfFame import HallOfFame
 from StandardNeuralNetwork import StandardNeuralNetwork
@@ -244,9 +245,9 @@ def testStdVsEnhGenetic(){
     enh_mean[0]/=tests
     enh_mean[1]/=tests
     print()
+    Utils.printDict(results,'Results')
+    print()
     print('Standard Mean ({}): {} | Enhanced Mean ({}): {}'.format(std_mean[0],std_mean[1],enh_mean[0],enh_mean[1]))
-
-    # Utils.printDict(elite_min.best,'Elite')
 
     Core.FREE_MEMORY_MANUALLY=True
 }
@@ -254,8 +255,10 @@ def testStdVsEnhGenetic(){
 
 def testNNIntLabel(){
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
     labels,label_map=Dataset.enumfyDatasetLabels(labels)
     labels,label_map_2=Dataset.encodeDatasetLabels(labels,LabelEncoding.INCREMENTAL)
+    features,labels=Dataset.balanceDataset(features,labels)
     print('First label:',Dataset.translateLabelFromOutput(labels[0],label_map,label_map_2))
     print('First label enum:',Dataset.translateLabelFromOutput(labels[0],label_map_2))
     print('First label encoding:',labels[0])
@@ -269,27 +272,130 @@ def testNNIntLabel(){
 
     input_size=len(train[0][0])
     output_size=len(train[1][0])
-    layers=1
-    layer_sizes=[output_size]
-    dropouts=[0]
+    layers=2
+    dropouts=0
+    bias=True
+    layer_sizes=[5,output_size]
+    label_type=LabelEncoding.INCREMENTAL
+    node_types=[NodeType.TANH,NodeType.SOFTMAX]
     batch_size=5
     alpha=0.01
     shuffle=True
     adam=True
-    label_type=LabelEncoding.INCREMENTAL
-    node_types=[NodeType.SOFTMAX]
-    patience_epochs=10
+    patience_epochs=0
     max_epochs=100
-    bias=[True]
-    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias)
+    loss='binary_crossentropy'
+    monitor_metric='f1_score'
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
     nn.buildModel(input_size)
     nn.train(train[0],train[1],val[0],val[1])
-    print(nn.history)
+    history=nn.history
+    Utils.printDict(history,'History')
+    preds=nn.predict(test[0])
+    print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
+    eval_res=nn.eval(test[0],test[1])
+    nn.clearCache()
+    del nn
+    Utils.printDict(eval_res,'Eval')
+
+    for i in range(len(preds)){
+        if (Dataset.labelToVanilla(preds[i])==test[1][i]){
+            print('OK:',Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2))
+        }else{
+            print('Fail:','Exptected:{} But was: {}'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2)))
+        }
+    }
+    Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
+}
+
+
+def testNNBinLabel_KFolds(){
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,LabelEncoding.BINARY)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+    train,test=Dataset.splitDataset(features,labels,.7)
+
+    input_size=len(train[0][0])
+    output_size=len(train[1][0])
+    layers=2
+    dropouts=0
+    bias=True
+    layer_sizes=[5,output_size]
+    label_type=LabelEncoding.BINARY
+    node_types=[NodeType.TANH,NodeType.SOFTMAX]
+    batch_size=5
+    alpha=0.01
+    shuffle=True
+    adam=True
+    patience_epochs=15
+    max_epochs=100
+    loss='categorical_crossentropy'
+    monitor_metric='f1_score'
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+
+    nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
+    nn.buildModel(input_size)
+    # KFolds
+    nn.trainKFolds(train[0],train[1],8)
+    ############################################################
+    # # Rolling Forecast Origin Technique
+    # nn.trainRollingForecast(train[0],train[1])
+    # # No Validation
+    # nn.trainNoValidation(train[0],train[1])
+    # # Custom Validation
+    # nn.trainCustomValidation(train[0],train[1],test[0],test[1])
+    ############################################################
+    history=nn.history
+    preds=nn.predict(test[0])
+    print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
+    eval_res=nn.eval(test[0],test[1])
+    del nn
+    Utils.printDict(eval_res,'Eval')
+
+    total=0
+    correct=0
+    wrong=0
+    for i in range(len(preds)){
+        total+=1
+        if (Dataset.labelToVanilla(preds[i])==test[1][i]){
+            correct+=1
+            print('OK:',Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2))
+        }else{
+            wrong+=1
+            print('Fail:','Exptected:{} But was: {}'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2)))
+        }
+    }
+    print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','%:','{:.2f}'.format(correct*100/float(total)))
+    Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
+}
+
+def testGeneticallyTunedNN(){
+    search_space=SearchSpace()
+    search_space.add(1,4,SearchSpace.Type.INT,'layers')
+    search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
+    search_space.add(0.0001,0.1,SearchSpace.Type.FLOAT,'alpha')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
+    search_space.add(15,30,SearchSpace.Type.INT,'patience_epochs')
+    search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
+    search_space.add(Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,SearchSpace.Type.INT,'loss')
+    search_space.add(LabelEncoding.BINARY,LabelEncoding.BINARY,SearchSpace.Type.INT,'label_type')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'adam')
+    search_space.add(Utils.getEnumBorder(Metric,False),Utils.getEnumBorder(Metric,True),SearchSpace.Type.INT,'monitor_metric')
+    search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
+    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
+    search_space.add(Utils.getEnumBorder(NodeType,False),Utils.getEnumBorder(NodeType,True),SearchSpace.Type.INT,'node_types')
+    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
+    search_space=Genome.enrichSearchSpace(search_space)
 }
 
 # testStdGenetic()
 # testEnhGenetic()
-#testStdVsEnhGenetic()
-testNNIntLabel()
+# testStdVsEnhGenetic()
+# testNNIntLabel()
+# testNNBinLabel_KFolds()
+testGeneticallyTunedNN()

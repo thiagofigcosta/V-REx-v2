@@ -93,8 +93,12 @@ class Utils(object){
     }
 
     @staticmethod
-    def getResource(path){
-        return Utils.joinPath(Utils.RESOURCES_FOLDER,path)
+    def getResource(filename){
+        path=filename
+		if Utils.appendToStrIfDoesNotEndsWith(Utils.RESOURCES_FOLDER,Utils.FILE_SEPARATOR) not in path{
+			path=Utils.joinPath(Utils.RESOURCES_FOLDER,filename)
+		}
+		return path
     }
 
     @staticmethod
@@ -489,14 +493,28 @@ class Utils(object){
     }
 
     @staticmethod
-	def printDict(dictionary,name=None,tabs=0){
+	def printDict(dictionary,name=None,tabs=0,inline=False){
 		start=''
 		if name is not None{
-			print('{}{}:'.format('\t'*tabs,name))
-			start='\t'
+			print('{}{}:'.format('\t'*tabs,name),end='' if inline else '\n')
+			start=' | ' if inline else '\t'
         }
+        first=True
 		for key,value in dictionary.items(){
-			print('{}{}{}: {}'.format('\t'*tabs,start,key,value))
+			print('{}{}{}: {}'.format('\t'*tabs,' ' if first and inline else start,key,value),end='' if inline else '\n')
+            first=False
+        }
+        if inline{
+            print()
+        }
+    }
+
+    @staticmethod
+    def getEnumBorder(enum,max_instead_of_min=False){
+        if max_instead_of_min{
+            return enum(list(enum._member_map_.items())[-1][1]).value
+        }else{
+            return enum(list(enum._member_map_.items())[0][1]).value
         }
     }
 }

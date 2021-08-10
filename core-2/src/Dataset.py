@@ -1,6 +1,7 @@
 #!/bin/python
 
 import math
+import numpy as np
 from Utils import Utils
 from Enums import LabelEncoding
 
@@ -99,11 +100,26 @@ class Dataset(object){
 
     @staticmethod
     def translateLabelFromOutput(label,first_equivalence,second_equivalence=None){
+        label=Dataset.labelToVanilla(label)
         if second_equivalence is None{
+            if repr(label) not in first_equivalence{
+                return [0]*len(first_equivalence.values()[0])
+            }
             return first_equivalence[repr(label)]
         }else{
+            if repr(label) not in second_equivalence{
+                return 'Abscent'
+            }
             return first_equivalence[repr(second_equivalence[repr(label)])]
         }
+    }
+
+    @staticmethod
+    def labelToVanilla(label){
+        if type(label) is not list{
+            label=[int(i) for i in label]
+        }
+        return label
     }
 
     @staticmethod
@@ -150,5 +166,130 @@ class Dataset(object){
         return (features[:firstSize],labels[:firstSize]),(features[firstSize:],labels[firstSize:])
     }
 
-    
+    @staticmethod
+    def statisticalAnalysis(predictions,corrects){
+        size = len(predictions)
+        if(len(corrects)<size){
+            size=len(corrects)
+        }
+        total=0.0
+        hits=0.0
+        true_negative=0
+        true_positive=0
+        false_negative=0
+        false_positive=0
+        wrong=0
+        pos_count=0
+        for i in range(size){
+            cur_pred=Dataset.labelToVanilla(predictions[i])
+            cur_correct=corrects[i]
+            equal=True
+            positive=True
+            for j in range(len(cur_pred)){
+                if(cur_pred[j]!=cur_correct[j]){
+                    equal=False
+                }
+                if(cur_correct[j]==0){
+                    positive=False
+                }
+            }
+            total+=1
+            if(equal){
+                hits+=1
+                if(positive){
+                    true_positive+=1
+                    pos_count+=1
+                }else{
+                    true_negative+=1
+                }
+            }else{
+                wrong+=1
+                if(positive){
+                    false_negative+=1
+                    pos_count+=1
+                }else{
+                    false_positive+=1
+                }
+            }
+        }
+        stats={}
+        stats['accuracy']=float(hits)/float(total)
+        if (len(corrects[0])==1 and pos_count>0){
+            stats['precision']=float(true_positive)/float((true_positive+false_positive))
+            stats['recall']=float(true_positive)/float((true_positive+false_negative))
+            stats['f1']=2*(stats['precision']*stats['recall'])/(stats['precision']+stats['recall'])
+        }
+        return stats
+    }
+
+    @staticmethod
+    def filterDataset(features,labels,only){
+        features_out=[]
+        labels_out=[]
+        value=None
+        for i in range(len(features)){
+            if labels[i]==only{
+                features_out.append(features[i])
+                labels_out.append(labels[i])
+                value=labels[i]
+            }
+        }
+        if type(value) is str{
+            abscent_value='Abscent'
+        }elif type(value) in (int,float){
+            if 0==value{
+                abscent_value=1
+            }else{
+                abscent_value=0
+            }
+        }else{
+            abscent_value=[0]*len(value)
+            if abscent_value==value{
+                abscent_value=[1]*len(value)
+            }
+        }
+        # abscent_value=None
+        for i in range(len(features)){
+            if labels[i]!=only{
+                if abscent_value is None{
+                    abscent_value=labels[i]
+                }
+                features_out.append(features[i])
+                labels_out.append(abscent_value)
+            }
+        }
+        return features_out,labels_out
+    }
+
+    @staticmethod
+    def balanceDataset(features,labels){
+        features_pos=[]
+        labels_pos=[]
+        features_neg=[]
+        labels_neg=[]
+        for i in range(len(features)){
+            if int(labels[i][0])==0{
+                features_neg.append(features[i])
+                labels_neg.append(labels[i])
+            }else{
+                features_pos.append(features[i])
+                labels_pos.append(labels[i])
+            }
+        }
+        if (len(labels_pos)>len(labels_neg)){
+            features_pos=features_pos[:len(labels_neg)]
+            labels_pos=labels_pos[:len(labels_neg)]
+            features_pos+=features_neg
+            labels_pos+=labels_neg
+            return Dataset.shuffleDataset(features_pos,labels_pos)
+        } elif (len(labels_pos)<len(labels_neg)){
+            features_neg=features_neg[:len(labels_pos)]
+            labels_neg=labels_neg[:len(labels_pos)]
+            features_neg+=features_pos
+            labels_neg+=labels_pos
+            return Dataset.shuffleDataset(features_neg,labels_neg)
+        }else{
+            return features,labels
+        }
+    }
 }

@@ -150,20 +150,19 @@ class EnhancedGenetic(GeneticAlgorithm){
     def sex(self, father, mother){
         family=[]
         if Utils.random()<self.sex_rate{
-            child_rnd=Utils.random()
-            amount_of_children=child_rnd*father.dna[self.index_max_children]+(1-child_rnd)*mother.dna[self.index_max_children]
+            amount_of_children=GeneticAlgorithm.geneShare(Utils.random(),father.dna[self.index_max_children],mother.dna[self.index_max_children])
             amount_of_children=max(1,amount_of_children)
             amount_of_children=min(self.max_children,amount_of_children)
             amount_of_children=self.calcBirthRate(amount_of_children)[1]
             children=[[] for _ in range(amount_of_children)]
             for c in range(amount_of_children){
                 for i in range(len(father.dna)){
-                    gene_share=Utils.random()
                     heritage_mother=Utils.random()>0.5
+                    children_genes=GeneticAlgorithm.geneShare(Utils.random(),father.dna[i],mother.dna[i])
                     if heritage_mother{
-                        children[c].append((1-gene_share)*father.dna[i]+gene_share*mother.dna[i])
+                        children[c].append(children_genes[1])
                     }else{
-                        children[c].append(gene_share*father.dna[i]+(1-gene_share)*mother.dna[i])
+                        children[c].append(children_genes[0])
                     }
                 }
             }
@@ -218,7 +217,7 @@ class EnhancedGenetic(GeneticAlgorithm){
     def mutateIndividual(self, individual, force=False){
         for i in range(len(individual.dna)){
             if (force or Utils.random()<self.mutation_rate) and i not in (self.index_max_age,self.index_max_children){
-                individual.dna[i]*=self.randomize()
+                individual.dna[i]=GeneticAlgorithm.geneMutation(self.randomize(),individual.dna[i])
             }
         }
         individual.fixlimits()

@@ -3,7 +3,7 @@
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    def __init__(self, batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, model_checkpoint=True){
+    def __init__(self, batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric='loss'){
         self.batch_size=batch_size
 		self.alpha=alpha
 		self.shuffle=shuffle
@@ -17,6 +17,8 @@ class Hyperparameters(object){
 		self.node_types=node_types
 		self.dropouts=dropouts
 		self.bias=bias
+		self.loss=loss
+		self.monitor_metric=monitor_metric
 
 		if type(self.dropouts) is not list {
 			self.dropouts=[self.dropouts]*self.layers

@@ -82,9 +82,9 @@ class StandardGenetic(GeneticAlgorithm){
             amount_of_children=2
             children=[[] for _ in range(amount_of_children)]
             for i in range(len(father.dna)){
-                gene_share=Utils.random()
-                children[0].append(gene_share*father.dna[i]+(1-gene_share)*mother.dna[i])
-                children[1].append((1-gene_share)*father.dna[i]+gene_share*mother.dna[i])
+                children_genes=GeneticAlgorithm.geneShare(Utils.random(),father.dna[i],mother.dna[i])
+                children[0].append(children_genes[0])
+                children[1].append(children_genes[1])
             }
             for i in range(len(children)){
                 children[i]=mother.makeChild(children[i])
@@ -107,7 +107,7 @@ class StandardGenetic(GeneticAlgorithm){
     def mutateIndividual(self, individual, force=False){
         for i in range(len(individual.dna)){
             if force or Utils.random()<self.mutation_rate{
-                individual.dna[i]*=self.randomize()
+                individual.dna[i]=GeneticAlgorithm.geneMutation(self.randomize(),individual.dna[i])
             }
         }
         individual.fixlimits()

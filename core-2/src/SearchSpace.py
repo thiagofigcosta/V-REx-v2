@@ -2,18 +2,29 @@
 # -*- coding: utf-8 -*-
  
 from enum import Enum
+from Utils import Utils
 
 class SearchSpace(object){
     
     class Type(Enum){
         INT=0
         FLOAT=1
+        BOOLEAN=2
     }
 
     class Dimension(object){
         # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-        def __init__(self,min_value,max_value,data_type,name=''){
+        def __init__(self,data_type,min_value=0,max_value=1,name=''){
+            if isinstance(min_value,Enum){
+                min_value=min_value.value
+            }
+            if isinstance(max_value,Enum){
+                max_value=max_value.value
+            }
+            if type(min_value)!=bool and (min_value > max_value){
+                raise Exception('Incorrect limits, swap min and max')
+            }
             self.name=name
             self.data_type=data_type
             self.min_value=min_value
@@ -24,21 +35,36 @@ class SearchSpace(object){
             }elif self.data_type==SearchSpace.Type.FLOAT{
                 self.min_value=float(self.min_value)
                 self.max_value=float(self.max_value)
+            }elif self.data_type==SearchSpace.Type.BOOLEAN{
+                self.min_value=False if self.min_value in (0,False) else True
+                self.max_value=False if self.min_value in (0,False) else True
+            }else{
+                raise Exception('Unhandled data type')
             }
         }
 
         def fixValue(self,value){
-            if value > self.max_value {
-                return self.max_value
-            }
-            if value < self.min_value {
-                return self.min_value
+            if (self.data_type==SearchSpace.Type.BOOLEAN and type(value) is bool and value in (self.min_value,self.max_value)){
+                return value
+            }elif (self.data_type==SearchSpace.Type.BOOLEAN) {
+                if Utils.random() >.5{
+                    return self.min_value
+                }else{
+                    return self.max_value
+                }
+            }else{
+                if value > self.max_value {
+                    return self.max_value
+                }
+                if value < self.min_value {
+                    return self.min_value
+                }
             }
             return value
         }
 
         def copy(self){
-            that=SearchSpace.Dimension(self.min_value,self.max_value,self.data_type,self.name)
+            that=SearchSpace.Dimension(self.data_type,self.min_value,self.max_value,self.name)
             return that
         }
     }
@@ -52,7 +78,16 @@ class SearchSpace(object){
     }
 
     def __getitem__(self, i){
-        return self.search_space[i]
+        if type(i) is int {
+            return self.search_space[i]
+        }elif type(i) is str{
+            for el in self.search_space{
+                if el.name==i{
+                    return el
+                }
+            }
+        }
+        return None
     }
 
     def __iter__(self){
@@ -60,7 +95,7 @@ class SearchSpace(object){
     }
 
     def add(self,min_value,max_value,data_type,name=''){
-        self.search_space.append(SearchSpace.Dimension(min_value,max_value,data_type,name))
+        self.search_space.append(SearchSpace.Dimension(data_type,min_value,max_value,name))
     }
 
     def get(self,i){

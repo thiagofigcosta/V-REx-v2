@@ -3,6 +3,8 @@
 
 from SearchSpace import SearchSpace
 from Core import Core
+from Enums import Metric,NodeType,Loss,LabelEncoding
+from Hyperparameters import Hyperparameters
 from Utils import Utils
 
 class Genome(object){
@@ -15,7 +17,7 @@ class Genome(object){
         self.limits=search_space
         self.dna=[]
         for limit in search_space{
-            if limit.data_type==SearchSpace.Type.INT {
+            if limit.data_type in (SearchSpace.Type.INT,SearchSpace.Type.BOOLEAN) {
                 self.dna.append(Utils.randomInt(limit.min_value,limit.max_value))
             }elif limit.data_type==SearchSpace.Type.FLOAT{
                 self.dna.append(Utils.randomFloat(limit.min_value,limit.max_value))
@@ -82,6 +84,8 @@ class Genome(object){
                 self.dna[i]=int(self.dna[i])
             }elif self.limits[i].data_type==SearchSpace.Type.FLOAT{
                 self.dna[i]=float(self.dna[i])
+            }elif self.limits[i].data_type==SearchSpace.Type.BOOLEAN{
+                self.dna[i]=bool(self.dna[i])
             }else{
                 raise Exception('Unkown search space data type {}'.format(self.limits[i].data_type))
             }
@@ -201,5 +205,93 @@ class Genome(object){
             }
         }
         return that
+    }
+
+    @staticmethod
+    def enrichSearchSpace(search_space,enh_neural_network=False){
+        if not enh_neural_network{
+            # mandatory
+            batch_size=search_space['batch_size']
+            alpha=search_space['alpha']
+            shuffle=search_space['shuffle']
+            patience_epochs=search_space['patience_epochs']
+            max_epochs=search_space['max_epochs']
+            loss=search_space['loss']
+            label_type=search_space['label_type']
+            #optional
+            adam=search_space['adam']
+            monitor_metric=search_space['monitor_metric']
+            model_checkpoint=search_space['model_checkpoint']
+            # layer dependent
+            layers=search_space['layers']
+            layer_sizes=search_space['layer_sizes']
+            node_types=search_space['node_types']
+            dropouts=search_space['dropouts']
+            bias=search_space['bias']
+
+            if adam is None{
+                adam=SearchSpace.Dimension(SearchSpace.Type.BOOLEAN,True,True,name='adam')
+            }
+            if monitor_metric is None{
+                min_metric=Utils.getEnumBorder(Metric,False)
+                monitor_metric=SearchSpace.Dimension(SearchSpace.Type.INT,min_metric,min_metric,name='monitor_metric')
+            }
+            if model_checkpoint is None{
+                model_checkpoint=SearchSpace.Dimension(SearchSpace.Type.BOOLEAN,True,True,name='model_checkpoint')
+            }
+
+            enriched_search_space=SearchSpace()
+            enriched_search_space.add(batch_size.min_value,batch_size.max_value,batch_size.data_type,batch_size.name)
+            enriched_search_space.add(alpha.min_value,alpha.max_value,alpha.data_type,alpha.name)
+            enriched_search_space.add(shuffle.min_value,shuffle.max_value,shuffle.data_type,shuffle.name)
+            enriched_search_space.add(patience_epochs.min_value,patience_epochs.max_value,patience_epochs.data_type,patience_epochs.name)
+            enriched_search_space.add(max_epochs.min_value,max_epochs.max_value,max_epochs.data_type,max_epochs.name)
+            enriched_search_space.add(loss.min_value,loss.max_value,loss.data_type,loss.name)
+            enriched_search_space.add(label_type.min_value,label_type.max_value,label_type.data_type,label_type.name)
+
+            enriched_search_space.add(adam.min_value,adam.max_value,adam.data_type,adam.name)
+            enriched_search_space.add(monitor_metric.min_value,monitor_metric.max_value,monitor_metric.data_type,monitor_metric.name)
+            enriched_search_space.add(model_checkpoint.min_value,model_checkpoint.max_value,model_checkpoint.data_type,model_checkpoint.name)
+            
+            enriched_search_space.add(layers.min_value,layers.max_value,layers.data_type,layers.name)
+            for l in range(layers.max_value){
+                enriched_search_space.add(layer_sizes.min_value,layer_sizes.max_value,layer_sizes.data_type,layer_sizes.name+'_{}'.format(l))
+                enriched_search_space.add(node_types.min_value,node_types.max_value,node_types.data_type,node_types.name+'_{}'.format(l))
+                enriched_search_space.add(dropouts.min_value,dropouts.max_value,dropouts.data_type,dropouts.name+'_{}'.format(l))
+                enriched_search_space.add(bias.min_value,bias.max_value,bias.data_type,bias.name+'_{}'.format(l))
+            }
+            return enriched_search_space
+        }
+    }
+
+    def toHyperparameters(self,enh_neural_network=False){
+        if not enh_neural_network{
+            batch_size=self.dna[0]
+            alpha=self.dna[1]
+            shuffle=self.dna[2]>0
+            patience_epochs=self.dna[3]
+            max_epochs=self.dna[4]
+            loss=Loss(self.dna[5]).toKerasName()
+            label_type=LabelEncoding(self.dna[6])
+
+            adam=self.dna[7]>0
+            monitor_metric=Metric(self.dna[8]).toKerasName()
+            model_checkpoint=self.dna[9]>0
+
+            layers=self.dna[10]
+            first_layer_dependent=11
+            layer_sizes=[]
+            node_types=[]
+            dropouts=[]
+            bias=[]
+            for l in range(layers){
+                layer_sizes.append(self.dna[(first_layer_dependent+0)*(l+1)])
+                node_types.append(NodeType(self.dna[(first_layer_dependent+1)*(l+1)]).toKerasName())
+                dropouts.append(self.dna[(first_layer_dependent+2)*(l+1)])
+                bias.append(self.dna[(first_layer_dependent+3)*(l+1)]>0)
+            }
+            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
+            return hyperparameters
+        }
     }
 }
