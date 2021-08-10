@@ -493,4 +493,8 @@ def testGeneticallyTunedNN(){
 # testStdVsEnhGenetic()
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
-testGeneticallyTunedNN()
+testGeneticallyTunedNN() 
+
+# TODO convert keras weights in custom format to be able to update weights from differrent shapes
+# TODO custom weights format -> serialize -> compress -> base64 -> base 65
+# TODO base 65 -> base64 -> uncompress -> deserialize -> custom weights format 
