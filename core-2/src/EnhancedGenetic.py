@@ -150,7 +150,7 @@ class EnhancedGenetic(GeneticAlgorithm){
     def sex(self, father, mother){
         family=[]
         if Utils.random()<self.sex_rate{
-            amount_of_children=GeneticAlgorithm.geneShare(Utils.random(),father.dna[self.index_max_children],mother.dna[self.index_max_children])
+            amount_of_children=GeneticAlgorithm.geneShare(Utils.random(),father.dna[self.index_max_children],mother.dna[self.index_max_children])[0]
             amount_of_children=max(1,amount_of_children)
             amount_of_children=min(self.max_children,amount_of_children)
             amount_of_children=self.calcBirthRate(amount_of_children)[1]

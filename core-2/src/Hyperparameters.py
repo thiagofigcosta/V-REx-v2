@@ -1,9 +1,11 @@
 #!/bin/python
 
+from Enums import Metric
+
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    def __init__(self, batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric='loss'){
+    def __init__(self, batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS){
         self.batch_size=batch_size
 		self.alpha=alpha
 		self.shuffle=shuffle

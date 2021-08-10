@@ -255,8 +255,13 @@ class Genome(object){
             
             enriched_search_space.add(layers.min_value,layers.max_value,layers.data_type,layers.name)
             for l in range(layers.max_value){
-                enriched_search_space.add(layer_sizes.min_value,layer_sizes.max_value,layer_sizes.data_type,layer_sizes.name+'_{}'.format(l))
-                enriched_search_space.add(node_types.min_value,node_types.max_value,node_types.data_type,node_types.name+'_{}'.format(l))
+                if l+1<layers.max_value{
+                    enriched_search_space.add(layer_sizes.min_value,layer_sizes.max_value,layer_sizes.data_type,layer_sizes.name+'_{}'.format(l))
+                    enriched_search_space.add(node_types.min_value,node_types.max_value,node_types.data_type,node_types.name+'_{}'.format(l))
+                }else{
+                    enriched_search_space.add(0,0,layer_sizes.data_type,'out_layer-size')
+                    enriched_search_space.add(0,0,node_types.data_type,'out_layer-type')
+                }
                 enriched_search_space.add(dropouts.min_value,dropouts.max_value,dropouts.data_type,dropouts.name+'_{}'.format(l))
                 enriched_search_space.add(bias.min_value,bias.max_value,bias.data_type,bias.name+'_{}'.format(l))
             }
@@ -264,19 +269,19 @@ class Genome(object){
         }
     }
 
-    def toHyperparameters(self,enh_neural_network=False){
+    def toHyperparameters(self,output_size,output_layer_type,enh_neural_network=False){
         if not enh_neural_network{
             batch_size=self.dna[0]
             alpha=self.dna[1]
-            shuffle=self.dna[2]>0
+            shuffle=self.dna[2]
             patience_epochs=self.dna[3]
             max_epochs=self.dna[4]
-            loss=Loss(self.dna[5]).toKerasName()
-            label_type=LabelEncoding(self.dna[6])
+            loss=Loss(self.dna[5])
+            label_type=self.getHyperparametersEncoder()
 
-            adam=self.dna[7]>0
-            monitor_metric=Metric(self.dna[8]).toKerasName()
-            model_checkpoint=self.dna[9]>0
+            adam=self.dna[7]
+            monitor_metric=Metric(self.dna[8])
+            model_checkpoint=self.dna[9]
 
             layers=self.dna[10]
             first_layer_dependent=11
@@ -284,14 +289,21 @@ class Genome(object){
             node_types=[]
             dropouts=[]
             bias=[]
+            amount_of_dependent=4
             for l in range(layers){
-                layer_sizes.append(self.dna[(first_layer_dependent+0)*(l+1)])
-                node_types.append(NodeType(self.dna[(first_layer_dependent+1)*(l+1)]).toKerasName())
-                dropouts.append(self.dna[(first_layer_dependent+2)*(l+1)])
-                bias.append(self.dna[(first_layer_dependent+3)*(l+1)]>0)
+                layer_sizes.append(self.dna[(first_layer_dependent+0)+amount_of_dependent*l])
+                node_types.append(NodeType(self.dna[(first_layer_dependent+1)+amount_of_dependent*l]))
+                dropouts.append(self.dna[(first_layer_dependent+2)+amount_of_dependent*l])
+                bias.append(self.dna[(first_layer_dependent+3)+amount_of_dependent*l])
             }
+            layer_sizes[-1]=output_size
+            node_types[-1]=output_layer_type
             hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
             return hyperparameters
         }
+    }
+
+    def getHyperparametersEncoder(self){
+        return LabelEncoding(self.dna[6])
     }
 }

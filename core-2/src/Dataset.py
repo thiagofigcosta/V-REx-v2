@@ -268,7 +268,7 @@ class Dataset(object){
         features_neg=[]
         labels_neg=[]
         for i in range(len(features)){
-            if int(labels[i][0])==0{
+            if (type(labels[i]) is int and labels[i]==0) or (type(labels[i]) is list and int(labels[i][0])==0){
                 features_neg.append(features[i])
                 labels_neg.append(labels[i])
             }else{

@@ -130,7 +130,8 @@ class StandardNeuralNetwork(object){
 		precision.__name__ = 'precision'
 		recall.__name__ = 'recall'
 		f1_score.__name__ = 'f1_score'
-		return [auc_original,auc,precision,recall,f1_score,'accuracy']
+		return [auc,precision,recall,f1_score,'accuracy']
+		# return [auc_original,auc,precision,recall,f1_score,'accuracy'] # TODO original auc not allowed
 	}
 
 	def _buildModel(self,input_size){
@@ -155,20 +156,20 @@ class StandardNeuralNetwork(object){
 		}else{
 			opt=SGD(learning_rate=self.hyperparameters.alpha)
 		}
-		model.compile(loss=self.hyperparameters.loss,optimizer=opt,metrics=self._metricsFactory())
+		model.compile(loss=self.hyperparameters.loss.toKerasName(),optimizer=opt,metrics=self._metricsFactory())
 		if self.verbose{
 			print(model.summary())
 		}
 		callbacks=[]
 		if self.hyperparameters.patience_epochs>0{
-			early_stopping=EarlyStopping(monitor='val_'+self.hyperparameters.monitor_metric, mode='min', patience=self.hyperparameters.patience_epochs,verbose=1)
+			early_stopping=EarlyStopping(monitor='val_'+self.hyperparameters.monitor_metric.toKerasName(), mode='min', patience=self.hyperparameters.patience_epochs,verbose=1)
 			callbacks.append(early_stopping)
 		}
 		if self.hyperparameters.model_checkpoint{
 			checkpoint_filename=self.basename+'_cp.h5'
 			self.checkpoint_filename=checkpoint_filename
 			checkpoint_filepath=self.getModelPath(self.checkpoint_filename)
-			checkpoint=ModelCheckpoint(checkpoint_filepath, monitor='val_'+self.hyperparameters.monitor_metric, verbose=1, save_best_only=True, mode='auto')
+			checkpoint=ModelCheckpoint(checkpoint_filepath, monitor='val_'+self.hyperparameters.monitor_metric.toKerasName(), verbose=1 if self.verbose else 0, save_best_only=True, mode='auto')
 			callbacks.append(checkpoint)
 		}
 		return model,callbacks
@@ -272,24 +273,34 @@ class StandardNeuralNetwork(object){
 		}
 		if val_labels is not None and epochs_wo_improvement is not None{
 			if best_val is not None{
-				if best_val<=val_metrics[self.hyperparameters.monitor_metric]{
-					print('val_{} did not improve from {}'.format(self.hyperparameters.monitor_metric,best_val))
+				if best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]{
+					if self.verbose{
+						print('val_{} did not improve from {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+					}
 					epochs_wo_improvement+=1
 				}else{
 					epochs_wo_improvement=0
-					best_val=val_metrics[self.hyperparameters.monitor_metric]
-					print('val_{} improved to {}'.format(self.hyperparameters.monitor_metric,best_val))
+					best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
+					if self.verbose{
+						print('val_{} improved to {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+					}
 					if self.hyperparameters.model_checkpoint{
-						print('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
+						if self.verbose{
+							print('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
+						}
 						self.model.save(self.getModelPath(self.checkpoint_filename))
 					}
 				}
 			}else{
-				best_val=val_metrics[self.hyperparameters.monitor_metric]
+				best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 			}
-			print()
+			if self.verbose{
+				print()
+			}
 			if self.hyperparameters.patience_epochs>0 and epochs_wo_improvement>=self.hyperparameters.patience_epochs{
-				print('Early stopping...')
+				if self.verbose {
+					print('Early stopping...')
+				}
 				best_val=StandardNeuralNetwork.NO_PATIENCE_LEFT_STR
 			}
 		}
@@ -375,7 +386,9 @@ class StandardNeuralNetwork(object){
 	}
 
 	def predict(self,features){
-		return self.model.predict(features)
+		preds=self.model.predict(features)
+		print('preds',preds)
+		return preds
 	}	
 
 	def fillMetricsNames(self,metrics){
@@ -407,6 +420,13 @@ class StandardNeuralNetwork(object){
 
 	def setWeights(self,weights){
 		self.model.set_weights(weights)
+	}
+
+	def getMetricMean(self,metric_name,Validation=False){
+		if Validation{
+			metric_names='val_'+metric_name
+		}
+		return sum(self.history[metric_name])/float(len(self.history[metric_name]))
 	}
 
 }

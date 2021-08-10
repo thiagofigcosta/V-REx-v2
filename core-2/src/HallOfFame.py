@@ -10,7 +10,7 @@ class HallOfFame(object){
         self.max_notables=max_notables
         self.looking_highest_fitness=looking_highest_fitness
         self.notables=[]
-        self.best={'output':0,'generation':-1,'genome': None}
+        self.best={'output':float('-inf') if looking_highest_fitness else float('inf'),'generation':-1,'genome': None}
     }
 
     def __del__(self){

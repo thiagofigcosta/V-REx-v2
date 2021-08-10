@@ -128,6 +128,10 @@ class PopulationManager(object){
             if self.after_gen_callback is not None {
                 self.after_gen_callback()
             }
+            if len(self.population)<2{
+                Core.LOGGER.warn('Stopping on generation {} due to its small size {}'.format(g,len(self.population)))
+                break
+            }
             if verbose_generations or self.print_deltas {
                 Core.LOGGER.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
             }

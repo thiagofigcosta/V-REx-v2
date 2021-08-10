@@ -284,8 +284,8 @@ def testNNIntLabel(){
     adam=True
     patience_epochs=0
     max_epochs=100
-    loss='binary_crossentropy'
-    monitor_metric='f1_score'
+    loss=Loss.BINARY_CROSSENTROPY
+    monitor_metric=Metric.F1
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
@@ -333,8 +333,8 @@ def testNNBinLabel_KFolds(){
     adam=True
     patience_epochs=15
     max_epochs=100
-    loss='categorical_crossentropy'
-    monitor_metric='f1_score'
+    loss=Loss.CATEGORICAL_CROSSENTROPY
+    monitor_metric=Metric.F1
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
@@ -384,13 +384,68 @@ def testGeneticallyTunedNN(){
     search_space.add(Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(LabelEncoding.BINARY,LabelEncoding.BINARY,SearchSpace.Type.INT,'label_type')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'adam')
-    search_space.add(Utils.getEnumBorder(Metric,False),Utils.getEnumBorder(Metric,True),SearchSpace.Type.INT,'monitor_metric')
+    search_space.add(Metric.RAW_LOSS,Metric.RAW_LOSS,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
     search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
     search_space.add(Utils.getEnumBorder(NodeType,False),Utils.getEnumBorder(NodeType,True),SearchSpace.Type.INT,'node_types')
     search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
     search_space=Genome.enrichSearchSpace(search_space)
+
+    Genome.CACHE_WEIGHTS=False
+
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    features,labels=Dataset.balanceDataset(features,labels)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+
+    train,test=Dataset.splitDataset(features,labels,.7)
+    search_maximum=False
+
+    def train_callback(genome){
+        nonlocal train,search_maximum
+        kfolds=5
+        train_features=train[0]
+        train_labels=train[1]
+        train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
+        input_size=len(train_features[0])
+        output_size=len(train_labels[0])
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
+        nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
+        nn.buildModel(input_size)
+        nn.trainKFolds(train_features,train_labels,kfolds)
+        output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
+        if output!=output{ #Not a Number
+            Core.LOGGER.warn('Not a number metric mean')
+            output=float('-inf') if search_maximum else float('inf')
+        }
+        genome.setWeights(nn.getWeights())
+        del nn
+        return output
+    }
+
+    verbose_natural_selection=True
+    verbose_population_details=True
+    population_start_size_enh=10
+    max_gens=10
+    max_age=2
+    max_children=3
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    max_notables=5
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+    
+    for individual in enh_elite.notables{
+        print(str(individual))
+    }
+    Utils.printDict(enh_elite.best,'Elite')
 }
 
 # testStdGenetic()
