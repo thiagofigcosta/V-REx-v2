@@ -254,10 +254,12 @@ def testStdVsEnhGenetic(){
 
 
 def testNNIntLabel(){
+    label_type=LabelEncoding.INCREMENTAL
+
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
     features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
     labels,label_map=Dataset.enumfyDatasetLabels(labels)
-    labels,label_map_2=Dataset.encodeDatasetLabels(labels,LabelEncoding.INCREMENTAL)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
     features,labels=Dataset.balanceDataset(features,labels)
     print('First label:',Dataset.translateLabelFromOutput(labels[0],label_map,label_map_2))
     print('First label enum:',Dataset.translateLabelFromOutput(labels[0],label_map_2))
@@ -276,7 +278,6 @@ def testNNIntLabel(){
     dropouts=0
     bias=True
     layer_sizes=[5,output_size]
-    label_type=LabelEncoding.INCREMENTAL
     node_types=[NodeType.TANH,NodeType.SOFTMAX]
     batch_size=5
     alpha=0.01
@@ -293,28 +294,36 @@ def testNNIntLabel(){
     nn.train(train[0],train[1],val[0],val[1])
     history=nn.history
     Utils.printDict(history,'History')
-    preds=nn.predict(test[0])
+    preds,activation=nn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
     eval_res=nn.eval(test[0],test[1])
     nn.clearCache()
     del nn
     Utils.printDict(eval_res,'Eval')
 
+    total=0
+    correct=0
+    wrong=0
     for i in range(len(preds)){
+        total+=1
         if (Dataset.labelToVanilla(preds[i])==test[1][i]){
-            print('OK:',Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2))
+            correct+=1
         }else{
-            print('Fail:','Exptected:{} But was: {}'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2)))
+            wrong+=1
+            print('Fail:','Exptected:{} (class: {}) But was: {} (class: {}, acti: {})'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),test[1][i],Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2),preds[i],activation[i]))
         }
     }
+    print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','acc:','{:.2f}%'.format(correct*100/float(total)))
     Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
 }
 
 
 def testNNBinLabel_KFolds(){
+    label_type=LabelEncoding.SPARSE
+
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
     labels,label_map=Dataset.enumfyDatasetLabels(labels)
-    labels,label_map_2=Dataset.encodeDatasetLabels(labels,LabelEncoding.BINARY)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
     features,scale=Dataset.normalizeDatasetFeatures(features)
     features,labels=Dataset.shuffleDataset(features,labels)
     train,test=Dataset.splitDataset(features,labels,.7)
@@ -325,7 +334,6 @@ def testNNBinLabel_KFolds(){
     dropouts=0
     bias=True
     layer_sizes=[5,output_size]
-    label_type=LabelEncoding.BINARY
     node_types=[NodeType.TANH,NodeType.SOFTMAX]
     batch_size=5
     alpha=0.01
@@ -334,7 +342,7 @@ def testNNBinLabel_KFolds(){
     patience_epochs=15
     max_epochs=100
     loss=Loss.CATEGORICAL_CROSSENTROPY
-    monitor_metric=Metric.F1
+    monitor_metric=Metric.RAW_LOSS
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
@@ -350,7 +358,7 @@ def testNNBinLabel_KFolds(){
     # nn.trainCustomValidation(train[0],train[1],test[0],test[1])
     ############################################################
     history=nn.history
-    preds=nn.predict(test[0])
+    preds,activation=nn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
     eval_res=nn.eval(test[0],test[1])
     del nn
@@ -363,13 +371,12 @@ def testNNBinLabel_KFolds(){
         total+=1
         if (Dataset.labelToVanilla(preds[i])==test[1][i]){
             correct+=1
-            print('OK:',Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2))
         }else{
             wrong+=1
-            print('Fail:','Exptected:{} But was: {}'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2)))
+            print('Fail:','Exptected:{} (class: {}) But was: {} (class: {}, acti: {})'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),test[1][i],Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2),preds[i],activation[i]))
         }
     }
-    print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','%:','{:.2f}'.format(correct*100/float(total)))
+    print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','acc:','{:.2f}%'.format(correct*100/float(total)))
     Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
 }
 
@@ -382,7 +389,7 @@ def testGeneticallyTunedNN(){
     search_space.add(15,30,SearchSpace.Type.INT,'patience_epochs')
     search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
     search_space.add(Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,SearchSpace.Type.INT,'loss')
-    search_space.add(LabelEncoding.BINARY,LabelEncoding.BINARY,SearchSpace.Type.INT,'label_type')
+    search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'adam')
     search_space.add(Metric.RAW_LOSS,Metric.RAW_LOSS,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
@@ -415,6 +422,7 @@ def testGeneticallyTunedNN(){
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
         nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size)
+        nn.setWeights(genome.getWeights())
         nn.trainKFolds(train_features,train_labels,kfolds)
         output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
         if output!=output{ #Not a Number
@@ -446,6 +454,38 @@ def testGeneticallyTunedNN(){
         print(str(individual))
     }
     Utils.printDict(enh_elite.best,'Elite')
+    print('Evaluating best')
+
+    def test_callback(genome){
+        nonlocal test
+        test_features=test[0]
+        test_labels=test[1]
+        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder())
+        input_size=len(test_features[0])
+        output_size=len(test_labels[0])
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
+        nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
+        nn.buildModel(input_size)
+        nn.setWeights(genome.getWeights())
+        preds,activation=nn.predict(test_features,True,True)
+        del nn
+        total=0
+        correct=0
+        wrong=0
+        for i in range(len(preds)){
+            total+=1
+            if (Dataset.labelToVanilla(preds[i])==test_labels[i]){
+                correct+=1
+            }else{
+                wrong+=1
+                print('Fail:','Exptected:{} (class: {}) But was: {} (class: {}, acti: {})'.format(Dataset.translateLabelFromOutput(test_labels[i],label_map,label_map_2),test_labels[i],Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2),preds[i],activation[i]))
+            }
+        }
+        print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','acc:','{:.2f}%'.format(correct*100/float(total)))
+        Utils.printDict(Dataset.statisticalAnalysis(preds,test_labels),'Statistical Analysis')
+    }
+
+    test_callback(enh_elite.getBestGenome())
 }
 
 # testStdGenetic()

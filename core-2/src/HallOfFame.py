@@ -21,6 +21,10 @@ class HallOfFame(object){
         }
     }
 
+    def getBestGenome(self){
+        return self.notables[0]
+    }
+
     def update(self,candidates,gen=-1){
         notables_to_select=candidates+self.notables
         notables_to_select.sort(key=lambda k: k.output, reverse=self.looking_highest_fitness)

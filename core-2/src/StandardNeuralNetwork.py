@@ -14,6 +14,7 @@ import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from Utils import Utils
 from Dataset import Dataset
+from Enums import NodeType 
 
 class StandardNeuralNetwork(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -385,8 +386,44 @@ class StandardNeuralNetwork(object){
 		}
 	}
 
-	def predict(self,features){
-		preds=self.model.predict(features)
+	def predict(self,features,get_classes=True,get_confidence=False,threshold=.5){
+		pred_res=self.model.predict(features)
+		classes=[]
+		confidence=[]
+		if get_classes or get_confidence {
+			for row in pred_res{
+				confidence.append(row.tolist())
+				row_class=[]
+				if self.hyperparameters.node_types[-1]!=NodeType.SOFTMAX{
+					for val in row{
+						if float(val)>=threshold{
+							row_class.append(1)
+						}else{
+							row_class.append(0)
+						}
+					}
+				}else{
+					max_idx=0
+					max_val=float('-inf')
+					for i,val in enumerate(row){
+						row_class.append(0)
+						if max_val<val{
+							max_val=val
+							max_idx=i
+						}
+					}
+					row_class[max_idx]=1
+				}
+				classes.append(row_class)
+			}
+		}
+		if get_classes and get_confidence{
+			return classes, confidence
+		}elif get_classes{
+			return classes
+		}elif get_confidence{
+			return confidence
+		}
 		return preds
 	}	
 
@@ -418,6 +455,9 @@ class StandardNeuralNetwork(object){
 	}
 
 	def setWeights(self,weights){
+		if weights is None{
+			return
+		}
 		self.model.set_weights(weights)
 	}
 
