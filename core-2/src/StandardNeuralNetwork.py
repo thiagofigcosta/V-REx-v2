@@ -387,7 +387,6 @@ class StandardNeuralNetwork(object){
 
 	def predict(self,features){
 		preds=self.model.predict(features)
-		print('preds',preds)
 		return preds
 	}	
 
