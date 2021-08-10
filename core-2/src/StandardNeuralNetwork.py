@@ -451,12 +451,45 @@ class StandardNeuralNetwork(object){
 	}
 
 	def getWeights(self){
-		return self.model.get_weights()
+		weights=self.model.get_weights()
+		amount_of_layers=self.hyperparameters.layers
+		boosted_weights={}
+		idx=0
+		for i in range(amount_of_layers){
+			boosted_weights['L_{}'.format(i)]=weights[idx]
+			idx+=1
+			bias=None
+			if self.hyperparameters.bias[i]{
+				bias=weights[idx]
+				idx+=1
+			}
+			boosted_weights['B_{}'.format(i)]=bias
+		}
+		return boosted_weights
 	}
 
-	def setWeights(self,weights){
-		if weights is None{
+	def setWeights(self,boosted_weights){
+		if boosted_weights is None{
 			return
+		}
+		amount_of_layers=self.hyperparameters.layers
+		weights=[]
+		for i in range(amount_of_layers){
+			print(self.hyperparameters.layer_sizes[i]) # TODO delete
+			name='L_{}'.format(i)
+			if name in boosted_weights{
+				weights.append(boosted_weights[name][:self.hyperparameters.layer_sizes[i]])
+			}else{
+				weights.append(np.array([Utils.random() for _ in range(self.hyperparameters.layer_sizes[i])]))
+			}
+			if self.hyperparameters.bias[i]{
+				name='B_{}'.format(i)
+				if name in boosted_weights{
+					weights.append(boosted_weights[name])
+				}else{
+					weights.append(np.array([Utils.random()]))
+				}
+			}
 		}
 		self.model.set_weights(weights)
 	}
@@ -466,6 +499,40 @@ class StandardNeuralNetwork(object){
 			metric_names='val_'+metric_name
 		}
 		return sum(self.history[metric_name])/float(len(self.history[metric_name]))
+	}
+
+	@staticmethod
+	def mergeWeights(weights_old,weights_new){
+		print('weights_old',weights_old) # TODO delete
+		print('weights_new',weights_new) # TODO delete
+		if weights_old is None and weights_new is None{
+			return None
+		}elif weights_old is None and weights_new is not None{
+			return weights_new
+		}elif weights_old is not None and weights_new is None{
+			return weights_old
+		}
+		weights_m={}
+		for k,v in weights_old.items(){
+			if v is not None and k not in weights_new{
+				weights_m[k]=v
+			}
+		}
+		for k,v in weights_new.items(){
+			if v is not None{
+				if k in weights_old {
+					if len(v)>=weights_old[k]{
+						weights_m[k]=v
+					}else{
+						weights_m[k]=v+weights_old[k][len(v):]
+					}
+				}else {
+					weights_m[k]=v
+				}
+			}
+		}
+		print('weights_m',weights_m) # TODO delete
+		return weights_m
 	}
 
 }

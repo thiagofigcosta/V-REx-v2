@@ -381,6 +381,7 @@ def testNNBinLabel_KFolds(){
 }
 
 def testGeneticallyTunedNN(){
+    metric=Metric.RAW_LOSS
     search_space=SearchSpace()
     search_space.add(1,4,SearchSpace.Type.INT,'layers')
     search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
@@ -391,7 +392,7 @@ def testGeneticallyTunedNN(){
     search_space.add(Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'adam')
-    search_space.add(Metric.RAW_LOSS,Metric.RAW_LOSS,SearchSpace.Type.INT,'monitor_metric')
+    search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
     search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
     search_space.add(Utils.getEnumBorder(NodeType,False),Utils.getEnumBorder(NodeType,True),SearchSpace.Type.INT,'node_types')
@@ -409,10 +410,9 @@ def testGeneticallyTunedNN(){
     features,labels=Dataset.shuffleDataset(features,labels)
 
     train,test=Dataset.splitDataset(features,labels,.7)
-    search_maximum=False
 
     def train_callback(genome){
-        nonlocal train,search_maximum
+        nonlocal train
         kfolds=5
         train_features=train[0]
         train_labels=train[1]
@@ -420,6 +420,7 @@ def testGeneticallyTunedNN(){
         input_size=len(train_features[0])
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
+        search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
         nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size)
         nn.setWeights(genome.getWeights())
@@ -429,7 +430,7 @@ def testGeneticallyTunedNN(){
             Core.LOGGER.warn('Not a number metric mean')
             output=float('-inf') if search_maximum else float('inf')
         }
-        genome.setWeights(nn.getWeights())
+        genome.setWeights(StandardNeuralNetwork.mergeWeights(genome.getWeights(),nn.getWeights()))
         del nn
         return output
     }
@@ -444,6 +445,7 @@ def testGeneticallyTunedNN(){
     recycle_rate=0.13
     sex_rate=0.7
     max_notables=5
+    search_maximum=metric!=Metric.RAW_LOSS
     enh_elite=HallOfFame(max_notables, search_maximum)
     en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
@@ -495,6 +497,5 @@ def testGeneticallyTunedNN(){
 # testNNBinLabel_KFolds()
 testGeneticallyTunedNN() 
 
-# TODO convert keras weights in custom format to be able to update weights from differrent shapes
 # TODO custom weights format -> serialize -> compress -> base64 -> base 65
 # TODO base 65 -> base64 -> uncompress -> deserialize -> custom weights format 
