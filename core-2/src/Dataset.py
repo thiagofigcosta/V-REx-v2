@@ -101,6 +101,9 @@ class Dataset(object){
     @staticmethod
     def translateLabelFromOutput(label,first_equivalence,second_equivalence=None){
         label=Dataset.labelToVanilla(label)
+        if first_equivalence is None and second_equivalence is None{
+            return label
+        }
         if second_equivalence is None{
             if repr(label) not in first_equivalence{
                 return [0]*len(first_equivalence.values()[0])
@@ -215,9 +218,24 @@ class Dataset(object){
         stats={}
         stats['accuracy']=float(hits)/float(total)
         if (len(corrects[0])==1 and pos_count>0){
-            stats['precision']=float(true_positive)/float((true_positive+false_positive))
-            stats['recall']=float(true_positive)/float((true_positive+false_negative))
-            stats['f1']=2*(stats['precision']*stats['recall'])/(stats['precision']+stats['recall'])
+            A=true_positive+false_positive
+            if A!=0{
+                stats['precision']=float(true_positive)/float(A)
+            }else{
+                stats['precision']=0
+            }
+            B=true_positive+false_negative
+            if B!=0{
+                stats['recall']=float(true_positive)/float(B)
+            }else{
+                stats['recall']=0
+            }
+            C=stats['precision']+stats['recall']
+            if C!=0{
+                stats['f1']=2*(stats['precision']*stats['recall'])/(C)
+            }else{
+                stats['f1']=0
+            }
         }
         return stats
     }
@@ -290,6 +308,47 @@ class Dataset(object){
             return Dataset.shuffleDataset(features_neg,labels_neg)
         }else{
             return features,labels
+        }
+    }
+
+    @staticmethod
+    def compareAndPrintLabels(classes,activations,labels,show_positives=False,equivalence_table_1=None,equivalence_table_2=None,logger=None){
+        total=0
+        correct=0
+        wrong=0
+        for i in range(len(classes)){
+            total+=1
+            pred=Dataset.labelToVanilla(classes[i])
+            label=labels[i]
+            str_cmp='Label: {} | Predicted: {}'.format(Dataset.translateLabelFromOutput(label,equivalence_table_1,equivalence_table_2),Dataset.translateLabelFromOutput(pred,equivalence_table_1,equivalence_table_2))
+            if activations is not None{
+                str_cmp+=' Activation: {}'.format(['{:.5f}'.format(el) for el in activations[i]])
+            }
+            if (pred==label){
+                correct+=1
+                str_cmp+=' | Correct, OK!'
+                if show_positives {
+                    if logger is None{
+                        print(str_cmp)
+                    }else{
+                        logger.info(str_cmp)
+                    }
+                }
+            }else{
+                wrong+=1
+                str_cmp+=' | FAILED! | Expected Class: {} But was: {}'.format(label,pred)
+                if logger is None{
+                    print(str_cmp)
+                }else{
+                    logger.warn(str_cmp)
+                }
+            }
+        }
+        str_summary='Total: {} - Correct: {} - Wrong: {} - Acc: {:.2f}%'.format(total,correct,wrong,(correct*100/float(total)))
+        if logger is None{
+            print(str_summary)
+        }else{
+            logger.info(str_summary)
         }
     }
 }

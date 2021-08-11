@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from SearchSpace import SearchSpace
-from Core import Core
 from Enums import Metric,NodeType,Loss,LabelEncoding
 from Hyperparameters import Hyperparameters
 from Utils import Utils
@@ -10,6 +9,9 @@ from Utils import Utils
 class Genome(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
+    COMPRESS_WEIGHTS=True
+    ENCODE_B64_WEIGHTS=True
+    ENCODE_B65_WEIGHTS=False
     CACHE_WEIGHTS=True
     CACHE_FOLDER='neural_genome_cache'
     
@@ -17,10 +19,12 @@ class Genome(object){
         self.limits=search_space
         self.dna=[]
         for limit in search_space{
-            if limit.data_type in (SearchSpace.Type.INT,SearchSpace.Type.BOOLEAN) {
+            if limit.data_type==SearchSpace.Type.INT {
                 self.dna.append(Utils.randomInt(limit.min_value,limit.max_value))
             }elif limit.data_type==SearchSpace.Type.FLOAT{
                 self.dna.append(Utils.randomFloat(limit.min_value,limit.max_value))
+            }elif limit.data_type==SearchSpace.Type.BOOLEAN{
+                self.dna.append(limit.max_value if Utils.random()>.5 else limit.min_value)
             }else{
                 raise Exception('Unkown search space data type {}'.format(limit.data_type))
             }
@@ -141,6 +145,7 @@ class Genome(object){
                    Utils.saveObj(self._weights,self.cache_file)
                    success=True
                }except Exception as e{
+                   from Core import Core
                    Core.LOGGER.exception(e)
                    if (tries==max_tries-1){
                         self.cache_file=self.genCacheFilename()
@@ -154,16 +159,42 @@ class Genome(object){
         }
     }
     
-    def getWeights(self){
+    def getWeights(self,raw=False){
         if (self.cached and Genome.CACHE_WEIGHTS){
             self._weights=Utils.loadObj(self.cache_file)
         }
-        return self._weights
+        if raw {
+            return self._weights
+        }else{
+            return Genome.decodeWeights(self._weights)
+        }
     }
 
-    def setWeights(self,weights){
-        self._weights=weights
+    def setWeights(self,weights,raw=False){
+        if raw {
+            self._weights=weights
+        }else{
+            self._weights=Genome.encodeWeights(weights)
+        }
         self.forceCache()
+    }
+
+    @staticmethod
+    def encodeWeights(weights){
+        wei_str=Utils.objToJsonStr(weights,compress=Genome.COMPRESS_WEIGHTS,b64=Genome.ENCODE_B64_WEIGHTS)
+        if Genome.ENCODE_B64_WEIGHTS and Genome.ENCODE_B65_WEIGHTS{
+            wei_str=Utils.base64ToBase65(wei_str)
+        }
+        return wei_str
+    }
+
+    @staticmethod
+    def decodeWeights(weights){
+        wei_str=weights
+        if Genome.ENCODE_B64_WEIGHTS and Genome.ENCODE_B65_WEIGHTS{
+            wei_str=Utils.base65ToBase64(wei_str)
+        }
+        return Utils.jsonStrToObj(wei_str,compress=Genome.COMPRESS_WEIGHTS,b64=Genome.ENCODE_B64_WEIGHTS)
     }
 
     def clearMemoryWeightsIfCached(self){
@@ -197,7 +228,7 @@ class Genome(object){
         that.id=self.id
         that.gen=self.gen
         if self.is_neural {
-            that._weights=self._weights.copy() # TODO code me
+            that._weights=self._weights # string copy
             that.cached=self.cached
             that.cache_file=self.genCacheFilename()
             if self.is_neural and self.cached and Genome.CACHE_WEIGHTS {
@@ -256,13 +287,13 @@ class Genome(object){
             enriched_search_space.add(layers.min_value,layers.max_value,layers.data_type,layers.name)
             for l in range(layers.max_value){
                 if l+1<layers.max_value{
-                    enriched_search_space.add(layer_sizes.min_value,layer_sizes.max_value,layer_sizes.data_type,layer_sizes.name+'_{}'.format(l))
-                    enriched_search_space.add(node_types.min_value,node_types.max_value,node_types.data_type,node_types.name+'_{}'.format(l))
+                    enriched_search_space.add(layer_sizes.min_value,layer_sizes.max_value,layer_sizes.data_type,layer_sizes.name[:-1]+'_{}'.format(l))
+                    enriched_search_space.add(node_types.min_value,node_types.max_value,node_types.data_type,node_types.name[:-1]+'_{}'.format(l))
                 }else{
                     enriched_search_space.add(0,0,layer_sizes.data_type,'out_layer-size')
                     enriched_search_space.add(0,0,node_types.data_type,'out_layer-type')
                 }
-                enriched_search_space.add(dropouts.min_value,dropouts.max_value,dropouts.data_type,dropouts.name+'_{}'.format(l))
+                enriched_search_space.add(dropouts.min_value,dropouts.max_value,dropouts.data_type,dropouts.name[:-1]+'_{}'.format(l))
                 enriched_search_space.add(bias.min_value,bias.max_value,bias.data_type,bias.name+'_{}'.format(l))
             }
             return enriched_search_space
@@ -296,9 +327,8 @@ class Genome(object){
                 dropouts.append(self.dna[(first_layer_dependent+2)+amount_of_dependent*l])
                 bias.append(self.dna[(first_layer_dependent+3)+amount_of_dependent*l])
             }
-            layer_sizes[-1]=output_size
-            node_types[-1]=output_layer_type
             hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
+            hyperparameters.setLastLayer(output_size,output_layer_type)
             return hyperparameters
         }
     }

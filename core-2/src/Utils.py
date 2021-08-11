@@ -11,11 +11,15 @@ from datetime import datetime
 import datetime as dt
 import joblib
 import gzip
+import zlib
+import base64
 import json
 import sys
 import uuid
+import socket
 from pympler.asizeof import asizeof
 import random as rd
+import numpy as np
 from bson.json_util import dumps as bdumps
 from bson.json_util import loads as bloads
 from numpy.random import Generator, MT19937
@@ -172,8 +176,18 @@ class Utils(object){
     }
 
     @staticmethod
-    def getTodayDate(date_format='%d/%m/%Y'){
+    def getTodayDate(date_format=DATE_FORMAT){
         return datetime.now().strftime(date_format)
+    }
+
+    @staticmethod
+    def getTodayDatetime(date_format=DATETIME_FORMAT){
+        return datetime.now().strftime(date_format)
+    }
+
+    @staticmethod
+    def getHostname(){
+        return socket.gethostname()
     }
 
     @staticmethod
@@ -515,6 +529,143 @@ class Utils(object){
             return enum(list(enum._member_map_.items())[-1][1]).value
         }else{
             return enum(list(enum._member_map_.items())[0][1]).value
+        }
+    }
+
+    @staticmethod
+    def objToJsonStr(obj,compress=False,b64=False){
+        if obj is None{
+            return None
+        }
+        data=json.dumps(obj,cls=Utils.NumpyJsonEncoder)
+        if compress{
+            compressed=zlib.compress(data.encode('utf-8'))
+            if b64 {
+                return base64.b64encode(compressed).decode()
+            }else{
+                return compressed.decode('iso-8859-1')
+            }
+        }else{
+            if b64 {
+                return base64.b64encode(data.encode('utf-8')).decode()
+            }else{
+                return data 
+            }
+        }
+    }
+
+    @staticmethod
+    def jsonStrToObj(data_str,compress=False,b64=False){
+        if data_str is None{
+            return None
+        }
+        if compress{
+            if b64 {
+                data_to_load=zlib.decompress(base64.b64decode(data_str.encode('utf-8'))).decode('utf-8')
+            }else{
+                data_to_load=zlib.decompress(data_str.encode('iso-8859-1')).decode('utf-8')
+            }
+        }else{
+            if b64 {
+                data_to_load=base64.b64decode(data_str.encode('utf-8')).decode('utf-8')
+            }else{
+                data_to_load=data_str
+            }
+        }
+        if data_to_load is not None{
+            data=json.loads(data_to_load,object_hook=Utils.NumpyJsonEncoder.dec)
+        }
+        return data
+    }
+
+    @staticmethod
+    def base64ToBase65(base64,char_65='*'){
+        if base64 is None{
+            return None
+        }
+        base65=''
+        mark_char='&'
+        last_char=mark_char
+        min_lenght=4
+        count=1
+        for c in base64+last_char{
+            if (last_char==mark_char){
+                last_char=c
+                count=1
+            }else{
+                if (last_char!=c){
+                    if (count>min_lenght){
+                        base65+='{}{}{}{}'.format(last_char,char_65,count,char_65)
+                    }else{
+                        base65+=last_char*count
+                    }
+                    count=0
+                    last_char=c
+                }
+                count+=1
+            }
+        }
+        return base65
+    }
+
+    @staticmethod
+    def base65ToBase64(base65,char_65='*'){
+        if base65 is None{
+            return None
+        }
+        if char_65 not in base65{ # fast
+            return base65
+        }
+        base64=''
+        mark_char='&'
+        last_char=mark_char
+        count=None
+        for c in base65 {
+            if (c==char_65){
+                if (count==None){
+                    count=-1
+                }else{
+                    base64+=last_char*(count-1)
+                    count=None
+                }
+            }
+            if (count==None){
+                if (c!=char_65){
+                    base64+=c
+                    last_char=c
+                }
+            }else{
+                if (c!=char_65){
+                    if (count==-1){
+                        count=int(c)
+                    }else{
+                        count*=10; 
+                        count+=int(c)
+                    }
+                }
+            }
+        }
+        return base64
+    }
+
+    class NumpyJsonEncoder(json.JSONEncoder){
+        # 'Just':'to fix vscode coloring':'when using pytho{\}'
+        def default(self, obj){
+            if isinstance(obj, np.ndarray){
+                data_b64 = base64.b64encode(obj.data).decode()
+                return dict(__ndarray__=data_b64,
+                            dtype=str(obj.dtype),
+                            shape=obj.shape)
+            }
+            return json.JSONEncoder.default(self, obj)
+        }
+
+        def dec(dct){
+            if isinstance(dct, dict) and '__ndarray__' in dct{
+                data = base64.b64decode(dct['__ndarray__'].encode())
+                return np.frombuffer(data, dct['dtype']).reshape(dct['shape'])
+            }
+            return dct
         }
     }
 }

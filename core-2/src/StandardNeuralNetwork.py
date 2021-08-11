@@ -15,6 +15,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from Utils import Utils
 from Dataset import Dataset
 from Enums import NodeType 
+from Core import Core 
 
 class StandardNeuralNetwork(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -159,7 +160,10 @@ class StandardNeuralNetwork(object){
 		}
 		model.compile(loss=self.hyperparameters.loss.toKerasName(),optimizer=opt,metrics=self._metricsFactory())
 		if self.verbose{
-			print(model.summary())
+			model_summary_lines=[]
+			model.summary(print_fn=lambda x: model_summary_lines.append(x))
+			model_summary_str='\n'.join(model_summary_lines)+'\n'
+			Core.LOGGER.multiline(model_summary_str)
 		}
 		callbacks=[]
 		if self.hyperparameters.patience_epochs>0{
@@ -173,6 +177,7 @@ class StandardNeuralNetwork(object){
 			checkpoint=ModelCheckpoint(checkpoint_filepath, monitor='val_'+self.hyperparameters.monitor_metric.toKerasName(), verbose=1 if self.verbose else 0, save_best_only=True, mode='auto')
 			callbacks.append(checkpoint)
 		}
+		self._resetWeights(model)
 		return model,callbacks
 	}
 
@@ -225,7 +230,7 @@ class StandardNeuralNetwork(object){
 		batch_size=max(min(len(labels_epoch),self.hyperparameters.batch_size),1)
 		batch_width=int(len(labels_epoch)/batch_size)
 		if self.verbose{
-			print('Epoch {} of {}'.format(e+1,self.hyperparameters.max_epochs))
+			Core.LOGGER.info('Epoch {} of {}'.format(e+1,self.hyperparameters.max_epochs))
 		}
 		epoch_metrics=None
 		for b in range(batch_size){
@@ -267,27 +272,27 @@ class StandardNeuralNetwork(object){
 			}
 		}
 		if self.verbose{
-			Utils.printDict(epoch_metrics,'Epoch metrics',inline=True)
+			Core.LOGGER.logDict(epoch_metrics,'Epoch metrics',inline=True)
 			if val_labels is not None{
-				Utils.printDict(val_metrics,'Validation metrics',inline=True)
+				Core.LOGGER.logDict(val_metrics,'Validation metrics',inline=True)
 			}
 		}
 		if val_labels is not None and epochs_wo_improvement is not None{
 			if best_val is not None{
 				if best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]{
 					if self.verbose{
-						print('val_{} did not improve from {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+						Core.LOGGER.info('val_{} did not improve from {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
 					}
 					epochs_wo_improvement+=1
 				}else{
 					epochs_wo_improvement=0
 					best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 					if self.verbose{
-						print('val_{} improved to {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+						Core.LOGGER.info('val_{} improved to {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
 					}
 					if self.hyperparameters.model_checkpoint{
 						if self.verbose{
-							print('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
+							Core.LOGGER.info('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
 						}
 						self.model.save(self.getModelPath(self.checkpoint_filename))
 					}
@@ -296,11 +301,11 @@ class StandardNeuralNetwork(object){
 				best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 			}
 			if self.verbose{
-				print()
+				Core.LOGGER.info()
 			}
 			if self.hyperparameters.patience_epochs>0 and epochs_wo_improvement>=self.hyperparameters.patience_epochs{
 				if self.verbose {
-					print('Early stopping...')
+					Core.LOGGER.info('Early stopping...')
 				}
 				best_val=StandardNeuralNetwork.NO_PATIENCE_LEFT_STR
 			}
@@ -450,6 +455,36 @@ class StandardNeuralNetwork(object){
 		return self.fillMetricsNames(metrics)
 	}
 
+	def _resetWeights(self,model){
+		for layer in model.layers{
+			if isinstance(layer, tf.keras.Model){
+				self._resetWeights(layer)
+			}else{
+				if hasattr(layer, 'cell'){
+					init_container = layer.cell
+				}else{
+					init_container = layer
+				}
+				for key, initializer in init_container.__dict__.items(){
+					if 'initializer' in key{
+						if key == 'recurrent_initializer'{
+							var = getattr(init_container, 'recurrent_kernel')
+						}else{
+							var = getattr(init_container, key.replace('_initializer', ''))
+						}
+						if var is not None{
+							var.assign(initializer(var.shape, var.dtype)) #use the initializer
+						}
+					}
+				}
+			}
+		}
+	}
+
+	def resetWeights(self){
+		self._resetWeights(self.model)
+	}
+
 	def getWeights(self){
 		weights=self.model.get_weights()
 		amount_of_layers=self.hyperparameters.layers
@@ -465,6 +500,9 @@ class StandardNeuralNetwork(object){
 			}
 			boosted_weights['B_{}'.format(i)]=bias
 		}
+		if (idx!=len(weights)){
+			Core.LOGGER.warn('Casted {} weights of {}, check the getWeights function'.format(idx,len(weights)))
+		}
 		return boosted_weights
 	}
 
@@ -473,21 +511,22 @@ class StandardNeuralNetwork(object){
 			return
 		}
 		amount_of_layers=self.hyperparameters.layers
+		cur_weights=self.getWeights()
+		boosted_weights=self.mergeWeights(cur_weights,boosted_weights)
 		weights=[]
 		for i in range(amount_of_layers){
-			print(self.hyperparameters.layer_sizes[i]) # TODO delete
 			name='L_{}'.format(i)
 			if name in boosted_weights{
-				weights.append(boosted_weights[name][:self.hyperparameters.layer_sizes[i]])
+				weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
 			}else{
-				weights.append(np.array([Utils.random() for _ in range(self.hyperparameters.layer_sizes[i])]))
+				weights.append(cur_weights[name])
 			}
 			if self.hyperparameters.bias[i]{
 				name='B_{}'.format(i)
 				if name in boosted_weights{
-					weights.append(boosted_weights[name])
+					weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
 				}else{
-					weights.append(np.array([Utils.random()]))
+					weights.append(cur_weights[name])
 				}
 			}
 		}
@@ -501,10 +540,10 @@ class StandardNeuralNetwork(object){
 		return sum(self.history[metric_name])/float(len(self.history[metric_name]))
 	}
 
-	@staticmethod
-	def mergeWeights(weights_old,weights_new){
-		print('weights_old',weights_old) # TODO delete
-		print('weights_new',weights_new) # TODO delete
+	def mergeWeights(self,weights_old,weights_new=[None]){
+		if weights_new==[None]{
+			weights_new=self.getWeights()
+		}
 		if weights_old is None and weights_new is None{
 			return None
 		}elif weights_old is None and weights_new is not None{
@@ -520,19 +559,128 @@ class StandardNeuralNetwork(object){
 		}
 		for k,v in weights_new.items(){
 			if v is not None{
-				if k in weights_old {
-					if len(v)>=weights_old[k]{
-						weights_m[k]=v
-					}else{
-						weights_m[k]=v+weights_old[k][len(v):]
-					}
+				if k in weights_old and weights_old[k] is not None{
+					weights_m[k]=self.fillWeights(v,weights_old[k])
 				}else {
 					weights_m[k]=v
 				}
 			}
 		}
-		print('weights_m',weights_m) # TODO delete
 		return weights_m
+	}
+
+	def shrinkWeights(self,weights,weights_with_format){
+		shape=list(weights.shape)
+		desired_shape=list(weights_with_format.shape)
+		if shape==desired_shape{
+			return weights
+		}
+		if len(desired_shape)==1{
+			desired_shape.append(None)
+		}
+		desired_shape_1=1 if desired_shape[1] is None else desired_shape[1]
+		new_weights=[]
+		for i in range(desired_shape[0]){
+			array=[]
+			for j in range(desired_shape_1){
+				value=None
+				if i < shape[0] and ((desired_shape[1] is None and j==0) or j < len(weights[i])){
+					if desired_shape[1] is not None{
+						value=weights[i][j]
+					}else{
+						value=weights[i]
+					}
+				}else{
+					if desired_shape[1] is not None{
+						value=weights_with_format[i][j]
+					}else{
+						value=weights_with_format[i]
+					}
+				}
+				array.append(value)
+			}
+			if desired_shape[1] is not None{
+				new_weights.append(np.array(array,dtype=weights_with_format.dtype))
+			}else{
+				new_weights.append(array[0])
+			}
+		}
+		new_weights=np.array(new_weights,dtype=weights_with_format.dtype)
+		new_weights_shape=list(new_weights.shape)
+		if len(new_weights_shape)==1{
+			new_weights_shape.append(None)
+		}
+		if new_weights_shape!=desired_shape{
+			Core.LOGGER.warn('Error on shrinkWeights, trying to format shape {} into {}, result {}'.format(shape,desired_shape,new_weights_shape))
+		}
+		return new_weights
+	}
+
+	def fillWeights(self,weights_a,weights_b){
+		shape_a=list(weights_a.shape)
+		shape_b=list(weights_b.shape)
+		if shape_a==shape_b{
+			return weights_a
+		}
+		desired_shape=[0,1]
+		if shape_a[0] > shape_b[0] {
+			desired_shape[0]=shape_a[0]
+		}else{
+			desired_shape[0]=shape_b[0]
+		}
+		if len(shape_a) > 1 and len(shape_b) > 1{
+			if shape_a[1] > shape_b[1] {
+				desired_shape[1]=shape_a[1]
+			}else{
+				desired_shape[1]=shape_b[1]
+			}
+		}elif len(shape_a) > 1{
+			desired_shape[1]=shape_a[1]
+			shape_b.append(None)
+		}elif len(shape_b) > 1{
+			desired_shape[1]=shape_b[1]
+			shape_a.append(None)
+		}else{
+			shape_a.append(None)
+			shape_b.append(None)
+		}
+		new_weights=[]
+		for i in range(desired_shape[0]){
+			array=[]
+			for j in range(desired_shape[1]){
+				value=None
+				if i < shape_a[0] and ((shape_a[1] is None and j==0) or j < len(weights_a[i])){
+					if shape_a[1] is not None{
+						value=weights_a[i][j]
+					}else{
+						value=weights_a[i]
+					}
+				}elif i < shape_b[0] and ((shape_b[1] is None and j==0) or j < len(weights_b[i])){
+					if shape_b[1] is not None{
+						value=weights_b[i][j]
+					}else{
+						value=weights_b[i]
+					}
+				}else{
+					value=Utils.randomFloat(-1,1)
+				}
+				array.append(value)
+			}
+			if shape_a[1] is not None and shape_b[1] is not None{
+				new_weights.append(np.array(array,dtype=weights_b.dtype))
+			}else{
+				new_weights.append(array[0])
+			}
+		}
+		new_weights=np.array(new_weights,dtype=weights_b.dtype)
+		new_weights_shape=list(new_weights.shape)
+		if len(new_weights_shape)==1{
+			new_weights_shape.append(1)
+		}
+		if new_weights_shape!=desired_shape{
+			Core.LOGGER.warn('Error on fillWeights, trying to format biggest shape between {} and {}, result {} - expected {}'.format(shape_a,shape_b,new_weights_shape,desired_shape))
+		}
+		return new_weights
 	}
 
 }

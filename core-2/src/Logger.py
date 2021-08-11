@@ -18,14 +18,21 @@ class Logger(object){
     EYE_CATCHER=False
 
 	def __init__(self, log_folder,verbose=False,print_on_screen=True,name='application'){
-		if not log_folder.endswith('\\' if os.name == 'nt' else '/'){
-            log_folder+='\\' if os.name == 'nt' else '/'
-        }
+		if log_folder is not None{
+			if not log_folder.endswith('\\' if os.name == 'nt' else '/'){
+				log_folder+='\\' if os.name == 'nt' else '/'
+			}
+		}
 		self.log_folder=log_folder
         self.print_on_screen=print_on_screen
 		self.print_verbose=verbose
 		self.name=name
     }
+
+	@staticmethod
+	def DEFAULT(){
+		return Logger(None)
+	}
 		
 	def _log(self,message,error=False,traceback=False,warn=False,fatal=False,clean=False){
 		if not clean{
@@ -72,9 +79,12 @@ class Logger(object){
 				print (formatted_message, flush=True)
             }
         }
-		with open(self.getLogFilename(), 'a') as logfile{
-			logfile.write(formatted_message+'\n')
-        }
+		log_filename=self.getLogFilename()
+		if log_filename is not None{
+			with open(log_filename, 'a') as logfile{
+				logfile.write(formatted_message+'\n')
+			}
+		}
     }
 
     def _handleException(self,e){
@@ -144,11 +154,44 @@ class Logger(object){
     }
 
 	def getLogFilename(self){
+		if self.log_folder is None{
+			return None
+		}
 		now = datetime.now()
 		return self.log_folder+'log-{}-{}.txt'.format(self.name,now.strftime(Logger.DATE_FORMAT))
 	}
 
-    def info(self,message){
+	def logDict(self,dictionary,name=None,tabs=0,inline=False){
+		start=''
+		to_print_all=''
+		if name is not None{
+			to_print='{}{}:{}'.format('\t'*tabs,name,'' if inline else '\n')
+			if inline{
+				to_print_all+=to_print
+			}else{
+				self.info(to_print)
+			}
+			start=' | ' if inline else '\t'
+        }
+        first=True
+		for key,value in dictionary.items(){
+			to_print='{}{}{}: {}{}'.format('\t'*tabs,' ' if first and inline else start,key,value,'' if inline else '\n')
+			if inline{
+				to_print_all+=to_print
+			}else{
+				self.info(to_print)
+			}
+            first=False
+        }
+    }
+
+	def multiline(self,messages){
+		for message in messages.split('\n'){
+        	self._log(message,error=False,traceback=False,warn=False)
+		}
+    }
+
+    def info(self,message=''){
         self._log(message,error=False,traceback=False,warn=False)
     }
 

@@ -9,7 +9,7 @@ class CrossValidation(Enum){
     NONE = 0
     ROLLING_FORECASTING_ORIGIN = 1
     KFOLDS = 2
-    TWENTY_PERCENT = 3
+    FIXED_PERCENT = 3
 }
 
 class Metric(Enum){
@@ -40,7 +40,7 @@ class LabelEncoding(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     INCREMENTAL = 0
     BINARY = 1
-    # yes, will jump 2
+    # yes, I will jump number 2
     BINARY_PLUS_ONE = 3
     SPARSE = 4
     DISTINCT_SPARSE = 5

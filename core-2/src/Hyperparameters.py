@@ -1,6 +1,6 @@
 #!/bin/python
 
-from Enums import Metric
+from Enums import Metric,NodeType
 
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -42,4 +42,12 @@ class Hyperparameters(object){
 			raise Exception('len(bias) different from amount of layers')
 		}
     }
+
+	def setLastLayer(self,output_size,out_node_type){
+		if out_node_type==NodeType.SOFTMAX and output_size==1{
+			out_node_type=NodeType.SIGMOID # keras returns 1 and 0 for 1 sized softmax
+		}
+		self.layer_sizes[-1]=output_size
+		self.node_types[-1]=out_node_type
+	}
 }

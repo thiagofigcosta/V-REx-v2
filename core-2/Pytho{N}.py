@@ -39,7 +39,7 @@ def save_source(path,content):
 def remove_string_contents(str):
     return re.sub(r'([\"\'])(?:(?=(\\?))\2.)*?\1','',str)
 
-def get_custom_imported_files(path):
+def get_custom_imported_files(path,ext_files_set):
     file_content,work_dir=read_source(path)
     file_content=remove_string_contents(file_content)
     libs = re.findall(r'.*from (.*?)[ .*|.*\n|.*\r]', file_content) + re.findall(r'.*import (.*?)[ .*|.*\n|.*\r]', file_content)
@@ -47,21 +47,22 @@ def get_custom_imported_files(path):
     for lib in libs:
         filename=lib+".py"
         filepath=work_dir+filename
-        if os.path.exists(filepath):
+        if os.path.exists(filepath) and filepath not in ext_files_set:
+            ext_files_set.add(filepath)
             ext_files.append(filepath)
     return ext_files
 
-def _get_custom_imported_files_recursively(ext_files):
+def _get_custom_imported_files_recursively(ext_files,ext_files_set):
     if len(ext_files)==0:
         return ext_files
     else:
         new_ext_files=[]
         for ext_file in ext_files:
-            new_ext_files.extend(_get_custom_imported_files_recursively(get_custom_imported_files(ext_file)))
+            new_ext_files.extend(_get_custom_imported_files_recursively(get_custom_imported_files(ext_file,ext_files_set),ext_files_set))
         return ext_files+new_ext_files
 
-def get_custom_imported_files_recursively(ext_file):
-    return [ext_file]+_get_custom_imported_files_recursively(get_custom_imported_files(ext_file))
+def get_custom_imported_files_recursively(ext_file,ext_files_set):
+    return [ext_file]+_get_custom_imported_files_recursively(get_custom_imported_files(ext_file,ext_files_set),ext_files_set)
 
 def replace_last(str,a,b):
     return str[::-1].replace(a,b,1)[::-1]
@@ -119,7 +120,7 @@ def pre_compile(content,print_out=False):
     return parsed_lines            
 
 def pre_compile_and_save_all_files(source_path,print_out=False):
-    ext_files=get_custom_imported_files_recursively(source_path)
+    ext_files=get_custom_imported_files_recursively(source_path,set())
     for ext_file in ext_files:
         save_source(TMP_FOLDER+SEPARATOR+ext_file,pre_compile(read_source(ext_file)[0],print_out=print_out))
 

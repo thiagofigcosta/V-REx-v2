@@ -37,7 +37,7 @@ class SearchSpace(object){
                 self.max_value=float(self.max_value)
             }elif self.data_type==SearchSpace.Type.BOOLEAN{
                 self.min_value=False if self.min_value in (0,False) else True
-                self.max_value=False if self.min_value in (0,False) else True
+                self.max_value=False if self.max_value in (0,False) else True
             }else{
                 raise Exception('Unhandled data type')
             }

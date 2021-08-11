@@ -36,7 +36,7 @@ def loopOnQueue(core){
                     }
                 }elif task=='Eval SNN'{
                     done=False
-                    core.evalNeuralNetwork(payload['args']['independent_net_id'],payload['args']['result_id'],payload['args']['eval_data'])
+                    core.predictNeuralNetwork(payload['args']['independent_net_id'],payload['args']['result_id'],payload['args']['eval_data'])
                     if not done{
                         raise Exception('Failed to eval neural network ({}) with data: {}'.format(payload['args']['independent_net_id'],payload['args']['eval_data']))
                     }else{

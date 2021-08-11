@@ -49,7 +49,7 @@ def testStdGenetic(){
     max_notables=5
     elite_min=HallOfFame(max_notables, search_maximum)
     ga=StandardGenetic(search_maximum,mutation_rate, sex_rate)
-    population=PopulationManager(ga,limits,eggHolder,population_size,neural_genome=False,print_deltas=verbose,after_gen_callback=lambda:print('After gen'))
+    population=PopulationManager(ga,limits,eggHolder,population_size,neural_genome=False,print_deltas=verbose,after_gen_callback=lambda x:print('After gen'))
     population.hall_of_fame=elite_min
     population.naturalSelection(max_gens,verbose)
     print('Expected: (x: 512, y: 404.2319) = -959.6407')
@@ -59,7 +59,7 @@ def testStdGenetic(){
     Utils.printDict(elite_min.best,'Elite')
 
     runned_after_gen=False
-    def afterGen(){
+    def afterGen(args_list){
         nonlocal runned_after_gen
         if not runned_after_gen {
             print('After gen - only once')
@@ -294,26 +294,13 @@ def testNNIntLabel(){
     nn.train(train[0],train[1],val[0],val[1])
     history=nn.history
     Utils.printDict(history,'History')
-    preds,activation=nn.predict(test[0],True,True)
+    preds,activations=nn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
     eval_res=nn.eval(test[0],test[1])
     nn.clearCache()
     del nn
     Utils.printDict(eval_res,'Eval')
-
-    total=0
-    correct=0
-    wrong=0
-    for i in range(len(preds)){
-        total+=1
-        if (Dataset.labelToVanilla(preds[i])==test[1][i]){
-            correct+=1
-        }else{
-            wrong+=1
-            print('Fail:','Exptected:{} (class: {}) But was: {} (class: {}, acti: {})'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),test[1][i],Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2),preds[i],activation[i]))
-        }
-    }
-    print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','acc:','{:.2f}%'.format(correct*100/float(total)))
+    Dataset.compareAndPrintLabels(preds,activations,test[1],show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
     Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
 }
 
@@ -358,25 +345,12 @@ def testNNBinLabel_KFolds(){
     # nn.trainCustomValidation(train[0],train[1],test[0],test[1])
     ############################################################
     history=nn.history
-    preds,activation=nn.predict(test[0],True,True)
+    preds,activations=nn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
     eval_res=nn.eval(test[0],test[1])
     del nn
     Utils.printDict(eval_res,'Eval')
-
-    total=0
-    correct=0
-    wrong=0
-    for i in range(len(preds)){
-        total+=1
-        if (Dataset.labelToVanilla(preds[i])==test[1][i]){
-            correct+=1
-        }else{
-            wrong+=1
-            print('Fail:','Exptected:{} (class: {}) But was: {} (class: {}, acti: {})'.format(Dataset.translateLabelFromOutput(test[1][i],label_map,label_map_2),test[1][i],Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2),preds[i],activation[i]))
-        }
-    }
-    print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','acc:','{:.2f}%'.format(correct*100/float(total)))
+    Dataset.compareAndPrintLabels(preds,activations,test[1],show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
     Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
 }
 
@@ -414,6 +388,7 @@ def testGeneticallyTunedNN(){
     def train_callback(genome){
         nonlocal train
         kfolds=5
+        preserve_weights=True
         train_features=train[0]
         train_labels=train[1]
         train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
@@ -426,11 +401,13 @@ def testGeneticallyTunedNN(){
         nn.setWeights(genome.getWeights())
         nn.trainKFolds(train_features,train_labels,kfolds)
         output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
-        if output!=output{ #Not a Number
+        if output!=output{ # Not a Number, ignore this genome
             Core.LOGGER.warn('Not a number metric mean')
             output=float('-inf') if search_maximum else float('inf')
         }
-        genome.setWeights(StandardNeuralNetwork.mergeWeights(genome.getWeights(),nn.getWeights()))
+        if preserve_weights {
+            genome.setWeights(nn.mergeWeights(genome.getWeights()))
+        }
         del nn
         return output
     }
@@ -469,25 +446,22 @@ def testGeneticallyTunedNN(){
         nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size)
         nn.setWeights(genome.getWeights())
-        preds,activation=nn.predict(test_features,True,True)
+        print('Best genome encoded weights:',genome.getWeights(raw=True))
+        preds,activations=nn.predict(test_features,True,True)
         del nn
-        total=0
-        correct=0
-        wrong=0
-        for i in range(len(preds)){
-            total+=1
-            if (Dataset.labelToVanilla(preds[i])==test_labels[i]){
-                correct+=1
-            }else{
-                wrong+=1
-                print('Fail:','Exptected:{} (class: {}) But was: {} (class: {}, acti: {})'.format(Dataset.translateLabelFromOutput(test_labels[i],label_map,label_map_2),test_labels[i],Dataset.translateLabelFromOutput(preds[i],label_map,label_map_2),preds[i],activation[i]))
-            }
-        }
-        print('Total:',total,'-','Correct:',correct,'-','Wrong:',wrong,'-','acc:','{:.2f}%'.format(correct*100/float(total)))
+        Dataset.compareAndPrintLabels(preds,activations,test_labels,show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
         Utils.printDict(Dataset.statisticalAnalysis(preds,test_labels),'Statistical Analysis')
     }
 
     test_callback(enh_elite.getBestGenome())
+}
+
+def testCustomEncodings(){
+    base64='AAAAAAAAAAaBCDDDDDDE'
+    print('base64--original',base64)
+    base65=Utils.base64ToBase65(base64)
+    print('base65-converted',base65)
+    print('base64-converted',Utils.base65ToBase64(base65))
 }
 
 # testStdGenetic()
@@ -496,6 +470,4 @@ def testGeneticallyTunedNN(){
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
 testGeneticallyTunedNN() 
-
-# TODO custom weights format -> serialize -> compress -> base64 -> base 65
-# TODO base 65 -> base64 -> uncompress -> deserialize -> custom weights format 
+# testCustomEncodings()
