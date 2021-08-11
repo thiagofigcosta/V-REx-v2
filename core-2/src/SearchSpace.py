@@ -94,6 +94,18 @@ class SearchSpace(object){
        return SearchSpaceIterator(self)
     }
 
+    def __str__(self){
+       str_out='Search Space: { \n'
+       for dim in self.search_space{
+           str_out+='\t{}: [{}, {}, {}] \n'.format(dim.name,dim.min_value,dim.max_value,dim.data_type)
+       }
+       if len(self.search_space)>0{
+           str_out=str_out[:-1]
+       }
+       str_out+=' }'
+       return str_out
+    }
+
     def add(self,min_value,max_value,data_type,name=''){
         self.search_space.append(SearchSpace.Dimension(data_type,min_value,max_value,name))
     }

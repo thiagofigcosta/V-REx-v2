@@ -41,7 +41,30 @@ class Hyperparameters(object){
 		if self.layers != len(self.bias) {
 			raise Exception('len(bias) different from amount of layers')
 		}
+
+		self.setLastLayer(self.layer_sizes[-1],self.node_types[-1])
     }
+
+	def __str__(self){
+		str_out='Hyperparameters: {\n'
+		str_out+='\t{}: {}'.format('batch_size',self.batch_size)
+		str_out+='\t{}: {}'.format('alpha',self.alpha)
+		str_out+='\t{}: {}'.format('shuffle',self.shuffle)
+		str_out+='\t{}: {}'.format('adam',self.adam)
+		str_out+='\t{}: {}'.format('label_type',self.label_type)
+		str_out+='\t{}: {}'.format('model_checkpoint',self.model_checkpoint)
+		str_out+='\t{}: {}'.format('max_epochs',self.max_epochs)
+		str_out+='\t{}: {}'.format('patience_epochs',self.patience_epochs)
+		str_out+='\t{}: {}'.format('loss',self.loss)
+		str_out+='\t{}: {}'.format('monitor_metric',self.monitor_metric)
+		str_out+='\t{}: {}'.format('layers',self.layers)
+		str_out+='\t{}: {}'.format('layer_sizes',self.layer_sizes)
+		str_out+='\t{}: {}'.format('node_types',self.node_types)
+		str_out+='\t{}: {}'.format('dropouts',self.dropouts)
+		str_out+='\t{}: {}'.format('bias',self.bias)
+		str_out+='}'
+		return str_out
+	}
 
 	def setLastLayer(self,output_size,out_node_type){
 		if out_node_type==NodeType.SOFTMAX and output_size==1{

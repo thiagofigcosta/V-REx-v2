@@ -285,7 +285,7 @@ def testNNIntLabel(){
     adam=True
     patience_epochs=0
     max_epochs=100
-    loss=Loss.BINARY_CROSSENTROPY
+    loss=Loss.CATEGORICAL_CROSSENTROPY
     monitor_metric=Metric.F1
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
@@ -306,7 +306,7 @@ def testNNIntLabel(){
 
 
 def testNNBinLabel_KFolds(){
-    label_type=LabelEncoding.SPARSE
+    label_type=LabelEncoding.BINARY
 
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
     labels,label_map=Dataset.enumfyDatasetLabels(labels)
@@ -328,7 +328,7 @@ def testNNBinLabel_KFolds(){
     adam=True
     patience_epochs=15
     max_epochs=100
-    loss=Loss.CATEGORICAL_CROSSENTROPY
+    loss=Loss.BINARY_CROSSENTROPY
     monitor_metric=Metric.RAW_LOSS
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
@@ -363,7 +363,7 @@ def testGeneticallyTunedNN(){
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
     search_space.add(15,30,SearchSpace.Type.INT,'patience_epochs')
     search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
-    search_space.add(Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,SearchSpace.Type.INT,'loss')
+    search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'adam')
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
