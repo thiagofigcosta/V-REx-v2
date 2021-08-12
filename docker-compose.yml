@@ -1,9 +1,9 @@
 version: '3.3'
 
 services:
-    core:
+    core-1:
         build: 
-            context: core
+            context: deprecated/core
             dockerfile: Dockerfile
         restart: always
         depends_on:
@@ -16,6 +16,23 @@ services:
                     memory: 60G
                 reservations:
                     memory: 10G
+    
+    core-2:
+        build: 
+            context: core-2
+            dockerfile: Dockerfile
+        restart: always
+        depends_on:
+            - mongo
+        networks:
+            - mongo-network
+        deploy:
+            resources:
+                limits:
+                    memory: 60G
+                reservations:
+                    memory: 10G
+
     data-crawler:
         build: 
             context: data-crawler

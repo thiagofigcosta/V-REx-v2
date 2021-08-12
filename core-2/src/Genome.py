@@ -181,6 +181,9 @@ class Genome(object){
 
     @staticmethod
     def encodeWeights(weights){
+        if weights is None{
+            return weights
+        }
         wei_str=Utils.objToJsonStr(weights,compress=Genome.COMPRESS_WEIGHTS,b64=Genome.ENCODE_B64_WEIGHTS)
         if Genome.ENCODE_B64_WEIGHTS and Genome.ENCODE_B65_WEIGHTS{
             wei_str=Utils.base64ToBase65(wei_str)
@@ -190,6 +193,9 @@ class Genome(object){
 
     @staticmethod
     def decodeWeights(weights){
+        if weights is None{
+            return weights
+        }
         wei_str=weights
         if Genome.ENCODE_B64_WEIGHTS and Genome.ENCODE_B65_WEIGHTS{
             wei_str=Utils.base65ToBase64(wei_str)

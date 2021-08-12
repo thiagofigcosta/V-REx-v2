@@ -668,4 +668,21 @@ class Utils(object){
             return dct
         }
     }
+
+    @staticmethod
+    def mean(list_of_values){
+       total=0.0
+       count=0
+       for el in list_of_values{
+           if el==el{ # avoid NaN
+                total+=el
+                count+1
+           }
+       }
+       if count>0{
+           return total/float(count)
+       }else{
+           return float('NaN')
+       }
+    }
 }

@@ -255,7 +255,7 @@ class StandardNeuralNetwork(object){
 			}
 			self.history=dict.fromkeys(all_metrics,[])
 		}
-		epoch_metrics=[float(sum(metric)/len(metric)) for metric in epoch_metrics]
+		epoch_metrics=[Utils.mean(metric) for metric in epoch_metrics]
 		epoch_metrics=self.fillMetricsNames(epoch_metrics)
 		for k,v in epoch_metrics.items(){
 			v=float(v[0])
@@ -535,9 +535,9 @@ class StandardNeuralNetwork(object){
 
 	def getMetricMean(self,metric_name,Validation=False){
 		if Validation{
-			metric_names='val_'+metric_name
+			metric_name='val_'+metric_name
 		}
-		return sum(self.history[metric_name])/float(len(self.history[metric_name]))
+		return Utils.mean(self.history[metric_name])
 	}
 
 	def mergeWeights(self,weights_old,weights_new=[None]){

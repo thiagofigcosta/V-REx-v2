@@ -10,558 +10,668 @@ from Genome import Genome
 from Dataset import Dataset
 
 class Core(object){
-    # 'Just':'to fix vscode coloring':'when using pytho{\}'
+	# 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    LOGGER=Logger.DEFAULT()
-    FREE_MEMORY_MANUALLY=True
-    CACHE_WEIGHTS=True
-    STORE_GEN_POP_ONLY_ON_LAST=False
-    K_FOLDS=10
-    ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
-    FIXED_VALIDATION_PERCENT=.2
-    THRESHOLD=0.5
+	LOGGER=Logger.DEFAULT()
+	FREE_MEMORY_MANUALLY=True
+	CACHE_WEIGHTS=True
+	STORE_GEN_POP_ONLY_ON_LAST=False
+	K_FOLDS=10
+	ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
+	FIXED_VALIDATION_PERCENT=.2
+	THRESHOLD=0.5
 
-    def __init__(self, mongo, logger){
-        Core.LOGGER=logger
+	def __init__(self, mongo, logger){
+		Core.LOGGER=logger
 		self.mongo=mongo
-    }
+	}
 
-    def runGeneticSimulation(self,simulation_id){
-        Core.LOGGER.info('Running genetic simulation {}...'.format(simulation_id))
-        Core.LOGGER.info('Loading simulation...')
-        genetic_metadata = self.fetchGeneticSimulationData(simulation_id)
-        environment_name=genetic_metadata[0]
-        cve_years=genetic_metadata[1]
-        train_data_limit=genetic_metadata[2]
-        hall_of_fame_id=genetic_metadata[3] 
-        population_id=genetic_metadata[4]
-        population_start_size=genetic_metadata[5]
-        max_gens=genetic_metadata[6]
-        max_age=genetic_metadata[7]
-        max_children=genetic_metadata[8] 
-        mutation_rate=genetic_metadata[9] 
-        recycle_rate=genetic_metadata[10] 
-        sex_rate=genetic_metadata[11]
-        max_notables=genetic_metadata[12]
-        cross_validation=genetic_metadata[13]
-        metric_mode=genetic_metadata[14]
-        algorithm=genetic_metadata[15] 
-        label_encoding=genetic_metadata[16] 
-        search_maximum=metric_mode!=Metric.RAW_LOSS
-        Core.LOGGER.info('Genetic metadata')
-        Core.LOGGER.info('\t{}:{}'.format('environment_name',environment_name))
-        Core.LOGGER.info('\t{}:{}'.format('cve_years',cve_years))
-        Core.LOGGER.info('\t{}:{}'.format('train_data_limit',train_data_limit))
-        Core.LOGGER.info('\t{}:{}'.format('hall_of_fame_id',hall_of_fame_id))
-        Core.LOGGER.info('\t{}:{}'.format('population_id',population_id))
-        Core.LOGGER.info('\t{}:{}'.format('population_start_size',population_start_size))
-        Core.LOGGER.info('\t{}:{}'.format('max_gens',max_gens))
-        Core.LOGGER.info('\t{}:{}'.format('max_age',max_age))
-        Core.LOGGER.info('\t{}:{}'.format('max_children',max_children))
-        Core.LOGGER.info('\t{}:{}'.format('mutation_rate',mutation_rate))
-        Core.LOGGER.info('\t{}:{}'.format('recycle_rate',recycle_rate))
-        Core.LOGGER.info('\t{}:{}'.format('sex_rate',sex_rate))
-        Core.LOGGER.info('\t{}:{}'.format('max_notables',max_notables))
-        Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
-        Core.LOGGER.info('\t{}:{}'.format('metric_mode',metric_mode))
-        Core.LOGGER.info('\t{}:{}'.format('algorithm',algorithm))
-        Core.LOGGER.info('\t{}:{}'.format('label_encoding',label_encoding))
-        Core.LOGGER.info('\t{}:{}'.format('search_maximum',search_maximum))
-        Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
-        Core.LOGGER.info('Loaded simulation...OK')
-        Core.LOGGER.info('Loading search space...')
-        search_space,output_layer_node_type,label_type=self.fetchEnvironmentDataV2(environment_name)
-        Core.LOGGER.info('Loaded search space...OK')
-        Core.LOGGER.info('Loading dataset...')
-        train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
-        train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
-        train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
-        # train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
-        Core.LOGGER.info('Loaded dataset...OK')
-        search_space=Genome.enrichSearchSpace(search_space)
-        Core.LOGGER.info('\t{}:{}'.format('output_layer_node_type',output_layer_node_type))
-        Core.LOGGER.info('\t{}:{}'.format('label_type',label_type))
-        Core.LOGGER.multiline(str(search_space))
-        def train_callback(genome){
-            nonlocal train_features,train_labels,cross_validation,output_layer_node_type,metric_mode
-            preserve_weights=True
-            input_size=len(train_features[0])
-            output_size=len(train_labels[0])
-            hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
-            search_maximum=metric_mode!=Metric.RAW_LOSS
-            nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_gen_{}'.format(genome.id),verbose=False)
-            nn.buildModel(input_size)
-            if preserve_weights {
-                nn.setWeights(genome.getWeights())
-            }
-            if cross_validation==CrossValidation.NONE{
-                nn.trainNoValidation(train_features,train_labels)
-            }elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
-                nn.trainRollingForecast(train_features,train_labels,min_size_percentage=Core.ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE)
-            }elif cross_validation==CrossValidation.KFOLDS{
-                nn.trainKFolds(train_features,train_labels,Core.K_FOLDS)
-            }elif cross_validation==CrossValidation.FIXED_PERCENT{
-                train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT)
-                nn.trainCustomValidation(train[0],train[1],test[0],test[1])
-            }else{
-                raise Exception('Unknown cross validation method {}'.format(cross_validation))
-            }
-            output=nn.getMetricMean(metric_mode.toKerasName(),cross_validation!=CrossValidation.NONE)
-            if output!=output{ # Not a Number, ignore this genome
-                Core.LOGGER.warn('Not a number metric mean')
-                output=float('-inf') if search_maximum else float('inf')
-            }
-            if preserve_weights {
-                genome.setWeights(nn.mergeWeights(genome.getWeights()))
-            }
-            if Core.FREE_MEMORY_MANUALLY{
-                del nn
-            }
-            return output
+	def runGeneticSimulation(self,simulation_id){
+		Core.LOGGER.info('Running genetic simulation {}...'.format(simulation_id))
+		Core.LOGGER.info('Loading simulation...')
+		genetic_metadata = self.fetchGeneticSimulationData(simulation_id)
+		environment_name=genetic_metadata[0]
+		cve_years=genetic_metadata[1]
+		train_data_limit=genetic_metadata[2]
+		hall_of_fame_id=genetic_metadata[3] 
+		population_id=genetic_metadata[4]
+		population_start_size=genetic_metadata[5]
+		max_gens=genetic_metadata[6]
+		max_age=genetic_metadata[7]
+		max_children=genetic_metadata[8] 
+		mutation_rate=genetic_metadata[9] 
+		recycle_rate=genetic_metadata[10] 
+		sex_rate=genetic_metadata[11]
+		max_notables=genetic_metadata[12]
+		cross_validation=genetic_metadata[13]
+		metric_mode=genetic_metadata[14]
+		algorithm=genetic_metadata[15] 
+		label_encoding=genetic_metadata[16] 
+		search_maximum=metric_mode!=Metric.RAW_LOSS
+		Core.LOGGER.info('Genetic metadata')
+		Core.LOGGER.info('\t{}:{}'.format('environment_name',environment_name))
+		Core.LOGGER.info('\t{}:{}'.format('cve_years',cve_years))
+		Core.LOGGER.info('\t{}:{}'.format('train_data_limit',train_data_limit))
+		Core.LOGGER.info('\t{}:{}'.format('hall_of_fame_id',hall_of_fame_id))
+		Core.LOGGER.info('\t{}:{}'.format('population_id',population_id))
+		Core.LOGGER.info('\t{}:{}'.format('population_start_size',population_start_size))
+		Core.LOGGER.info('\t{}:{}'.format('max_gens',max_gens))
+		Core.LOGGER.info('\t{}:{}'.format('max_age',max_age))
+		Core.LOGGER.info('\t{}:{}'.format('max_children',max_children))
+		Core.LOGGER.info('\t{}:{}'.format('mutation_rate',mutation_rate))
+		Core.LOGGER.info('\t{}:{}'.format('recycle_rate',recycle_rate))
+		Core.LOGGER.info('\t{}:{}'.format('sex_rate',sex_rate))
+		Core.LOGGER.info('\t{}:{}'.format('max_notables',max_notables))
+		Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
+		Core.LOGGER.info('\t{}:{}'.format('metric_mode',metric_mode))
+		Core.LOGGER.info('\t{}:{}'.format('algorithm',algorithm))
+		Core.LOGGER.info('\t{}:{}'.format('label_encoding',label_encoding))
+		Core.LOGGER.info('\t{}:{}'.format('search_maximum',search_maximum))
+		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
+		Core.LOGGER.info('Loaded simulation...OK')
+		Core.LOGGER.info('Loading search space...')
+		search_space,output_layer_node_type,label_type=self.fetchEnvironmentDataV2(environment_name)
+		Core.LOGGER.info('Loaded search space...OK')
+		Core.LOGGER.info('Loading dataset...')
+		train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
+		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
+		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
+		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
+		Core.LOGGER.info('Loaded dataset...OK')
+		search_space=Genome.enrichSearchSpace(search_space)
+		Core.LOGGER.info('\t{}:{}'.format('output_layer_node_type',output_layer_node_type))
+		Core.LOGGER.info('\t{}:{}'.format('label_type',label_type))
+		Core.LOGGER.multiline(str(search_space))
+		def train_callback(genome){
+			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,metric_mode
+			preserve_weights=True
+			input_size=len(train_features[0])
+			output_size=len(train_labels[0])
+			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
+			search_maximum=metric_mode!=Metric.RAW_LOSS
+			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_gen_{}'.format(genome.id),verbose=False)
+			nn.buildModel(input_size)
+			if preserve_weights {
+				nn.setWeights(genome.getWeights())
+			}
+			if cross_validation==CrossValidation.NONE{
+				nn.trainNoValidation(train_features,train_labels)
+			}elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
+				nn.trainRollingForecast(train_features,train_labels,min_size_percentage=Core.ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE)
+			}elif cross_validation==CrossValidation.KFOLDS{
+				nn.trainKFolds(train_features,train_labels,Core.K_FOLDS)
+			}elif cross_validation==CrossValidation.FIXED_PERCENT{
+				train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT)
+				nn.trainCustomValidation(train[0],train[1],test[0],test[1])
+			}else{
+				raise Exception('Unknown cross validation method {}'.format(cross_validation))
+			}
+			output=nn.getMetricMean(metric_mode.toKerasName(),cross_validation!=CrossValidation.NONE)
+			if output!=output{ # Not a Number, ignore this genome
+				Core.LOGGER.warn('Not a number metric mean')
+				output=float('-inf') if search_maximum else float('inf')
+			}
+			if preserve_weights {
+				genome.setWeights(nn.mergeWeights(genome.getWeights()))
+			}
+			if Core.FREE_MEMORY_MANUALLY{
+				del nn
+			}
+			return output
+		}
+
+		def after_gen_callback(args_list){
+			nonlocal max_gens
+			pop_size=args_list[0]
+			g=args_list[1]
+			best_out=args_list[2]
+			timestamp_s=args_list[3]
+			population=args_list[4]
+			hall_of_fame=args_list[5]
+			if hall_of_fame is not None{
+				Core.LOGGER.info('\tStoring Hall of Fame Best Individuals...')
+				self.updateBestOnGeneticSimulation(simulation_id,hall_of_fame.best,Utils.getTodayDatetime())
+				Core.LOGGER.info('\tStored Hall of Fame Best Individuals...OK')
+			}
+			Core.LOGGER.info('\tStoring generation metadata...')
+			self.appendResultOnGeneticSimulation(simulation_id,pop_size,g,best_out,timestamp_s)
+			Core.LOGGER.info('\tStored generation metadata...OK')
+			if (not Core.STORE_GEN_POP_ONLY_ON_LAST) or g>=max_gens {
+				Core.LOGGER.info('\tStoring population...')
+				self.clearPopulation(population_id,Utils.getTodayDatetime())
+				for individual in population{
+					self.appendIndividualToPopulation(population_id,individual,Utils.getTodayDatetime())
+				}
+				Core.LOGGER.info('\tStored population...OK')
+			}
+		}
+
+		self.clearResultOnGeneticSimulation(simulation_id)
+		self.claimGeneticSimulation(simulation_id,Utils.getTodayDatetime(),Utils.getHostname())
+		elite=HallOfFame(max_notables, search_maximum)
+		ga=None
+		if algorithm == GeneticAlgorithmType.ENHANCED{
+			ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+		}elif algorithm == GeneticAlgorithmType.STANDARD{
+			ga=StandardGenetic(search_maximum,mutation_rate,sex_rate)
+		}else{
+			raise Exception('Unknown algorithm {}'.format(algorithm))
+		}
+		population=PopulationManager(ga,search_space,train_callback,population_start_size,neural_genome=True,print_deltas=True,after_gen_callback=after_gen_callback)
+		population.hall_of_fame=elite
+		Core.LOGGER.info('Starting natural selection...')
+		population.naturalSelection(max_gens,True)
+		Core.LOGGER.info('Finished natural selection...OK')
+		Core.LOGGER.info('Best output {:.5f} at gen {}, with genome {}'.format(elite.best['output'],elite.best['generation'],elite.best['genome']))
+		self.clearHallOfFameIndividuals(hall_of_fame_id,Utils.getTodayDatetime())
+		for individual in elite.notables {
+			self.appendIndividualToHallOfFame(hall_of_fame_id,individual,Utils.getTodayDatetime())
+		}
+		self.finishGeneticSimulation(simulation_id,Utils.getTodayDatetime())
+		Core.LOGGER.info('Runned genetic simulation {}...OK'.format(simulation_id))
+		if Core.FREE_MEMORY_MANUALLY{
+			del elite
+		}
+	}
+
+	def trainNeuralNetwork(self,independent_net_id,load=False,just_train=False){
+		Core.LOGGER.info('Training neural network {}...'.format(independent_net_id))
+		Core.LOGGER.info('Parsing train settings...')
+		independent_net_metadata = self.fetchNeuralNetworkMetadata(independent_net_id)
+		hyper_name=independent_net_metadata[0]
+		cve_years_train=independent_net_metadata[1]
+		train_data_limit=independent_net_metadata[2]
+		cve_years_test=independent_net_metadata[3]
+		test_data_limit=independent_net_metadata[4]
+		epochs=independent_net_metadata[5]
+		patience_epochs=independent_net_metadata[6]
+		cross_validation=independent_net_metadata[7]
+		train_metric=independent_net_metadata[8]
+		test_metric=independent_net_metadata[9]
+		hyperparameters=self.fetchHyperparametersDataV2(hyper_name,epochs,patience_epochs,train_metric)
+		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
+		Core.LOGGER.info('\t{}:{}'.format('hyper_name',hyper_name))
+		Core.LOGGER.info('\t{}:{}'.format('cve_years_train',cve_years_train))
+		Core.LOGGER.info('\t{}:{}'.format('train_data_limit',train_data_limit))
+		Core.LOGGER.info('\t{}:{}'.format('cve_years_test',cve_years_test))
+		Core.LOGGER.info('\t{}:{}'.format('test_data_limit',test_data_limit))
+		Core.LOGGER.info('\t{}:{}'.format('epochs',epochs))
+		Core.LOGGER.info('\t{}:{}'.format('patience_epochs',patience_epochs))
+		Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
+		Core.LOGGER.info('\t{}:{}'.format('train_metric',train_metric))
+		Core.LOGGER.info('\t{}:{}'.format('test_metric',test_metric))
+		Core.LOGGER.multiline(str(hyperparameters))
+		Core.LOGGER.info('Parsed train settings...OK')
+		Core.LOGGER.info('Loading dataset...')
+		train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
+		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
+		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,Core.ENCODER)
+		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
+		Core.LOGGER.info('Loaded dataset...OK')
+		self.claimNeuralNetTrain(independent_net_id,Utils.getTodayDatetime(),Utils.getHostname())
+		trained_weights=None
+		if load {
+			Core.LOGGER.info('Loading weights...')
+			trained_weights=Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id))
+			Core.LOGGER.info('Loaded weights...OK')
+		}else{
+			Core.LOGGER.info('Creating train network...')
+			input_size=len(train_features[0])
+			output_size=len(train_labels[0])
+			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train_{}'.format(independent_net_id),verbose=True)
+			nn.buildModel(input_size)
+			Core.LOGGER.info('Created train network...OK')
+			Core.LOGGER.info('Training network...')
+			nn.trainRollingForecast(train_features,train_labels)
+			if cross_validation==CrossValidation.NONE{
+				nn.trainNoValidation(train_features,train_labels)
+			}elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
+				nn.trainRollingForecast(train_features,train_labels,min_size_percentage=Core.ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE)
+			}elif cross_validation==CrossValidation.KFOLDS{
+				nn.trainKFolds(train_features,train_labels,Core.K_FOLDS)
+			}elif cross_validation==CrossValidation.FIXED_PERCENT{
+				train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT)
+				nn.trainCustomValidation(train[0],train[1],test[0],test[1])
+			}else{
+				raise Exception('Unknown cross validation method {}'.format(cross_validation))
+			}
+			history=nn.history
+			train_metrics=nn.getMetricMean(train_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
+			Core.LOGGER.info('Trained network...OK')
+			Core.LOGGER.info('Writing weights..')
+			trained_weights=Genome.encodeWeights(nn.getWeights())
+			self.appendTMetricsOnNeuralNet(independent_net_id,train_metrics)
+			self.saveWeightsOnNeuralNet(independent_net_id,trained_weights)
+			Core.LOGGER.info('Wrote weights...OK')
+			if Core.FREE_MEMORY_MANUALLY{
+				del nn
+			}
+		}
+		if not just_train {
+			Core.LOGGER.info('Loading dataset...')
+			if len(cve_years_test)>0{
+				test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
+				# no balance for testing
+				test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,Core.ENCODER)
+				# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
+			}
+			Core.LOGGER.info('Loaded dataset...OK')
+			Core.LOGGER.info('Creating test network...')
+			input_size=len(train_features[0])
+			output_size=len(train_labels[0])
+			hyperparameters.setLastLayer(output_size,Core.OUTPUT_LAYER_TYPE)
+			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+			nn.buildModel(input_size)
+			nn.setWeights(Genome.decodeWeights(trained_weights))
+			Core.LOGGER.info('Created test network...OK')
+			Core.LOGGER.info('Evaluating network...')
+			train_eval_res=nn.eval(train_features,train_labels)
+			train_eval_res=train_eval_res[train_metric.toKerasName()]
+			if len(cve_years_test)>0{
+				test_eval_res=nn.eval(test_features,test_labels)
+				test_eval_res=test_eval_res[test_metric.toKerasName()]
+			}else{
+				test_eval_res=None
+			}
+			Core.LOGGER.info('Evaluated network...OK')
+			Core.LOGGER.logDict(train_eval_res,train_metric.toKerasName())
+			if test_eval_res is not None{
+				Core.LOGGER.logDict(test_eval_res,test_metric.toKerasName())
+			}
+			Core.LOGGER.info('Writing results...')
+			self.appendStatsOnNeuralNet(independent_net_id,'train_stats',train_eval_res,train_metric.toKerasName())
+			if test_eval_res is not None{
+				self.appendStatsOnNeuralNet(independent_net_id,'test_stats',test_eval_res,test_metric.toKerasName())
+			}
+			Core.LOGGER.info('Wrote results...OK')
+			if Core.FREE_MEMORY_MANUALLY{
+				del nn
+			}
+		}
+		self.finishNeuralNetTrain(independent_net_id,Utils.getTodayDatetime())
+		Core.LOGGER.info('Trained neural network {}...OK'.format(independent_net_id))
+	}
+
+	def predictNeuralNetwork(self,independent_net_id,result_id,eval_data){
+		Core.LOGGER.info('Evaluating neural network {}...'.format(independent_net_id))
+		Core.LOGGER.info('Parsing evaluate settings...')
+		independent_net_metadata = self.fetchNeuralNetworkMetadata(independent_net_id)
+		hyper_name=independent_net_metadata[0]
+		cross_validation=independent_net_metadata[7]
+		test_metric=independent_net_metadata[9]
+		hyperparameters=self.fetchHyperparametersDataV2(hyper_name,0,0,test_metric)
+		cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(eval_data)
+		Core.LOGGER.info('\t{}:{}'.format('hyper_name',hyper_name))
+		Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
+		Core.LOGGER.info('\t{}:{}'.format('test_metric',test_metric))
+		Core.LOGGER.info('\t{}:{}'.format('cve_years_test',cve_years_test))
+		Core.LOGGER.info('\t{}:{}'.format('test_data_limit',test_data_limit))
+		Core.LOGGER.multiline(str(hyperparameters))
+		Core.LOGGER.info('Parsed evaluate settings...OK')
+		Core.LOGGER.info('Loading dataset...')
+		test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
+		# no balance for testing
+		test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,Core.ENCODER)
+		# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
+		Core.LOGGER.info('Loaded dataset...OK')
+		Core.LOGGER.info('Creating eval network...')
+		input_size=len(test_features[0])
+		output_size=len(test_labels[0])
+		hyperparameters.setLastLayer(output_size,Core.OUTPUT_LAYER_TYPE)
+		nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_eval_{}'.format(independent_net_id),verbose=True)
+		nn.buildModel(input_size)
+		nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
+		Core.LOGGER.info('Created eval network...OK')
+		Core.LOGGER.info('Predicting...')
+		classes,activations=nn.predict(test_features,True,True,Core.THRESHOLD)
+		statistics=Dataset.statisticalAnalysis(classes,test_labels)
+		Core.LOGGER.info('Predicted...OK')
+		Core.LOGGER.logDict(statistics,'Statistics')
+		Dataset.compareAndPrintLabels(classes,activations,test_labels,show_positives=True,equivalence_table_1=labels_equivalence,logger=Core.LOGGER)
+		Core.LOGGER.info('Writing results...')
+		self.storeEvalNeuralNetResult(result_id,test_data_ids,classes,activations,test_labels,statistics)
+		Core.LOGGER.info('Wrote results...OK')
+		if Core.FREE_MEMORY_MANUALLY{
+			del nn
+		}
+		Core.LOGGER.info('Evaluated neural network {}...OK'.format(independent_net_id))
+	}
+
+	def loadDataset(self,years,limit){
+		processed_db=self.mongo.getProcessedDB()
+		data_ids=[]
+		data_features=[]
+		data_labels=[]
+		for year in years {
+			cur_cves=mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
+			if cur_cves is None {
+				raise Exception('Unable to find cves from {}:{}'.format(year,limit))
+			}
+			parsed_cves=0
+			for cur_cve in cur_cves {
+				data_ids.append(cur_cve['cve'])
+				parsed_cve_features=[]
+				for k,v in cur_cve['features'].items(){
+					parsed_cve_features.append(float(v))
+				}
+				data_features.append(parsed_cve_features)
+				parsed_cve_labels=[]
+				parsed_cve_labels.append(int(cur_cve['labels']['exploits_has']))
+				data_labels.append(parsed_cve_labels)
+				parsed_cves+=1
+				if limit>0 and parsed_cves >= limit {
+					break
+				}
+			}
+		}
+		return data_ids,data_features,data_labels
+	}
+
+	def parseDatasetMetadataStrRepresentation(self,data_meta){
+		limit=0
+		if ':' in data_meta{
+			cve_years_arr=data_meta.split(':')
+			limit=int(cve_years_arr[1])
+			cve_years_arr=cve_years_arr[0]
+		}else{
+			cve_years_arr=data_meta
+		}
+		cve_years_arr=cve_years_arr.split(',')
+		cve_years=[int(el) for el in cve_years_arr]
+		return cve_years,limit
+	}
+
+	def fetchGeneticSimulationData(self,simulation_id){
+		genetic_db=self.mongo.getGeneticDB()
+		simu_data=mongo.findOneOnDBFromIndex(genetic_db,'simulations','_id',simulation_id)
+		if simu_data is None {
+			raise Exception('Unable to find simulation {}'.format(simulation_id))
+		}
+		environment_name=str(simu_data['env_name'])
+		cve_years,train_data_limit=self.parseDatasetMetadataStrRepresentation(str(simu_data['train_data']))
+		hall_of_fame_id=str(simu_data['hall_of_fame_id'])
+		population_id=str(simu_data['population_id'])
+		population_start_size=int(data['pop_start_size'])
+		max_gens=int(data['max_gens'])
+		max_age=int(data['max_age'])
+		max_children=int(data['max_children'])
+		mutation_rate=float(data['mutation_rate'])
+		recycle_rate=float(data['recycle_rate'])
+		sex_rate=float(data['sex_rate'])
+		max_notables=int(data['max_notables'])
+		cross_validation=CrossValidation(data['cross_validation'])
+		metric_mode=Metric(data['metric'])
+		algorithm=GeneticAlgorithmType(data['algorithm'])
+		label_encoding=LabelEncoding(data['label_type'])
+		return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_encoding
+	}
+
+	def fetchEnvironmentDataV1(self,environment_name){
+		genetic_db=self.mongo.getGeneticDB()
+		search_space_db=mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
+		if search_space_db is None {
+			raise Exception('Unable to find environment {}'.format(environment_name))
+		}
+		search_space=SearchSpace()
+		search_space.add('amount_of_layers',search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT)
+		search_space.add('epochs',search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT)
+		search_space.add('batch_size',search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT)
+		search_space.add('layer_sizes',search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT)
+		search_space.add('activation_functions',search_space_db['activation_functions']['min'],search_space_db['activation_functions']['max'],SearchSpace.Type.INT)
+		search_space.add('alpha',search_space_db['alpha']['min'],search_space_db['alpha']['max'],SearchSpace.Type.FLOAT)
+		# K, L and sparcity are useless, since we are not using SLIDE
+		return search_space
+	}
+
+	def fetchEnvironmentDataV2(self,environment_name,metric){
+		genetic_db=self.mongo.getGeneticDB()
+		search_space_db=mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
+		if search_space_db is None {
+			raise Exception('Unable to find environment {}'.format(environment_name))
+		}
+		search_space=SearchSpace()
+		search_space.add(search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT,'layers')
+		search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
+		search_space.add(search_space_db['alpha']['min'],search_space_db['alpha']['max'],SearchSpace.Type.FLOAT,'alpha')
+		search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
+		search_space.add(search_space_db['patience_epochs']['min'],search_space_db['patience_epochs']['max'],SearchSpace.Type.INT,'patience_epochs')
+		search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
+		search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
+		search_space.add(Core.ENCODER,Core.ENCODER,SearchSpace.Type.INT,'label_type')
+		search_space.add(search_space_db['adam']['min'] not in (0,False),search_space_db['adam']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'adam')
+		search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
+		search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
+		search_space.add(search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT,'layer_sizes')
+		search_space.add(NodeType(search_space_db['activation_functions']['min']),NodeType(search_space_db['activation_functions']['max']),SearchSpace.Type.INT,'node_types')
+		search_space.add(search_space_db['dropouts']['min'],search_space_db['dropouts']['max'],SearchSpace.Type.FLOAT,'dropouts')
+		search_space.add(search_space_db['bias']['min'] not in (0,False),search_space_db['bias']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'bias')
+		output_layer_node_type=NodeType(search_space_db['output_layer_node_type'])
+		label_type=LabelEncoding(search_space_db['label_type'])
+		return search_space,output_layer_node_type,label_type
+	}
+
+	def fetchNeuralNetworkMetadata(self,independent_net_id){
+		neural_db=self.mongo.getNeuralDB()
+		train_metadata=mongo.findOneOnDBFromIndex(neural_db,'independent_net','_id',independent_net_id)
+		if train_metadata is None {
+			raise Exception('Unable to find network {}'.format(independent_net_id))
+		}
+		hyper_name=str(train_metadata['hyperparameters_name'])
+		cve_years_train,train_data_limit=self.parseDatasetMetadataStrRepresentation(str(train_metadata['train_data']))
+		cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(str(train_metadata['test_data']))
+		epochs=train_metadata['epochs']
+		patience_epochs=train_metadata['patience_epochs']
+		cross_validation=CrossValidation(train_metadata['cross_validation'])
+		train_metric=Metric(train_metadata['train_metric'])
+		test_metric=Metric(train_metadata['test_metric'])
+		return hyper_name, cve_years_train, train_data_limit, cve_years_test, test_data_limit, epochs, patience_epochs, cross_validation, train_metric, test_metric
+	}
+
+	def fetchHyperparametersDataV1(self,hyper_name){
+		neural_db=self.mongo.getNeuralDB()
+		hyperparameters=mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
+		if train_metadata is None {
+			raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
+		}
+		hyperparameters=Hyperparameters(int(hyperparameters['batch_size']), float(hyperparameters['alpha']), bool(hyperparameters['shuffle']), bool(hyperparameters['adam']), LabelEncoding(hyperparameters['label_type']), int(hyperparameters['layers']), [int(el) for el in hyperparameters['layer_sizes']], [NodeType(el) for el in hyperparameters['node_types']])
+		# K, L, rehash, rebuild, range_pow and sparcity are useless, since we are not using SLIDE
+		return hyperparameters
+	}
+
+	def fetchHyperparametersDataV2(self,hyper_name,epochs,pat_epochs,metric){
+		neural_db=self.mongo.getNeuralDB()
+		hyperparameters=mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
+		if train_metadata is None {
+			raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
+		}
+		layers=int(hyperparameters['layers'])
+		dropouts=[int(el) for el in hyperparameters['dropouts']]
+		bias=[bool(el) for el in hyperparameters['bias']]
+		layer_sizes=[int(el) for el in hyperparameters['layer_sizes']]
+		node_types=[NodeType(el) for el in hyperparameters['node_types']]
+		batch_size=int(hyperparameters['batch_size'])
+		alpha=float(hyperparameters['alpha'])
+		shuffle=bool(hyperparameters['shuffle'])
+		adam=bool(hyperparameters['adam'])
+		patience_epochs=pat_epochs
+		max_epochs=epochs
+		loss=Loss(hyperparameters['loss'])
+		monitor_metric=metric
+		label_type=LabelEncoding(hyperparameters['label_type'])
+		return Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+	}
+
+	# Disclaim, I'm to lazy to fix Pytho{\} dicts or to make a real Pytho{\} "compiler" with lexemes and stuff
+	def claimGeneticSimulation(self,simulation_id,now_str,hostname){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(simulation_id),'started_at':{'$eq':None}} # TODO ? why? it was 'started_at':{'$ne':None} on core
+		query_update={'$set':{'started_at':now_str}}
+		self.mongo.updateDocumentOnDB(self.mongo.getGeneticDB(),'simulations',query_fetch,query_update,verbose=False,ignore_lock=False)
+		
+		query_fetch={'_id':self.mongo.getObjectId(simulation_id)}
+		query_update={'$set':{'started_by':hostname}}
+		self.mongo.updateDocumentOnDB(self.mongo.getGeneticDB(),'simulations',query_fetch,query_update,verbose=False,ignore_lock=False)
+		# Pytho{\}: End regular Python
+	}
+
+	def appendResultOnGeneticSimulation(self,simulation_id,pop_size,g,best_out,timestamp_s){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(simulation_id)}
+		query_update={'$push':{'results':{'pop_size':pop_size,'cur_gen':g,'gen_best_out':best_out,'delta_ms':int(timestamp_s*1000)}}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getGeneticDB(),'simulations',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def updateBestOnGeneticSimulation(self,simulation_id,best,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(simulation_id)}
+		query_update={'$set':{'updated_at':now_str,'best':best}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getGeneticDB(),'simulations',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def appendIndividualToPopulation(self,population_id,individual,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(population_id)}
+		query_update={'$push':{'neural_genomes':self.genomeToDict(individual)},'$set':{'updated_at':now_str}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'populations',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def clearPopulation(self,population_id,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(population_id)}
+		query_update={'$set':{'updated_at':now_str,'neural_genomes':[]}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'populations',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def clearResultOnGeneticSimulation(self,simulation_id){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(simulation_id)}
+		query_update={'$set':{'results':[]}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getGeneticDB(),'simulations',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def finishGeneticSimulation(self,simulation_id,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(simulation_id)}
+		query_update={'$set':{'finished_at':now_str}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getGeneticDB(),'simulations',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def claimNeuralNetTrain(self,independent_net_id,now_str,hostname){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id),'started_at':{'$eq':None}} # TODO ? why? it was 'started_at':{'$ne':None} on core
+		query_update={'$set':{'started_at':now_str}}
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+		
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
+		query_update={'$set':{'started_by':hostname}}
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+		# Pytho{\}: End regular Python
+	}
+
+	def appendIndividualToHallOfFame(self,hall_of_fame_id,taylor_swift,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(hall_of_fame_id)}
+		query_update={'$set':{'updated_at':now_str},'$push':{'neural_genomes':self.genomeToDict(taylor_swift)}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'hall_of_fame',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def clearHallOfFameIndividuals(self,hall_of_fame_id,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(hall_of_fame_id)}
+		query_update={'$set':{'updated_at':now_str,'neural_genomes':[]}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'hall_of_fame',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def appendTMetricsOnNeuralNet(self,independent_net_id,train_metrics){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
+		query_update={'$set':{'train_metrics':train_metrics}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def saveWeightsOnNeuralNet(self,independent_net_id,trained_weights){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
+		query_update={'$set':{'weights':trained_weights}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def loadWeightsFromNeuralNet(self,independent_net_id){
+		# Pytho{\}: Start regular Python
+		query={'_id':self.mongo.getObjectId(independent_net_id)}
+		# Pytho{\}: End regular Python
+		net=self.mongo.findOneOnDB(self.mongo.getNeuralDB(),'independent_net',query,wait_unlock=True)
+		if net is not None and 'weights' in net{
+			return net['weights']
+		}
+		return None
+	}
+
+	def appendStatsOnNeuralNet(self,independent_net_id,name,res,metric){
+        # Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
+		query_update={'$set':{name:{'metric':metric,'values':res}}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def storeEvalNeuralNetResult(self,result_id,test_data_ids,classes,activations,test_labels,statistics,log_result=True){
+        correct=0
+        results=[]
+        if log_result {
+            Core.LOGGER.info('Results to be stored:')
         }
-
-        def after_gen_callback(args_list){
-            nonlocal max_gens
-            pop_size=args_list[0]
-            g=args_list[1]
-            best_out=args_list[2]
-            timestamp_s=args_list[3]
-            population=args_list[4]
-            hall_of_fame=args_list[5]
-            if hall_of_fame is not None{
-                Core.LOGGER.info('\tStoring Hall of Fame Best Individuals...')
-                self.updateBestOnGeneticSimulation(simulation_id,hall_of_fame.best,Utils.getTodayDatetime())
-                Core.LOGGER.info('\tStored Hall of Fame Best Individuals...OK')
+        for i in range(len(test_data_ids)){
+            match=classes[i][0]==test_labels[i][0]
+            if match{
+                correct+=1
             }
-            Core.LOGGER.info('\tStoring generation metadata...')
-            self.appendResultOnGeneticSimulation(simulation_id,pop_size,g,best_out,timestamp_s)
-            Core.LOGGER.info('\tStored generation metadata...OK')
-            if (not Core.STORE_GEN_POP_ONLY_ON_LAST) or g>=max_gens {
-                Core.LOGGER.info('\tStoring population...')
-                self.clearPopulationNeuralGenomeVector(population_id,Utils.getTodayDatetime())
-                for individual in population{
-                    self.addToPopulationNeuralGenomeVector(population_id,individual,Utils.getTodayDatetime())
-                }
-                Core.LOGGER.info('\tStored population...OK')
+            confidence=activations[i][0]*100.0
+            result='{}: Label: {} | Predicted Exploit: {} | Conficende {:.2f}% | Prediction Match: {}'.format(test_data_ids[i],test_labels[i][0],classes[i][0],confidence,match)
+            if log_result {
+                Core.LOGGER.info('\t'+log_result)
             }
+            results.append(result)
         }
+        # Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(result_id)}
+		query_update={'$set':{'result_stats':statistics,'total_test_cases':len(test_data_ids),'matching_preds':correct,'results':results}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'eval_results',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
 
-        self.clearResultOnGeneticSimulation(simulation_id)
-        self.claimGeneticSimulation(simulation_id,Utils.getTodayDatetime(),Utils.getHostname())
-        elite=HallOfFame(max_notables, search_maximum)
-        ga=None
-        if algorithm == GeneticAlgorithmType.ENHANCED{
-            ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
-        }elif algorithm == GeneticAlgorithmType.STANDARD{
-            ga=StandardGenetic(search_maximum,mutation_rate,sex_rate)
-        }else{
-            raise Exception('Unknown algorithm {}'.format(algorithm))
-        }
-        population=PopulationManager(ga,search_space,train_callback,population_start_size,neural_genome=True,print_deltas=True,after_gen_callback=after_gen_callback)
-        population.hall_of_fame=elite
-        Core.LOGGER.info('Starting natural selection...')
-        population.naturalSelection(max_gens,True)
-        Core.LOGGER.info('Finished natural selection...OK')
-        Core.LOGGER.info('Best output {:.5f} at gen {}, with genome {}'.format(elite.best['output'],elite.best['generation'],elite.best['genome']))
-        self.clearHallOfFameNeuralGenomeVector(hall_of_fame_id,Utils.getTodayDatetime())
-        for individual in elite.notables {
-            self.addToHallOfFameNeuralGenomeVector(hall_of_fame_id,individual,Utils.getTodayDatetime())
-        }
-        self.finishGeneticSimulation(simulation_id,Utils.getTodayDatetime())
-        Core.LOGGER.info('Runned genetic simulation {}...OK'.format(simulation_id))
-        if Core.FREE_MEMORY_MANUALLY{
-            del elite
-        }
-    }
+	def finishNeuralNetTrain(self,independent_net_id,now_str){
+		# Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
+		query_update={'$set':{'finished_at':now_str}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
 
-    def trainNeuralNetwork(self,independent_net_id,load=False,just_train=False){
-        Core.LOGGER.info('Training neural network {}...'.format(independent_net_id))
-        Core.LOGGER.info('Parsing train settings...')
-        independent_net_metadata = self.fetchNeuralNetworkMetadata(independent_net_id)
-        hyper_name=independent_net_metadata[0]
-        cve_years_train=independent_net_metadata[1]
-        train_data_limit=independent_net_metadata[2]
-        cve_years_test=independent_net_metadata[3]
-        test_data_limit=independent_net_metadata[4]
-        epochs=independent_net_metadata[5]
-        patience_epochs=independent_net_metadata[6]
-        cross_validation=independent_net_metadata[7]
-        train_metric=independent_net_metadata[8]
-        test_metric=independent_net_metadata[9]
-        hyperparameters=self.fetchHyperparametersDataV2(hyper_name,epochs,patience_epochs,train_metric)
-        Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
-        Core.LOGGER.info('\t{}:{}'.format('hyper_name',hyper_name))
-        Core.LOGGER.info('\t{}:{}'.format('cve_years_train',cve_years_train))
-        Core.LOGGER.info('\t{}:{}'.format('train_data_limit',train_data_limit))
-        Core.LOGGER.info('\t{}:{}'.format('cve_years_test',cve_years_test))
-        Core.LOGGER.info('\t{}:{}'.format('test_data_limit',test_data_limit))
-        Core.LOGGER.info('\t{}:{}'.format('epochs',epochs))
-        Core.LOGGER.info('\t{}:{}'.format('patience_epochs',patience_epochs))
-        Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
-        Core.LOGGER.info('\t{}:{}'.format('train_metric',train_metric))
-        Core.LOGGER.info('\t{}:{}'.format('test_metric',test_metric))
-        Core.LOGGER.multiline(str(hyperparameters))
-        Core.LOGGER.info('Parsed train settings...OK')
-        Core.LOGGER.info('Loading dataset...')
-        train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
-        train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
-        train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,Core.ENCODER)
-        # train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
-        Core.LOGGER.info('Loaded dataset...OK')
-        self.claimNeuralNetTrain(independent_net_id,Utils.getTodayDatetime(),Utils.getHostname())
-        trained_weights=None
-        if load {
-            Core.LOGGER.info('Loading weights...')
-            trained_weights=Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id))
-            Core.LOGGER.info('Loaded weights...OK')
-        }else{
-            Core.LOGGER.info('Creating train network...')
-            input_size=len(train_features[0])
-            output_size=len(train_labels[0])
-            nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train_{}'.format(independent_net_id),verbose=True)
-            nn.buildModel(input_size)
-            Core.LOGGER.info('Created train network...OK')
-            Core.LOGGER.info('Training network...')
-            nn.trainRollingForecast(train_features,train_labels)
-            if cross_validation==CrossValidation.NONE{
-                nn.trainNoValidation(train_features,train_labels)
-            }elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
-                nn.trainRollingForecast(train_features,train_labels,min_size_percentage=Core.ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE)
-            }elif cross_validation==CrossValidation.KFOLDS{
-                nn.trainKFolds(train_features,train_labels,Core.K_FOLDS)
-            }elif cross_validation==CrossValidation.FIXED_PERCENT{
-                train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT)
-                nn.trainCustomValidation(train[0],train[1],test[0],test[1])
-            }else{
-                raise Exception('Unknown cross validation method {}'.format(cross_validation))
-            }
-            history=nn.history
-            train_metrics=nn.getMetricMean(train_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
-            Core.LOGGER.info('Trained network...OK')
-            Core.LOGGER.info('Writing weights..')
-            trained_weights=Genome.encodeWeights(nn.getWeights())
-            self.appendTMetricsOnNeuralNet(independent_net_id,train_metrics)
-            self.appendWeightsOnNeuralNet(independent_net_id,trained_weights)
-            Core.LOGGER.info('Wrote weights...OK')
-            if Core.FREE_MEMORY_MANUALLY{
-                del nn
-            }
-        }
-        if not just_train {
-            Core.LOGGER.info('Loading dataset...')
-            if len(cve_years_test)>0{
-                test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
-                # no balance for testing
-                test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,Core.ENCODER)
-                # test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
-            }
-            Core.LOGGER.info('Loaded dataset...OK')
-            Core.LOGGER.info('Creating test network...')
-            input_size=len(train_features[0])
-            output_size=len(train_labels[0])
-            hyperparameters.setLastLayer(output_size,Core.OUTPUT_LAYER_TYPE)
-            nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train-p2_{}'.format(independent_net_id),verbose=True)
-            nn.buildModel(input_size)
-            nn.setWeights(Genome.decodeWeights(trained_weights))
-            Core.LOGGER.info('Created test network...OK')
-            Core.LOGGER.info('Evaluating network...')
-            train_eval_res=nn.eval(train_features,train_labels)
-            train_eval_res=train_eval_res[train_metric.toKerasName()]
-            if len(cve_years_test)>0{
-                test_eval_res=nn.eval(test_features,test_labels)
-                test_eval_res=test_eval_res[test_metric.toKerasName()]
-            }else{
-                test_eval_res=None
-            }
-            Core.LOGGER.info('Evaluated network...OK')
-            Core.LOGGER.logDict(train_eval_res,train_metric.toKerasName())
-            if test_eval_res is not None{
-                Core.LOGGER.logDict(test_eval_res,test_metric.toKerasName())
-            }
-            Core.LOGGER.info('Writing results...')
-            self.appendStatsOnNeuralNet(independent_net_id,'train_stats',train_eval_res)
-            if test_eval_res is not None{
-                self.appendStatsOnNeuralNet(independent_net_id,'test_stats',test_eval_res)
-            }
-            Core.LOGGER.info('Wrote results...OK')
-            if Core.FREE_MEMORY_MANUALLY{
-                del nn
-            }
-        }
-        self.finishNeuralNetTrain(independent_net_id,Utils.getTodayDatetime())
-        Core.LOGGER.info('Trained neural network {}...OK'.format(independent_net_id))
-    }
-
-    def predictNeuralNetwork(self,independent_net_id,result_id,eval_data){
-        Core.LOGGER.info('Evaluating neural network {}...'.format(independent_net_id))
-        Core.LOGGER.info('Parsing evaluate settings...')
-        independent_net_metadata = self.fetchNeuralNetworkMetadata(independent_net_id)
-        hyper_name=independent_net_metadata[0]
-        cross_validation=independent_net_metadata[7]
-        test_metric=independent_net_metadata[9]
-        hyperparameters=self.fetchHyperparametersDataV2(hyper_name,0,0,test_metric)
-        cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(eval_data)
-        Core.LOGGER.info('\t{}:{}'.format('hyper_name',hyper_name))
-        Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
-        Core.LOGGER.info('\t{}:{}'.format('test_metric',test_metric))
-        Core.LOGGER.info('\t{}:{}'.format('cve_years_test',cve_years_test))
-        Core.LOGGER.info('\t{}:{}'.format('test_data_limit',test_data_limit))
-        Core.LOGGER.multiline(str(hyperparameters))
-        Core.LOGGER.info('Parsed evaluate settings...OK')
-        Core.LOGGER.info('Loading dataset...')
-        test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
-        # no balance for testing
-        test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,Core.ENCODER)
-        # test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
-        Core.LOGGER.info('Loaded dataset...OK')
-        Core.LOGGER.info('Creating eval network...')
-        input_size=len(test_features[0])
-        output_size=len(test_labels[0])
-        hyperparameters.setLastLayer(output_size,Core.OUTPUT_LAYER_TYPE)
-        nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_eval_{}'.format(independent_net_id),verbose=True)
-        nn.buildModel(input_size)
-        nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
-        Core.LOGGER.info('Created eval network...OK')
-        Core.LOGGER.info('Predicting...')
-        classes,activations=nn.predict(test_features,True,True,Core.THRESHOLD)
-        statistics=Dataset.statisticalAnalysis(classes,test_labels)
-        Core.LOGGER.info('Predicted...OK')
-        Core.LOGGER.logDict(statistics,'Statistics')
-        Dataset.compareAndPrintLabels(classes,activations,test_labels,show_positives=True,equivalence_table_1=labels_equivalence,logger=Core.LOGGER)
-        Core.LOGGER.info('Writing results...')
-        self.storeEvalNeuralNetResult(result_id,test_data_ids,classes,activations,test_labels,statistics)
-        Core.LOGGER.info('Wrote results...OK')
-        if Core.FREE_MEMORY_MANUALLY{
-            del nn
-        }
-        Core.LOGGER.info('Evaluated neural network {}...OK'.format(independent_net_id))
-    }
-
-    def loadDataset(self,years,limit){
-        processed_db=self.mongo.getProcessedDB()
-        data_ids=[]
-        data_features=[]
-        data_labels=[]
-        for year in years {
-            cur_cves=mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
-            if cur_cves is None {
-                raise Exception('Unable to find cves from {}:{}'.format(year,limit))
-            }
-            parsed_cves=0
-            for cur_cve in cur_cves {
-                data_ids.append(cur_cve['cve'])
-                parsed_cve_features=[]
-                for k,v in cur_cve['features'].items(){
-                    parsed_cve_features.append(float(v))
-                }
-                data_features.append(parsed_cve_features)
-                parsed_cve_labels=[]
-                parsed_cve_labels.append(int(cur_cve['labels']['exploits_has']))
-                data_labels.append(parsed_cve_labels)
-                parsed_cves+=1
-                if limit>0 and parsed_cves >= limit {
-                    break
-                }
-            }
-        }
-        return data_ids,data_features,data_labels
-    }
-
-    def parseDatasetMetadataStrRepresentation(self,data_meta){
-        limit=0
-        if ':' in data_meta{
-            cve_years_arr=data_meta.split(':')
-            limit=int(cve_years_arr[1])
-            cve_years_arr=cve_years_arr[0]
-        }else{
-            cve_years_arr=data_meta
-        }
-        cve_years_arr=cve_years_arr.split(',')
-        cve_years=[int(el) for el in cve_years_arr]
-        return cve_years,limit
-    }
-
-    def fetchGeneticSimulationData(self,simulation_id){
-        genetic_db=self.mongo.getGeneticDB()
-        simu_data=mongo.findOneOnDBFromIndex(genetic_db,'simulations','_id',simulation_id)
-        if simu_data is None {
-            raise Exception('Unable to find simulation {}'.format(simulation_id))
-        }
-        environment_name=str(simu_data['env_name'])
-        cve_years,train_data_limit=self.parseDatasetMetadataStrRepresentation(str(simu_data['train_data']))
-        hall_of_fame_id=str(simu_data['hall_of_fame_id'])
-        population_id=str(simu_data['population_id'])
-        population_start_size=int(data['pop_start_size'])
-        max_gens=int(data['max_gens'])
-        max_age=int(data['max_age'])
-        max_children=int(data['max_children'])
-        mutation_rate=float(data['mutation_rate'])
-        recycle_rate=float(data['recycle_rate'])
-        sex_rate=float(data['sex_rate'])
-        max_notables=int(data['max_notables'])
-        cross_validation=CrossValidation(data['cross_validation'])
-        metric_mode=Metric(data['metric'])
-        algorithm=GeneticAlgorithmType(data['algorithm'])
-        label_encoding=LabelEncoding(data['label_type'])
-        return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_encoding
-    }
-
-    def fetchEnvironmentDataV1(self,environment_name){
-        genetic_db=self.mongo.getGeneticDB()
-        search_space_db=mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
-        if search_space_db is None {
-            raise Exception('Unable to find environment {}'.format(environment_name))
-        }
-        search_space=SearchSpace()
-        search_space.add('amount_of_layers',search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT)
-        search_space.add('epochs',search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT)
-        search_space.add('batch_size',search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT)
-        search_space.add('layer_sizes',search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT)
-        search_space.add('activation_functions',search_space_db['activation_functions']['min'],search_space_db['activation_functions']['max'],SearchSpace.Type.INT)
-        search_space.add('alpha',search_space_db['alpha']['min'],search_space_db['alpha']['max'],SearchSpace.Type.FLOAT)
-        # K, L and sparcity are useless, since we are not using SLIDE
-        return search_space
-    }
-
-    def fetchEnvironmentDataV2(self,environment_name,metric){
-        genetic_db=self.mongo.getGeneticDB()
-        search_space_db=mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
-        if search_space_db is None {
-            raise Exception('Unable to find environment {}'.format(environment_name))
-        }
-        search_space=SearchSpace()
-        search_space.add(search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT,'layers')
-        search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
-        search_space.add(search_space_db['alpha']['min'],search_space_db['alpha']['max'],SearchSpace.Type.FLOAT,'alpha')
-        search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
-        search_space.add(search_space_db['patience_epochs']['min'],search_space_db['patience_epochs']['max'],SearchSpace.Type.INT,'patience_epochs')
-        search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
-        search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
-        search_space.add(Core.ENCODER,Core.ENCODER,SearchSpace.Type.INT,'label_type')
-        search_space.add(search_space_db['adam']['min'] not in (0,False),search_space_db['adam']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'adam')
-        search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
-        search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
-        search_space.add(search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT,'layer_sizes')
-        search_space.add(NodeType(search_space_db['activation_functions']['min']),NodeType(search_space_db['activation_functions']['max']),SearchSpace.Type.INT,'node_types')
-        search_space.add(search_space_db['dropouts']['min'],search_space_db['dropouts']['max'],SearchSpace.Type.FLOAT,'dropouts')
-        search_space.add(search_space_db['bias']['min'] not in (0,False),search_space_db['bias']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'bias')
-        output_layer_node_type=NodeType(search_space_db['output_layer_node_type'])
-        label_type=LabelEncoding(search_space_db['label_type'])
-        return search_space,output_layer_node_type,label_type
-    }
-
-    def fetchNeuralNetworkMetadata(self,independent_net_id){
-        neural_db=self.mongo.getNeuralDB()
-        train_metadata=mongo.findOneOnDBFromIndex(neural_db,'independent_net','_id',independent_net_id)
-        if train_metadata is None {
-            raise Exception('Unable to find network {}'.format(independent_net_id))
-        }
-        hyper_name=str(train_metadata['hyperparameters_name'])
-        cve_years_train,train_data_limit=self.parseDatasetMetadataStrRepresentation(str(train_metadata['train_data']))
-        cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(str(train_metadata['test_data']))
-        epochs=train_metadata['epochs']
-        patience_epochs=train_metadata['patience_epochs']
-        cross_validation=CrossValidation(train_metadata['cross_validation'])
-        train_metric=Metric(train_metadata['train_metric'])
-        test_metric=Metric(train_metadata['test_metric'])
-        return hyper_name, cve_years_train, train_data_limit, cve_years_test, test_data_limit, epochs, patience_epochs, cross_validation, train_metric, test_metric
-    }
-
-    def fetchHyperparametersDataV1(self,hyper_name){
-        neural_db=self.mongo.getNeuralDB()
-        hyperparameters=mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
-        if train_metadata is None {
-            raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
-        }
-        hyperparameters=Hyperparameters(int(hyperparameters['batch_size']), float(hyperparameters['alpha']), bool(hyperparameters['shuffle']), bool(hyperparameters['adam']), LabelEncoding(hyperparameters['label_type']), int(hyperparameters['layers']), [int(el) for el in hyperparameters['layer_sizes']], [NodeType(el) for el in hyperparameters['node_types']])
-        # K, L, rehash, rebuild, range_pow and sparcity are useless, since we are not using SLIDE
-        return hyperparameters
-    }
-
-    def fetchHyperparametersDataV2(self,hyper_name,epochs,pat_epochs,metric){
-        neural_db=self.mongo.getNeuralDB()
-        hyperparameters=mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
-        if train_metadata is None {
-            raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
-        }
-        layers=int(hyperparameters['layers'])
-        dropouts=[int(el) for el in hyperparameters['dropouts']]
-        bias=[bool(el) for el in hyperparameters['bias']]
-        layer_sizes=[int(el) for el in hyperparameters['layer_sizes']]
-        node_types=[NodeType(el) for el in hyperparameters['node_types']]
-        batch_size=int(hyperparameters['batch_size'])
-        alpha=float(hyperparameters['alpha'])
-        shuffle=bool(hyperparameters['shuffle'])
-        adam=bool(hyperparameters['adam'])
-        patience_epochs=pat_epochs
-        max_epochs=epochs
-        loss=Loss(hyperparameters['loss'])
-        monitor_metric=metric
-        label_type=LabelEncoding(hyperparameters['label_type'])
-        return Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
-    }
-
-    def updateBestOnGeneticSimulation(self,simulation_id,best,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def appendResultOnGeneticSimulation(self,simulation_id,pop_size,g,best_out,timestamp_s){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def clearPopulationNeuralGenomeVector(self,population_id,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def addToPopulationNeuralGenomeVector(self,population_id,individual,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def clearResultOnGeneticSimulation(self,simulation_id){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def claimGeneticSimulation(self,simulation_id,now_str,hostname){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def clearHallOfFameNeuralGenomeVector(self,hall_of_fame_id,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def addToHallOfFameNeuralGenomeVector(self,hall_of_fame_id,individual,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def finishGeneticSimulation(self,simulation_id,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def loadWeightsFromNeuralNet(self,independent_net_id){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def appendTMetricsOnNeuralNet(self,independent_net_id,train_metrics){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def appendWeightsOnNeuralNet(self,independent_net_id,trained_weights){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def appendStatsOnNeuralNet(self,independent_net_id,name,res){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def claimNeuralNetTrain(self,independent_net_id,now_str,hostname){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def finishNeuralNetTrain(self,independent_net_id,now_str){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
-
-    def storeEvalNeuralNetResult(self,result_id,test_data_ids,classes,activation,test_labels,statistics){
-        raise Exception('Not implemented yet!') # TODO Code me!
-    }
+	def genomeToDict(self,individual){
+		genome={}
+		genome['id']=individual.id
+		genome['output']=individual.output
+		genome['fitness']=individual.fitness
+		genome['gen']=individual.gen
+		if individual.age is not None{
+			genome['age']=individual.age
+		}
+		genome['mt_dna']=individual.mt_dna
+		genome['dna']='[ '+' '.join([str(i) for i in individual.dna])+' ]'
+		if individual.is_neural{
+			genome['weights']=individual.getWeights(raw=True)
+		}
+		return genome
+	}
 }

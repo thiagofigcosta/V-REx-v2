@@ -141,15 +141,19 @@ class MongoDB(object){
         return self.neural_db
     }
 
-    def getObjectId(self,id){
-        return bson.ObjectId(id)
+    def getObjectId(self,id_str){
+        if type(id_str)==str{
+            return bson.ObjectId(id_str)
+        }else{
+            return id_str
+        }
     }
 
-    def insertOneOnDB(self,db,document,collection,index=None,verbose=True,ignore_lock=False){
-        return self.insertManyOnDB(db,[document],collection,index=index,verbose=verbose,ignore_lock=ignore_lock)
+    def insertOneOnDB(self,db,document,collection_str,index=None,verbose=True,ignore_lock=False,create_index=True){
+        return self.insertManyOnDB(db,[document],collection_str,index=index,verbose=verbose,ignore_lock=ignore_lock,create_index=create_index)
     }
 
-    def insertManyOnDB(self,db,documents,collection_str,index=None,verbose=True,ignore_lock=False){
+    def insertManyOnDB(self,db,documents,collection_str,index=None,verbose=True,ignore_lock=False,create_index=True){
         if self.dummy {
             path=Utils.joinPath(MongoDB.DUMMY_FOLDER,'{}.json'.format(collection_str))
             Utils.saveJson(path,documents)
@@ -174,15 +178,21 @@ class MongoDB(object){
                             lock.acquire()
                         }
                         trying=False
-                        if index is not None{
-                            collection.create_index([(index, pymongo.ASCENDING)], unique=True)
+                        if index is not None and index!='_id'{
+                            if create_index {
+                                collection.create_index([(index, pymongo.ASCENDING)], unique=True)
+                            }
                         }else{
                             index='_id'
                         }
                         mod_count=0
                         for doc in documents{
                             if index in doc{
-                                query={index: doc[index]}
+                                idx_val=doc[index]
+                                if index=='_id' and type(idx_val)==str{
+                                    idx_val=self.getObjectId(idx_val)
+                                }
+                                query={index: idx_val}
                                 result=collection.replace_one(query, doc, upsert=True) 
                                 if result.modified_count > 0{
                                     mod_count+=result.modified_count
@@ -208,6 +218,65 @@ class MongoDB(object){
                     }
                 }except Exception as e{
                     if 'Cannot insert on collection' not in str(e){
+                        raise e
+                    }
+                    tries+=1
+                    if tries <= MAX_TRIES {
+                        self.logger.warn('Collection {} of db {}, collection is locked, trying again later! {} of {}'.format(collection_str,db.name,tries,MAX_TRIES))
+                        time.sleep(SECONDS_BETWEEN_TRIES)
+                    }else{
+                        trying=False
+                        raise e
+                    }
+                }
+            }
+        }
+    }
+
+    def updateDocumentOnDB(self,db,collection_str,query_fetch,query_update,verbose=True,ignore_lock=False){
+        if self.dummy {
+            path=Utils.joinPath(MongoDB.DUMMY_FOLDER,'{}.json'.format(collection_str))
+            Utils.saveJson(path,documents)
+            return path
+        }else{
+            if verbose{
+                self.logger.info('Updating on {} db on col: {} with query: {} setting: {}...'.format(db.name,collection_str,query_fetch,query_update))
+            }
+            collection=db[collection_str]
+            lock=self.getLock(db,collection_str)
+            MAX_TRIES=3
+            SECONDS_BETWEEN_TRIES=60
+            tries=0
+            trying=True
+            while trying{
+                try{
+                    if not ignore_lock{
+                        lock.fetch()
+                    }
+                    if not lock.locked or ignore_lock{
+                        if not ignore_lock{
+                            lock.acquire()
+                        }
+                        trying=False
+                        mod_count=0
+                        result=collection.update_one(query_fetch, query_update) 
+                        if result.modified_count > 0{
+                            mod_count+=result.modified_count
+                        }
+                                # if result.upserted_id{
+                                #     mod_count+=1
+                                # }
+                        if verbose{
+                            self.logger.info('Updated size: {}...OK'.format(mod_count))
+                        }
+                        if not ignore_lock{
+                            lock.release()
+                        }
+                    }else{
+                        raise Exception('Cannot update on collection {} of db {}, collection is locked!'.format(collection_str,db.name))
+                    }
+                }except Exception as e{
+                    if 'Cannot update on collection' not in str(e){
                         raise e
                     }
                     tries+=1
@@ -371,6 +440,7 @@ class MongoDB(object){
         if found>0{
             return result.next()
         }
+        return None
     }
 
     def findOneOnDBFromIndex(self,db,collection,index_field,index_value,wait_unlock=True){

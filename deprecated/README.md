@@ -1,12 +1,15 @@
-# V-REx-v2
+# V-REx
 Vulnerabilities' Risk of Exploitation
-
-Improved version of https://github.com/thiagofigcosta/V-REx
 
 Prototype of a genetically tuned neural network to predict probability of exploiting a vulnerability.
 
 Neural network with parts of the code from: 
+>- https://github.com/keroro824/HashingDeepLearning 
+>- https://github.com/jl2922/hps
 >- https://github.com/kapilt/mongoqueue
+>- https://github.com/mongodb/mongo-cxx-driver
+>- https://github.com/mongodb/mongo-c-driver
+>- https://github.com/mnmlstc/core
 
 ## To run commands
 
@@ -28,14 +31,9 @@ docker exec -it $(docker container ls | grep front-end | cut -f 1 -d' ') front
 
 To follow logs type one of the commands below
 
-### Core V2
+### Core
 ```
-docker logs --follow $(docker container ls | grep core | grep v2 | cut -f 1 -d' ')
-```
-
-### Core V1
-```
-docker logs --follow $(docker container ls | grep core | grep v1 | cut -f 1 -d' ')
+docker logs --follow $(docker container ls | grep core | cut -f 1 -d' ')
 ```
 
 ### Data Crawler
@@ -63,7 +61,7 @@ Inside .env file
 
 ## Running with Docker compose (recommended)
 ```
-docker build -f deprecated/core/BaseImage.dockerfile -t ubuntu_2004_vrex_core_build deprecated/core/ # only once because this is a cache image with just libraries
+docker build -f core/BaseImage.dockerfile -t ubuntu_2004_vrex_core_build core/ # only once because this is a cache image with just libraries
 docker-compose build
 docker-compose up
 ```
@@ -111,18 +109,11 @@ docker build -t front-end:v1.0.0 front-end/  # build image
 docker rmi -f $(docker images -f "dangling=true" -q) # cleanup <none> images
 ```
 
-#### Core V2
+#### Core
 ```
 ./update_Pytho\{N\}.sh # update Pytho{\}
-docker build -t core:v2.0.0 core-2/  # build image
-docker rmi -f $(docker images -f "dangling=true" -q) # cleanup <none> images
-```
-
-#### Core V1
-```
-./update_Pytho\{N\}.sh # update Pytho{\}
-docker build -f deprecated/core/BaseImage.dockerfile -t ubuntu_2004_vrex_core_build deprecated/core/ # build base image
-docker build -f deprecated/core/Dockerfile -t core:v1.0.0 deprecated/core/ # build image
+docker build -f core/BaseImage.dockerfile -t ubuntu_2004_vrex_core_build core/ # build base image
+docker build -f core/Dockerfile -t core:v1.0.0 core/ # build image
 docker rmi -f $(docker images -f "dangling=true" -q) # cleanup <none> images
 ```
 
@@ -138,12 +129,7 @@ docker run data-crawler:v1.0.0
 docker run front-end:v1.0.0
 ```
 
-#### Core V2
-```
-docker run core:v2.0.0
-```
-
-#### Core V1
+#### Core
 
 ##### With Controller
 ```
