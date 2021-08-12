@@ -72,13 +72,13 @@ def inputArrayNumber(is_float=False,greater_or_eq=0,lower_or_eq=None){
 }
 
 def main(argv){
-    HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--train-neural-gen-mode]\n\t[--train-neural-gen-mode-continue <simulation_id>:<independent_net_id>]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]'
+    HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]'
     args=[]
     zombie=False
     global ITERATIVE
     to_run=[]
     try{ 
-        opts, args = getopt.getopt(argv,"hq",["keep-alive-as-zombie","download-source=","download-all-sources","check-jobs","quit","get-queue-names","empty-queue=","empty-all-queues","get-all-db-names","dump-db=","restore-db=","run-processor-pipeline","run-flattern-and-simplify-all","run-flattern-and-simplify=","run-filter-exploits","run-transform-all","run-transform=","run-enrich","run-analyze","run-filter-and-normalize","run-merge-cve","create-genetic-env","list-genetic-envs","rm-genetic-env=","run-genetic","show-genetic-results","create-neural-hyperparams","list-neural-hyperparams","rm-neural-hyperparams=","train-neural","eval-neural","parse-dna-to-hyperparams","train-neural-gen-mode","train-neural-gen-mode-continue="])
+        opts, args = getopt.getopt(argv,"hq",["keep-alive-as-zombie","download-source=","download-all-sources","check-jobs","quit","get-queue-names","empty-queue=","empty-all-queues","get-all-db-names","dump-db=","restore-db=","run-processor-pipeline","run-flattern-and-simplify-all","run-flattern-and-simplify=","run-filter-exploits","run-transform-all","run-transform=","run-enrich","run-analyze","run-filter-and-normalize","run-merge-cve","create-genetic-env","list-genetic-envs","rm-genetic-env=","run-genetic","show-genetic-results","create-neural-hyperparams","list-neural-hyperparams","rm-neural-hyperparams=","train-neural","eval-neural","parse-dna-to-hyperparams"])
     }except getopt.GetoptError{
         print (HELP_STR)
         if not ITERATIVE {
@@ -454,113 +454,6 @@ def main(argv){
                         LOGGER.info('Wrote on Core queue to eval network...OK')
                     }
                 } 
-            }elif opt == "--train-neural-gen-mode-continue"{
-                arg=arg.strip().split(':')
-                simulation_id=arg[0]
-                independent_net_id=arg[1]
-                query={'_id':bson.ObjectId(simulation_id)}
-                simulation=mongo.findOneOnDB(mongo.getDB('genetic_db'),'simulations',query)
-
-                if simulation!=None{
-                    query={'_id':bson.ObjectId(simulation['population_id'])}
-                    population=mongo.findOneOnDB(mongo.getDB('neural_db'),'populations',query)
-                    if population!=None{
-                        LOGGER.info('Updating individual_net on neural_db...')
-                        query={'_id':bson.ObjectId(independent_net_id)}
-                        update={'$set':{'started_by':simulation['started_by'],'started_at':simulation['started_at'],'finished_at':simulation['finished_at'],'weights':population['neural_genomes'][0]['weights']}}
-                        mongo.getDB('neural_db')['independent_net'].find_one_and_update(query,update)
-                        LOGGER.info('Updated individual_net on neural_db...OK')
-                    }else{
-                        LOGGER.error('Population not found!')
-                    }
-                }else{
-                    LOGGER.error('Simulation not found!')
-                }
-            }elif opt == "--train-neural-gen-mode"{
-                print('Now enter the data to train the neural network...')
-                print('Enter a existing hyperparameters name to be used: ', end = '')
-                hyper_name=input().strip()
-                hyper=mongo.findOneOnDBFromIndex(mongo.getDB('neural_db'),'snn_hyperparameters','name',hyper_name,wait_unlock=False)
-                if hyper==None{
-                    LOGGER.error('Not found a hyperparameter for the given name!')
-                }else{
-                    print('Enter the epochs: ',end='')
-                    epochs=inputNumber()
-                    print('Enter the cross validation method (0-4):')
-                    print('\t0 - NONE')
-                    print('\t1 - ROLLING_FORECASTING_ORIGIN')
-                    print('\t2 - KFOLDS')
-                    print('\t3 - FIXED_PERCENT')
-                    print('value: ', end='')
-                    cross_validation=inputNumber(lower_or_eq=3)
-                    print('Enter the metric to be used during training/val (0-4):')
-                    print('\t0 - RAW_LOSS')
-                    print('\t1 - F1')
-                    print('\t2 - RECALL')
-                    print('\t3 - ACCURACY')
-                    print('\t4 - PRECISION')
-                    print('value: ',end='')
-                    train_metric=inputNumber(lower_or_eq=4)
-                    print('Enter the years to be used as train data splitted by comma (,) (1999-2020):')
-                    train_data=inputArrayNumber(greater_or_eq=1999,lower_or_eq=2020)
-                    print('Enter a limit of CVEs for each year (0 = unlimitted): ')
-                    train_data+=':{}'.format(inputNumber())
-                    test_metric=0
-                    test_data=''
-                    gen_name='{}_ss'.format(hyper_name)
-                    environment_fetch=mongo.findOneOnDBFromIndex(mongo.getDB('genetic_db'),'environments','name',gen_name,wait_unlock=False)
-                    if environment_fetch==None{
-                        environment_fetch={'name':gen_name,'submitted_at':Utils.getTodayDate('%d/%m/%Y %H:%M:%S'),'space_search':{'amount_of_layers':{'min':hyper['layers'],'max':hyper['layers']},'epochs':{'min':epochs,'max':epochs},'batch_size':{'min':hyper['batch_size'],'max':hyper['batch_size']},'layer_sizes':{'min':hyper['layers'],'max':hyper['layers']},'range_pow':{'min':hyper['range_pow'][0],'max':hyper['range_pow'][0]},'K':{'min':hyper['K'][0],'max':hyper['K'][0]},'L':{'min':hyper['L'][0],'max':hyper['L'][0]},'activation_functions':{'min':hyper['node_types'][0],'max':hyper['node_types'][0]},'sparcity':{'min':hyper['sparcity'][0],'max':hyper['sparcity'][0]},'alpha':{'min':hyper['alpha'],'max':hyper['alpha']}}}
-                        LOGGER.info('Writting environment on genetic_db...')
-                        mongo.insertOneOnDB(mongo.getDB('genetic_db'),environment_fetch,'environments',index='name',ignore_lock=True)
-                        LOGGER.info('Wrote environment on genetic_db...OK')
-                    }
-                    print('Enter a name for the train (unique): ', end = '')
-                    train_name=input().strip()
-                    submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
-                    started_by=None
-                    started_at=None
-                    finished_at=None
-                    weights=None
-                    train_metadata={'name':train_name,'hyperparameters_name':hyper_name,'submitted_at':submitted_at,'started_by':started_by,'started_at':started_at,'finished_at':finished_at,'epochs':epochs,'cross_validation':cross_validation,'train_metric':train_metric,'train_data':train_data,'test_metric':test_metric,'test_data':test_data,'weights':weights}
-                    LOGGER.info('Writting individual_net on neural_db...')
-                    independent_net_id=mongo.quickInsertOneIgnoringLockAndRetrieveId(mongo.getDB('neural_db'),train_metadata,'independent_net',index='name')
-                    if (independent_net_id==None){
-                        LOGGER.error('Failed to insert individual_net!')
-                    }else{
-                        LOGGER.info('Wrote individual_net on neural_db...OK')
-                        simulation_name='{}_s'.format(train_name)
-                        hall_of_fame_id=None
-                        population_id=None
-                        best={'output':None,'at_gen':None}
-                        results=[]
-                        simulation_data={'name':simulation_name,'env_name':gen_name,'submitted_at':submitted_at,'started_by':started_by,'started_at':started_at,'finished_at':finished_at,'hall_of_fame_id':hall_of_fame_id,'population_id':population_id,'pop_start_size':1,'max_gens':1,'algorithm':1,'max_age':0,'max_children':0,'mutation_rate':0,'recycle_rate':0,'sex_rate':0,'max_notables':1,'cross_validation':cross_validation,'label_type':hyper['label_type'],'metric':train_metric,'train_data':train_data,'best':best,'results':results}
-                        LOGGER.info('Writting simulation config on genetic_db...')
-                        simulation_id=mongo.quickInsertOneIgnoringLockAndRetrieveId(mongo.getDB('genetic_db'),simulation_data,'simulations')
-                        if (simulation_id==None){
-                            LOGGER.error('Failed to insert simulation!')
-                        }else{
-                            LOGGER.info('Wrote simulation config on genetic_db...OK')
-                            halloffame_data={'simulation_id':simulation_id,'env_name':gen_name,'updated_at':None,'neural_genomes':[]}
-                            halloffame_id=mongo.quickInsertOneIgnoringLockAndRetrieveId(mongo.getDB('neural_db'),halloffame_data,'hall_of_fame')
-                            generation_data={'simulation_id':simulation_id,'env_name':gen_name,'updated_at':None,'neural_genomes':[]}
-                            population_id=mongo.quickInsertOneIgnoringLockAndRetrieveId(mongo.getDB('neural_db'),generation_data,'populations')
-                            if halloffame_id == None or population_id == None{
-                                LOGGER.error('Failed to insert hall of fame or/and generation!')
-                            }else{
-                                query={'_id':bson.ObjectId(simulation_id)}
-                                update={'$set':{'hall_of_fame_id':halloffame_id,'population_id':population_id}}
-                                mongo.getDB('genetic_db')['simulations'].find_one_and_update(query,update)
-
-                                LOGGER.info('Writting on Core queue to train network...')
-                                job_args={'simulation_id':simulation_id}
-                                mongo.insertOnCoreQueue('Genetic',job_args,priority=3)
-                                LOGGER.info('Wrote on Core queue to train network...OK')
-                                LOGGER.info('\n\n\n\n\nType `--train-neural-gen-mode-continue {}:{}` when the core simulation {} finishes.\n'.format(simulation_id,independent_net_id,simulation_id))
-                            }
-                        }
-                    }
-                }
             }elif opt == "--train-neural"{
                 print('Now enter the data to train the neural network...')
                 print('Enter a existing hyperparameters name to be used: ', end = '')
