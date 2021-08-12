@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import time
-from Core import Core
 from Genome import Genome
 from Utils import Utils
 from StandardGenetic import StandardGenetic
@@ -36,6 +35,7 @@ class PopulationManager(object){
         self.genetic_algorithm=None
         self.space=None
         for individual in self.population{
+            from Core import Core
             if Core.FREE_MEMORY_MANUALLY==True{
                 del individual
             }
@@ -55,6 +55,7 @@ class PopulationManager(object){
                 best_out=float('inf')
             }
             if verbose{
+                from Core import Core
                 Core.LOGGER.info('\tEvaluating individuals...')
             }
             for p,individual in enumerate(self.population){
@@ -73,33 +74,40 @@ class PopulationManager(object){
                 if verbose{
                     percent=(p+1)/float(len(self.population))*100.0
                     if int(percent)%PopulationManager.PRINT_REL_FREQUENCY==0 {
+                        from Core import Core
                         Core.LOGGER.info('\t\tprogress: {:2.2f}%'.format(percent))
                     }
                 }
             }
             if verbose{
+                from Core import Core
                 Core.LOGGER.info('\tEvaluated individuals...OK')
                 Core.LOGGER.info('\tCalculating fitness...')
             }
             self.population=self.genetic_algorithm.fit(self.population)
             if verbose{
+                from Core import Core
                 Core.LOGGER.info('\tCalculated fitness...OK')
             }
             if self.hall_of_fame is not None {
                 if verbose{
+                    from Core import Core
                     Core.LOGGER.info('\tSetting hall of fame...')
                 }
                 self.hall_of_fame.update(self.population,g)
                 if verbose{
+                    from Core import Core
                     Core.LOGGER.info('\tSetted hall of fame...OK')
                 }
             }
             if g<gens{
                 if verbose{
+                    from Core import Core
                     Core.LOGGER.info('\tSelecting and breeding individuals...')
                 }
                 self.population=self.genetic_algorithm.select(self.population)
                 if verbose{
+                    from Core import Core
                     Core.LOGGER.info('\tSelected and breed individuals...OK')
                     enhanced_str=' and aging'
                     if type(self.genetic_algorithm) is not EnhancedGenetic{
@@ -118,6 +126,7 @@ class PopulationManager(object){
                     if type(self.genetic_algorithm) is not EnhancedGenetic{
                         enhanced_str=''
                     }
+                    from Core import Core
                     Core.LOGGER.info('\tMutated{} individuals...OK'.format(enhanced_str))
                 }
             }else{
@@ -130,10 +139,12 @@ class PopulationManager(object){
                 self.after_gen_callback(args_list)
             }
             if len(self.population)<2{
+                from Core import Core
                 Core.LOGGER.warn('Early stopping generation {} due to its small size {}, this population died!'.format(g,len(self.population)))
                 break
             }
             if verbose_generations or self.print_deltas {
+                from Core import Core
                 Core.LOGGER.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
             }
         }

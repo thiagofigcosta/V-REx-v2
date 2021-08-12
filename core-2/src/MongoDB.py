@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from Utils import Utils
 import pymongo
+import bson
 import datetime
 import socket
 import os

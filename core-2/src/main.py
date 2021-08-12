@@ -1,6 +1,6 @@
 #!/bin/python
 
-import sys, getopt, bson, re
+import sys, getopt
 from Core import Core
 from Utils import Utils
 from Logger import Logger
@@ -15,7 +15,7 @@ Utils(TMP_FOLDER,LOGGER)
 
 def loopOnQueue(core){
     while True{
-        job=mongo.getQueues()[MongoDB.QUEUE_COL_CORE_NAME].next()
+        job=core.mongo.getQueues()[MongoDB.QUEUE_COL_CORE_NAME].next()
         if job is not None{
             payload=job.payload
             task=payload['task']

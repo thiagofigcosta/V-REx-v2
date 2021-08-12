@@ -4,8 +4,13 @@ from Utils import Utils
 from Logger import Logger
 from MongoDB import MongoDB
 from SearchSpace import SearchSpace
+from HallOfFame import HallOfFame
+from StandardNeuralNetwork import StandardNeuralNetwork
+from PopulationManager import PopulationManager
+from StandardGenetic import StandardGenetic
+from EnhancedGenetic import EnhancedGenetic
 from Hyperparameters import Hyperparameters
-from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType
+from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss
 from Genome import Genome
 from Dataset import Dataset
 
@@ -46,31 +51,31 @@ class Core(object){
 		cross_validation=genetic_metadata[13]
 		metric_mode=genetic_metadata[14]
 		algorithm=genetic_metadata[15] 
-		label_encoding=genetic_metadata[16] 
+		label_type=genetic_metadata[16] 
 		search_maximum=metric_mode!=Metric.RAW_LOSS
 		Core.LOGGER.info('Genetic metadata')
-		Core.LOGGER.info('\t{}:{}'.format('environment_name',environment_name))
-		Core.LOGGER.info('\t{}:{}'.format('cve_years',cve_years))
-		Core.LOGGER.info('\t{}:{}'.format('train_data_limit',train_data_limit))
-		Core.LOGGER.info('\t{}:{}'.format('hall_of_fame_id',hall_of_fame_id))
-		Core.LOGGER.info('\t{}:{}'.format('population_id',population_id))
-		Core.LOGGER.info('\t{}:{}'.format('population_start_size',population_start_size))
-		Core.LOGGER.info('\t{}:{}'.format('max_gens',max_gens))
-		Core.LOGGER.info('\t{}:{}'.format('max_age',max_age))
-		Core.LOGGER.info('\t{}:{}'.format('max_children',max_children))
-		Core.LOGGER.info('\t{}:{}'.format('mutation_rate',mutation_rate))
-		Core.LOGGER.info('\t{}:{}'.format('recycle_rate',recycle_rate))
-		Core.LOGGER.info('\t{}:{}'.format('sex_rate',sex_rate))
-		Core.LOGGER.info('\t{}:{}'.format('max_notables',max_notables))
-		Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
-		Core.LOGGER.info('\t{}:{}'.format('metric_mode',metric_mode))
-		Core.LOGGER.info('\t{}:{}'.format('algorithm',algorithm))
-		Core.LOGGER.info('\t{}:{}'.format('label_encoding',label_encoding))
-		Core.LOGGER.info('\t{}:{}'.format('search_maximum',search_maximum))
+		Core.LOGGER.info('\t{}: {}'.format('environment_name',environment_name))
+		Core.LOGGER.info('\t{}: {}'.format('cve_years',cve_years))
+		Core.LOGGER.info('\t{}: {}'.format('train_data_limit',train_data_limit))
+		Core.LOGGER.info('\t{}: {}'.format('hall_of_fame_id',hall_of_fame_id))
+		Core.LOGGER.info('\t{}: {}'.format('population_id',population_id))
+		Core.LOGGER.info('\t{}: {}'.format('population_start_size',population_start_size))
+		Core.LOGGER.info('\t{}: {}'.format('max_gens',max_gens))
+		Core.LOGGER.info('\t{}: {}'.format('max_age',max_age))
+		Core.LOGGER.info('\t{}: {}'.format('max_children',max_children))
+		Core.LOGGER.info('\t{}: {}'.format('mutation_rate',mutation_rate))
+		Core.LOGGER.info('\t{}: {}'.format('recycle_rate',recycle_rate))
+		Core.LOGGER.info('\t{}: {}'.format('sex_rate',sex_rate))
+		Core.LOGGER.info('\t{}: {}'.format('max_notables',max_notables))
+		Core.LOGGER.info('\t{}: {}'.format('cross_validation',cross_validation))
+		Core.LOGGER.info('\t{}: {}'.format('metric_mode',metric_mode))
+		Core.LOGGER.info('\t{}: {}'.format('algorithm',algorithm))
+		Core.LOGGER.info('\t{}: {}'.format('label_type',label_type))
+		Core.LOGGER.info('\t{}: {}'.format('search_maximum',search_maximum))
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
 		Core.LOGGER.info('Loaded simulation...OK')
 		Core.LOGGER.info('Loading search space...')
-		search_space,output_layer_node_type,label_type=self.fetchEnvironmentDataV2(environment_name)
+		search_space,output_layer_node_type=self.fetchEnvironmentDataV2(environment_name,metric_mode,label_type)
 		Core.LOGGER.info('Loaded search space...OK')
 		Core.LOGGER.info('Loading dataset...')
 		train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
@@ -79,21 +84,18 @@ class Core(object){
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
 		search_space=Genome.enrichSearchSpace(search_space)
-		Core.LOGGER.info('\t{}:{}'.format('output_layer_node_type',output_layer_node_type))
-		Core.LOGGER.info('\t{}:{}'.format('label_type',label_type))
+		Core.LOGGER.info('\t{}: {}'.format('output_layer_node_type',output_layer_node_type))
 		Core.LOGGER.multiline(str(search_space))
 		def train_callback(genome){
-			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,metric_mode
+			nonlocal train_features,train_labels,cross_validation,output_layer_node_type
 			preserve_weights=True
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
-			search_maximum=metric_mode!=Metric.RAW_LOSS
+			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
 			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_gen_{}'.format(genome.id),verbose=False)
 			nn.buildModel(input_size)
-			if preserve_weights {
-				nn.setWeights(genome.getWeights())
-			}
+			nn.setWeights(genome.getWeights())
 			if cross_validation==CrossValidation.NONE{
 				nn.trainNoValidation(train_features,train_labels)
 			}elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
@@ -106,7 +108,7 @@ class Core(object){
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
-			output=nn.getMetricMean(metric_mode.toKerasName(),cross_validation!=CrossValidation.NONE)
+			output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
 			if output!=output{ # Not a Number, ignore this genome
 				Core.LOGGER.warn('Not a number metric mean')
 				output=float('-inf') if search_maximum else float('inf')
@@ -190,22 +192,22 @@ class Core(object){
 		test_metric=independent_net_metadata[9]
 		hyperparameters=self.fetchHyperparametersDataV2(hyper_name,epochs,patience_epochs,train_metric)
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
-		Core.LOGGER.info('\t{}:{}'.format('hyper_name',hyper_name))
-		Core.LOGGER.info('\t{}:{}'.format('cve_years_train',cve_years_train))
-		Core.LOGGER.info('\t{}:{}'.format('train_data_limit',train_data_limit))
-		Core.LOGGER.info('\t{}:{}'.format('cve_years_test',cve_years_test))
-		Core.LOGGER.info('\t{}:{}'.format('test_data_limit',test_data_limit))
-		Core.LOGGER.info('\t{}:{}'.format('epochs',epochs))
-		Core.LOGGER.info('\t{}:{}'.format('patience_epochs',patience_epochs))
-		Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
-		Core.LOGGER.info('\t{}:{}'.format('train_metric',train_metric))
-		Core.LOGGER.info('\t{}:{}'.format('test_metric',test_metric))
+		Core.LOGGER.info('\t{}: {}'.format('hyper_name',hyper_name))
+		Core.LOGGER.info('\t{}: {}'.format('cve_years_train',cve_years_train))
+		Core.LOGGER.info('\t{}: {}'.format('train_data_limit',train_data_limit))
+		Core.LOGGER.info('\t{}: {}'.format('cve_years_test',cve_years_test))
+		Core.LOGGER.info('\t{}: {}'.format('test_data_limit',test_data_limit))
+		Core.LOGGER.info('\t{}: {}'.format('epochs',epochs))
+		Core.LOGGER.info('\t{}: {}'.format('patience_epochs',patience_epochs))
+		Core.LOGGER.info('\t{}: {}'.format('cross_validation',cross_validation))
+		Core.LOGGER.info('\t{}: {}'.format('train_metric',train_metric))
+		Core.LOGGER.info('\t{}: {}'.format('test_metric',test_metric))
 		Core.LOGGER.multiline(str(hyperparameters))
 		Core.LOGGER.info('Parsed train settings...OK')
 		Core.LOGGER.info('Loading dataset...')
 		train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
 		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
-		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,Core.ENCODER)
+		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,hyperparameters.label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
 		self.claimNeuralNetTrain(independent_net_id,Utils.getTodayDatetime(),Utils.getHostname())
@@ -252,14 +254,13 @@ class Core(object){
 			if len(cve_years_test)>0{
 				test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
 				# no balance for testing
-				test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,Core.ENCODER)
+				test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,hyperparameters.label_type)
 				# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
 			}
 			Core.LOGGER.info('Loaded dataset...OK')
 			Core.LOGGER.info('Creating test network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			hyperparameters.setLastLayer(output_size,Core.OUTPUT_LAYER_TYPE)
 			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train-p2_{}'.format(independent_net_id),verbose=True)
 			nn.buildModel(input_size)
 			nn.setWeights(Genome.decodeWeights(trained_weights))
@@ -301,23 +302,22 @@ class Core(object){
 		test_metric=independent_net_metadata[9]
 		hyperparameters=self.fetchHyperparametersDataV2(hyper_name,0,0,test_metric)
 		cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(eval_data)
-		Core.LOGGER.info('\t{}:{}'.format('hyper_name',hyper_name))
-		Core.LOGGER.info('\t{}:{}'.format('cross_validation',cross_validation))
-		Core.LOGGER.info('\t{}:{}'.format('test_metric',test_metric))
-		Core.LOGGER.info('\t{}:{}'.format('cve_years_test',cve_years_test))
-		Core.LOGGER.info('\t{}:{}'.format('test_data_limit',test_data_limit))
+		Core.LOGGER.info('\t{}: {}'.format('hyper_name',hyper_name))
+		Core.LOGGER.info('\t{}: {}'.format('cross_validation',cross_validation))
+		Core.LOGGER.info('\t{}: {}'.format('test_metric',test_metric))
+		Core.LOGGER.info('\t{}: {}'.format('cve_years_test',cve_years_test))
+		Core.LOGGER.info('\t{}: {}'.format('test_data_limit',test_data_limit))
 		Core.LOGGER.multiline(str(hyperparameters))
 		Core.LOGGER.info('Parsed evaluate settings...OK')
 		Core.LOGGER.info('Loading dataset...')
 		test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
 		# no balance for testing
-		test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,Core.ENCODER)
+		test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,hyperparameters.label_type)
 		# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
 		Core.LOGGER.info('Creating eval network...')
 		input_size=len(test_features[0])
 		output_size=len(test_labels[0])
-		hyperparameters.setLastLayer(output_size,Core.OUTPUT_LAYER_TYPE)
 		nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_eval_{}'.format(independent_net_id),verbose=True)
 		nn.buildModel(input_size)
 		nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
@@ -343,7 +343,7 @@ class Core(object){
 		data_features=[]
 		data_labels=[]
 		for year in years {
-			cur_cves=mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
+			cur_cves=self.mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
 			if cur_cves is None {
 				raise Exception('Unable to find cves from {}:{}'.format(year,limit))
 			}
@@ -357,6 +357,9 @@ class Core(object){
 				data_features.append(parsed_cve_features)
 				parsed_cve_labels=[]
 				parsed_cve_labels.append(int(cur_cve['labels']['exploits_has']))
+				if len(parsed_cve_labels)==1{
+					parsed_cve_labels=parsed_cve_labels[0] # to avoid enumfication of the dataset later
+				}
 				data_labels.append(parsed_cve_labels)
 				parsed_cves+=1
 				if limit>0 and parsed_cves >= limit {
@@ -383,7 +386,7 @@ class Core(object){
 
 	def fetchGeneticSimulationData(self,simulation_id){
 		genetic_db=self.mongo.getGeneticDB()
-		simu_data=mongo.findOneOnDBFromIndex(genetic_db,'simulations','_id',simulation_id)
+		simu_data=self.mongo.findOneOnDBFromIndex(genetic_db,'simulations','_id',simulation_id)
 		if simu_data is None {
 			raise Exception('Unable to find simulation {}'.format(simulation_id))
 		}
@@ -391,27 +394,28 @@ class Core(object){
 		cve_years,train_data_limit=self.parseDatasetMetadataStrRepresentation(str(simu_data['train_data']))
 		hall_of_fame_id=str(simu_data['hall_of_fame_id'])
 		population_id=str(simu_data['population_id'])
-		population_start_size=int(data['pop_start_size'])
-		max_gens=int(data['max_gens'])
-		max_age=int(data['max_age'])
-		max_children=int(data['max_children'])
-		mutation_rate=float(data['mutation_rate'])
-		recycle_rate=float(data['recycle_rate'])
-		sex_rate=float(data['sex_rate'])
-		max_notables=int(data['max_notables'])
-		cross_validation=CrossValidation(data['cross_validation'])
-		metric_mode=Metric(data['metric'])
-		algorithm=GeneticAlgorithmType(data['algorithm'])
-		label_encoding=LabelEncoding(data['label_type'])
-		return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_encoding
+		population_start_size=int(simu_data['pop_start_size'])
+		max_gens=int(simu_data['max_gens'])
+		max_age=int(simu_data['max_age'])
+		max_children=int(simu_data['max_children'])
+		mutation_rate=float(simu_data['mutation_rate'])
+		recycle_rate=float(simu_data['recycle_rate'])
+		sex_rate=float(simu_data['sex_rate'])
+		max_notables=int(simu_data['max_notables'])
+		cross_validation=CrossValidation(simu_data['cross_validation'])
+		metric_mode=Metric(simu_data['metric'])
+		algorithm=GeneticAlgorithmType(simu_data['algorithm'])
+		label_type=LabelEncoding(simu_data['label_type'])
+		return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_type
 	}
 
 	def fetchEnvironmentDataV1(self,environment_name){
 		genetic_db=self.mongo.getGeneticDB()
-		search_space_db=mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
+		search_space_db=self.mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
 		if search_space_db is None {
 			raise Exception('Unable to find environment {}'.format(environment_name))
 		}
+		search_space_db=search_space_db['space_search'] # keep it misspelled
 		search_space=SearchSpace()
 		search_space.add('amount_of_layers',search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT)
 		search_space.add('epochs',search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT)
@@ -423,12 +427,13 @@ class Core(object){
 		return search_space
 	}
 
-	def fetchEnvironmentDataV2(self,environment_name,metric){
+	def fetchEnvironmentDataV2(self,environment_name,metric,encoder){
 		genetic_db=self.mongo.getGeneticDB()
-		search_space_db=mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
+		search_space_db=self.mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
 		if search_space_db is None {
 			raise Exception('Unable to find environment {}'.format(environment_name))
 		}
+		search_space_db=search_space_db['search_space']
 		search_space=SearchSpace()
 		search_space.add(search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT,'layers')
 		search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
@@ -437,7 +442,7 @@ class Core(object){
 		search_space.add(search_space_db['patience_epochs']['min'],search_space_db['patience_epochs']['max'],SearchSpace.Type.INT,'patience_epochs')
 		search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
 		search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
-		search_space.add(Core.ENCODER,Core.ENCODER,SearchSpace.Type.INT,'label_type')
+		search_space.add(encoder,encoder,SearchSpace.Type.INT,'label_type')
 		search_space.add(search_space_db['adam']['min'] not in (0,False),search_space_db['adam']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'adam')
 		search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
 		search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
@@ -446,13 +451,12 @@ class Core(object){
 		search_space.add(search_space_db['dropouts']['min'],search_space_db['dropouts']['max'],SearchSpace.Type.FLOAT,'dropouts')
 		search_space.add(search_space_db['bias']['min'] not in (0,False),search_space_db['bias']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'bias')
 		output_layer_node_type=NodeType(search_space_db['output_layer_node_type'])
-		label_type=LabelEncoding(search_space_db['label_type'])
-		return search_space,output_layer_node_type,label_type
+		return search_space,output_layer_node_type
 	}
 
 	def fetchNeuralNetworkMetadata(self,independent_net_id){
 		neural_db=self.mongo.getNeuralDB()
-		train_metadata=mongo.findOneOnDBFromIndex(neural_db,'independent_net','_id',independent_net_id)
+		train_metadata=self.mongo.findOneOnDBFromIndex(neural_db,'independent_net','_id',independent_net_id)
 		if train_metadata is None {
 			raise Exception('Unable to find network {}'.format(independent_net_id))
 		}
@@ -469,8 +473,8 @@ class Core(object){
 
 	def fetchHyperparametersDataV1(self,hyper_name){
 		neural_db=self.mongo.getNeuralDB()
-		hyperparameters=mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
-		if train_metadata is None {
+		hyperparameters=self.mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
+		if hyperparameters is None {
 			raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
 		}
 		hyperparameters=Hyperparameters(int(hyperparameters['batch_size']), float(hyperparameters['alpha']), bool(hyperparameters['shuffle']), bool(hyperparameters['adam']), LabelEncoding(hyperparameters['label_type']), int(hyperparameters['layers']), [int(el) for el in hyperparameters['layer_sizes']], [NodeType(el) for el in hyperparameters['node_types']])
@@ -480,8 +484,8 @@ class Core(object){
 
 	def fetchHyperparametersDataV2(self,hyper_name,epochs,pat_epochs,metric){
 		neural_db=self.mongo.getNeuralDB()
-		hyperparameters=mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
-		if train_metadata is None {
+		hyperparameters=self.mongo.findOneOnDBFromIndex(neural_db,'snn_hyperparameters','name',hyper_name)
+		if hyperparameters is None {
 			raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
 		}
 		layers=int(hyperparameters['layers'])

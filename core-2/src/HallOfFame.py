@@ -1,8 +1,6 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 
-from Core import Core
-
 class HallOfFame(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
    
@@ -15,6 +13,7 @@ class HallOfFame(object){
 
     def __del__(self){
         for notable in self.notables {
+            from Core import Core
             if Core.FREE_MEMORY_MANUALLY==True{
                 del notable
             }
@@ -31,6 +30,7 @@ class HallOfFame(object){
         while len(notables_to_select)>self.max_notables {
             ordinary=notables_to_select[-1]
             if ordinary in self.notables {
+                from Core import Core
                 if Core.FREE_MEMORY_MANUALLY==True{
                     del ordinary
                 }

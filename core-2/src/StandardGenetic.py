@@ -4,7 +4,6 @@
 from GeneticAlgorithm import GeneticAlgorithm
 from Enums import GeneticRankType
 from Utils import Utils
-from Core import Core
 
 class StandardGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -46,6 +45,7 @@ class StandardGenetic(GeneticAlgorithm){
             next_gen+=children
         }
         for individual in individuals {
+            from Core import Core
             if Core.FREE_MEMORY_MANUALLY==True{
                 del individual
             }
@@ -118,18 +118,7 @@ class StandardGenetic(GeneticAlgorithm){
     }
 
     def randomize(self){
-        r=Utils.random()
-        if (r<=0.3){
-            r=Utils.randomFloat(0,0.06)
-        }elif (r<=0.8){
-            r=Utils.randomFloat(0,0.11)
-        }elif (r<=0.9){
-            r=Utils.randomFloat(0.09,0.16)
-        }elif (r<=0.97){
-            r=Utils.randomFloat(0.15,0.23)
-        }else{
-            r=Utils.randomFloat(0.333,0.666)
-        }
+        r=Utils.randomFloat(0,0.1)
         if (Utils.random()>0.5){
             r=-(1+r);
         }else{

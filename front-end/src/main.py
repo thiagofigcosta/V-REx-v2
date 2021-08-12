@@ -401,9 +401,15 @@ def main(argv){
                 for env in mongo.findAllOnDB(mongo.getDB('genetic_db'),'environments',wait_unlock=False){
                     LOGGER.clean('Name: {}'.format(env['name']))
                     LOGGER.clean('Submitted At: {}'.format(env['submitted_at']))
-                    LOGGER.clean('Space Search:')
-                    for k,v in env['space_search'].items() {
-                        LOGGER.clean('\t{}: {}'.format(k,str(v)))
+                    LOGGER.clean('Search Space:')
+                    if 'space_search' in env{
+                        for k,v in env['space_search'].items() {
+                            LOGGER.clean('\t{}: {}'.format(k,str(v)))
+                        }
+                    }elif 'search_space' in env{
+                        for k,v in env['search_space'].items() {
+                            LOGGER.clean('\t{}: {}'.format(k,str(v)))
+                        }
                     }
                     LOGGER.clean('\n')
                 }
@@ -502,11 +508,11 @@ def main(argv){
                     test_metric=0
                     test_data=''
                     gen_name='{}_ss'.format(hyper_name)
-                    space_search=mongo.findOneOnDBFromIndex(mongo.getDB('genetic_db'),'environments','name',gen_name,wait_unlock=False)
-                    if space_search==None{
-                        space_search={'name':gen_name,'submitted_at':Utils.getTodayDate('%d/%m/%Y %H:%M:%S'),'space_search':{'amount_of_layers':{'min':hyper['layers'],'max':hyper['layers']},'epochs':{'min':epochs,'max':epochs},'batch_size':{'min':hyper['batch_size'],'max':hyper['batch_size']},'layer_sizes':{'min':hyper['layers'],'max':hyper['layers']},'range_pow':{'min':hyper['range_pow'][0],'max':hyper['range_pow'][0]},'K':{'min':hyper['K'][0],'max':hyper['K'][0]},'L':{'min':hyper['L'][0],'max':hyper['L'][0]},'activation_functions':{'min':hyper['node_types'][0],'max':hyper['node_types'][0]},'sparcity':{'min':hyper['sparcity'][0],'max':hyper['sparcity'][0]},'alpha':{'min':hyper['alpha'],'max':hyper['alpha']}}}
+                    environment_fetch=mongo.findOneOnDBFromIndex(mongo.getDB('genetic_db'),'environments','name',gen_name,wait_unlock=False)
+                    if environment_fetch==None{
+                        environment_fetch={'name':gen_name,'submitted_at':Utils.getTodayDate('%d/%m/%Y %H:%M:%S'),'space_search':{'amount_of_layers':{'min':hyper['layers'],'max':hyper['layers']},'epochs':{'min':epochs,'max':epochs},'batch_size':{'min':hyper['batch_size'],'max':hyper['batch_size']},'layer_sizes':{'min':hyper['layers'],'max':hyper['layers']},'range_pow':{'min':hyper['range_pow'][0],'max':hyper['range_pow'][0]},'K':{'min':hyper['K'][0],'max':hyper['K'][0]},'L':{'min':hyper['L'][0],'max':hyper['L'][0]},'activation_functions':{'min':hyper['node_types'][0],'max':hyper['node_types'][0]},'sparcity':{'min':hyper['sparcity'][0],'max':hyper['sparcity'][0]},'alpha':{'min':hyper['alpha'],'max':hyper['alpha']}}}
                         LOGGER.info('Writting environment on genetic_db...')
-                        mongo.insertOneOnDB(mongo.getDB('genetic_db'),space_search,'environments',index='name',ignore_lock=True)
+                        mongo.insertOneOnDB(mongo.getDB('genetic_db'),environment_fetch,'environments',index='name',ignore_lock=True)
                         LOGGER.info('Wrote environment on genetic_db...OK')
                     }
                     print('Enter a name for the train (unique): ', end = '')
@@ -690,12 +696,22 @@ def main(argv){
                     print('\t4 - PRECISION')
                     print('value: ')
                     metric=inputNumber(lower_or_eq=4)
-                    print('Enter the label type (0-2):')
-                    print('\t0 - INT_CLASS')
-                    print('\t1 - NEURON_BY_NEURON')
-                    print('\t2 - NEURON_BY_NEURON_LOG_LOSS')
+                    print('Now enter label type ([0-1]+[3-8]):')
+                    print('\t0 - INCREMENTAL')
+                    print('\t1 - BINARY')
+                    # print('\t2 - NEURON_BY_NEURON_LOG_LOSS DEPRECATED')
+                    print('\t3 - BINARY_PLUS_ONE')
+                    print('\t4 - SPARSE')
+                    print('\t5 - DISTINCT_SPARSE')
+                    print('\t6 - DISTINCT_SPARSE_PLUS_ONE')
+                    print('\t7 - INCREMENTAL_PLUS_ONE')
+                    print('\t8 - EXPONENTIAL')
                     print('value: ', end='')
-                    label_type=inputNumber(lower_or_eq=2)
+                    label_type=inputNumber(lower_or_eq=8)
+                    while label_type==2{
+                        print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
+                        label_type=inputNumber(lower_or_eq=8)
+                    }
                     print('Enter the years to be used as train data splitted by comma (,) (1999-2020):')
                     train_data=inputArrayNumber(greater_or_eq=1999,lower_or_eq=2020)
                     print('Enter a limit of CVEs for each year (0 = unlimitted): ')
@@ -782,23 +798,23 @@ def main(argv){
                     submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
                     print('Enter the amount of layers: min: ')
                     amount_of_layers_min=inputNumber(greater_or_eq=1)
-                    print("Max: ")
+                    print('Max: ')
                     amount_of_layers_max=inputNumber(greater_or_eq=amount_of_layers_min)
                     print('Enter the maximum epochs: min: ')
                     epochs_min=inputNumber(greater_or_eq=1)
-                    print("Max: ")
+                    print('Max: ')
                     epochs_max=inputNumber(greater_or_eq=epochs_min)
                     print('Enter the patience epochs (0 means no patience): min: ')
                     patience_epochs_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     patience_epochs_max=inputNumber(greater_or_eq=patience_epochs_min)
                     print('Enter the alpha: min: ')
                     alpha_min=inputNumber(is_float=True,lower_or_eq=1)
-                    print("Max: ")
+                    print('Max: ')
                     alpha_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=alpha_min)
                     print('Enter the batch size: min: ')
                     batch_size_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     batch_size_max=inputNumber(greater_or_eq=batch_size_min)
                     print('Enter the loss functions (0-3):')
                     print('\t0 - Binary Crossentropy')
@@ -807,27 +823,32 @@ def main(argv){
                     print('\t3 - Mean Absolute Error')
                     print('min: ')
                     loss_min=inputNumber(lower_or_eq=3)
-                    print("Max: ")
+                    print('Max: ')
                     loss_max=inputNumber(lower_or_eq=3,greater_or_eq=loss_min)
                     print('Use adam optimizer instead of SGD (0 [False] - 1 [True]):')
                     print('min: ')
                     adam_min=inputNumber(lower_or_eq=1)==1
-                    print("Max: ")
+                    print('Max: ')
                     adam_max=inputNumber(lower_or_eq=1,greater_or_eq=adam_min)==1
-                    print('Enter the layer sizes: min: ')
-                    layer_size_min=inputNumber(greater_or_eq=1)
-                    print("Max: ")
-                    layer_size_max=inputNumber(greater_or_eq=layer_size_min)
+                    if amount_of_layers_min>1 or amount_of_layers_max>1{
+                        print('Enter the layer sizes: min: ')
+                        layer_size_min=inputNumber(greater_or_eq=1)
+                        print('Max: ')
+                        layer_size_max=inputNumber(greater_or_eq=layer_size_min)
+                    }else{
+                        layer_size_min=0
+                        layer_size_max=0
+                    }
                     print('Use bias on layers (0 [False] - 1 [True]):')
                     print('min: ')
                     bias_min=inputNumber(lower_or_eq=1)==1
-                    print("Max: ")
+                    print('Max: ')
                     bias_max=inputNumber(lower_or_eq=1,greater_or_eq=bias_min)==1
                     print('Enter the dropouts layer value: min: ')
                     dropouts_min=inputNumber(is_float=True,lower_or_eq=1)
-                    print("Max: ")
+                    print('Max: ')
                     dropouts_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=dropouts_min)
-                    print('Enter the nodes activation functions (0-9):')
+                    print('Activation functions (0-9):')
                     print('\t0 - ReLU')
                     print('\t1 - Softmax')
                     print('\t2 - Sigmoid')
@@ -838,29 +859,18 @@ def main(argv){
                     print('\t7 - Elu')
                     print('\t8 - Exponential')
                     print('\t9 - Linear')
-                    print('min: ')
-                    activation_min=inputNumber(lower_or_eq=9)
-                    print("Max: ")
-                    activation_max=inputNumber(lower_or_eq=9,greater_or_eq=activation_min)
+                    if amount_of_layers_min>1 or amount_of_layers_max>1{
+                        print('Enter the activation functions for all nodes except output layer: min: ')
+                        activation_min=inputNumber(lower_or_eq=9)
+                        print('Max: ')
+                        activation_max=inputNumber(lower_or_eq=9,greater_or_eq=activation_min)
+                    }else{
+                        activation_min=0
+                        activation_max=0
+                    }
                     print('Now enter the activation function for the OUTPUT layer (0-9) recommended (1-2):')
                     activation_out=inputNumber(lower_or_eq=9)
-                    print('Now enter label type ([0-1]+[3-8]):')
-                    print('\t0 - INCREMENTAL')
-                    print('\t1 - BINARY')
-                    # print('\t2 - NEURON_BY_NEURON_LOG_LOSS DEPRECATED')
-                    print('\t3 - BINARY_PLUS_ONE')
-                    print('\t4 - SPARSE')
-                    print('\t5 - DISTINCT_SPARSE')
-                    print('\t6 - DISTINCT_SPARSE_PLUS_ONE')
-                    print('\t7 - INCREMENTAL_PLUS_ONE')
-                    print('\t8 - EXPONENTIAL')
-                    print('value: ', end='')
-                    label_type=inputNumber(lower_or_eq=8)
-                    while label_type==2{
-                        print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
-                        label_type=inputNumber(lower_or_eq=8)
-                    }
-                    space_search={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'space_search':{'output_layer_node_type':activation_out,'label_type':label_type,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'adam':{'min':adam_min,'max':adam_max}}}
+                    environment_to_insert={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'search_space':{'output_layer_node_type':activation_out,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'adam':{'min':adam_min,'max':adam_max}}}
                 }else{
                     print('Now type the minimum and maximums for each item of the Smart Neural Search Space...')
                     print('Enter the genetic environment name: ', end = '')
@@ -868,39 +878,39 @@ def main(argv){
                     submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
                     print('Enter the amount of layers: min: ')
                     amount_of_layers_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     amount_of_layers_max=inputNumber(greater_or_eq=amount_of_layers_min)
                     print('Enter the epochs: min: ')
                     epochs_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     epochs_max=inputNumber(greater_or_eq=epochs_min)
                     print('Enter the alpha: min: ')
                     alpha_min=inputNumber(is_float=True,lower_or_eq=1)
-                    print("Max: ")
+                    print('Max: ')
                     alpha_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=alpha_min)
                     print('Enter the batch size: min: ')
                     batch_size_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     batch_size_max=inputNumber(greater_or_eq=batch_size_min)
                     print('Enter the layer sizes: min: ')
                     layer_size_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     layer_size_max=inputNumber(greater_or_eq=layer_size_min)
                     print('Enter the range pow: min: ')
                     range_pow_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     range_pow_max=inputNumber(greater_or_eq=range_pow_min)
                     print('Enter the K values: min: ')
                     k_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     k_max=inputNumber(greater_or_eq=k_min)
                     print('Enter the L values: min: ')
                     l_min=inputNumber()
-                    print("Max: ")
+                    print('Max: ')
                     l_max=inputNumber(greater_or_eq=l_min)
                     print('Enter the sparcity: min: ')
                     sparcity_min=inputNumber(is_float=True,lower_or_eq=1)
-                    print("Max: ")
+                    print('Max: ')
                     sparcity_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=sparcity_min)
                     print('Enter the activation functions (0-2):')
                     print('\t0 - ReLU')
@@ -908,12 +918,12 @@ def main(argv){
                     print('\t2 - Sigmoid')
                     print('min: ')
                     activation_min=inputNumber(lower_or_eq=2)
-                    print("Max: ")
+                    print('Max: ')
                     activation_max=inputNumber(lower_or_eq=2,greater_or_eq=activation_min)
-                    space_search={'core_version':'v1','name':gen_name,'submitted_at':submitted_at,'space_search':{'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'range_pow':{'min':range_pow_min,'max':range_pow_max},'K':{'min':k_min,'max':k_max},'L':{'min':l_min,'max':l_max},'activation_functions':{'min':activation_min,'max':activation_max},'sparcity':{'min':sparcity_min,'max':sparcity_max},'alpha':{'min':alpha_min,'max':alpha_max}}}
+                    environment_to_insert={'core_version':'v1','name':gen_name,'submitted_at':submitted_at,'space_search':{'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'range_pow':{'min':range_pow_min,'max':range_pow_max},'K':{'min':k_min,'max':k_max},'L':{'min':l_min,'max':l_max},'activation_functions':{'min':activation_min,'max':activation_max},'sparcity':{'min':sparcity_min,'max':sparcity_max},'alpha':{'min':alpha_min,'max':alpha_max}}}
                 }
                 LOGGER.info('Writting environment on genetic_db...')
-                mongo.insertOneOnDB(mongo.getDB('genetic_db'),space_search,'environments',index='name',ignore_lock=True)
+                mongo.insertOneOnDB(mongo.getDB('genetic_db'),environment_to_insert,'environments',index='name',ignore_lock=True)
                 LOGGER.info('Wrote environment on genetic_db...OK')
             }elif opt == "--rm-genetic-env"{
                 arg=arg.strip()

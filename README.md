@@ -30,12 +30,12 @@ To follow logs type one of the commands below
 
 ### Core V2
 ```
-docker logs --follow $(docker container ls | grep core | grep v2 | cut -f 1 -d' ')
+docker logs --follow $(docker container ls | grep core-2 | cut -f 1 -d' ')
 ```
 
 ### Core V1
 ```
-docker logs --follow $(docker container ls | grep core | grep v1 | cut -f 1 -d' ')
+docker logs --follow $(docker container ls | grep core_1 | cut -f 1 -d' ')
 ```
 
 ### Data Crawler
@@ -71,6 +71,10 @@ or in background
 ```
 docker-compose build
 docker-compose up -d
+```
+or
+```
+docker-compose up -d --scale core-1=0 --scale data-crawler=0 --scale data-processor=0
 ```
 or in background with replicas
 ```

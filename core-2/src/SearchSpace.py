@@ -53,11 +53,17 @@ class SearchSpace(object){
                     return self.max_value
                 }
             }else{
-                if value > self.max_value {
-                    return self.max_value
-                }
-                if value < self.min_value {
-                    return self.min_value
+                if value > self.max_value or value < self.min_value {
+                    value_abs=abs(value)
+                    if value_abs <= self.max_value and value_abs >= self.min_value {
+                        return value_abs
+                    }
+                    if value > self.max_value {
+                        return self.max_value
+                    }
+                    if value < self.min_value {
+                        return self.min_value
+                    }
                 }
             }
             return value
@@ -97,12 +103,9 @@ class SearchSpace(object){
     def __str__(self){
        str_out='Search Space: { \n'
        for dim in self.search_space{
-           str_out+='\t{}: [{}, {}, {}] \n'.format(dim.name,dim.min_value,dim.max_value,dim.data_type)
+           str_out+='\t{}: [ min: {}, max: {} | {} ] \n'.format(dim.name,dim.min_value,dim.max_value,dim.data_type)
        }
-       if len(self.search_space)>0{
-           str_out=str_out[:-1]
-       }
-       str_out+=' }'
+       str_out+='}'
        return str_out
     }
 

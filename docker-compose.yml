@@ -11,6 +11,7 @@ services:
         networks:
             - mongo-network
         deploy:
+            replicas: 0
             resources:
                 limits:
                     memory: 60G
@@ -27,6 +28,7 @@ services:
         networks:
             - mongo-network
         deploy:
+            replicas: 1
             resources:
                 limits:
                     memory: 60G

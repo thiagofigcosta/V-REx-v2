@@ -6,7 +6,6 @@ from GeneticAlgorithm import GeneticAlgorithm
 from Enums import GeneticRankType
 from SearchSpace import SearchSpace
 from Utils import Utils
-from Core import Core
 
 class EnhancedGenetic(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -70,6 +69,7 @@ class EnhancedGenetic(GeneticAlgorithm){
         }
         non_selected_beings_set=set(individuals)-selected_beings_set
         for useless_being in non_selected_beings_set{
+            from Core import Core
             if Core.FREE_MEMORY_MANUALLY==True{
                 del useless_being
             }
@@ -83,6 +83,7 @@ class EnhancedGenetic(GeneticAlgorithm){
             self.current_population_size+=len(children)-2
         }
         for useful_being in selected_beings_set{
+            from Core import Core
             if Core.FREE_MEMORY_MANUALLY==True{
                 del useful_being
             }
@@ -125,6 +126,7 @@ class EnhancedGenetic(GeneticAlgorithm){
                     if self.rank_type==GeneticRankType.RELATIVE{
                         for e in range(len(individuals),len(individuals)-to_cut_off,-1){
                             individual=individuals[e]
+                            from Core import Core
                             if Core.FREE_MEMORY_MANUALLY==True{ 
                                 del individual
                             }
@@ -133,6 +135,7 @@ class EnhancedGenetic(GeneticAlgorithm){
                     }else{
                         for e in range(to_cut_off){
                             individual=individuals[e]
+                            from Core import Core
                             if Core.FREE_MEMORY_MANUALLY==True{
                                 del individual
                             }
@@ -198,6 +201,7 @@ class EnhancedGenetic(GeneticAlgorithm){
             individual.age+=1
             if self.getLifeLeft(individual)<0 {
                 if (individual.fitness<=(1-EnhancedGenetic.WILL_OF_D_PERCENT)*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>=EnhancedGenetic.WILL_OF_D_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
+                    from Core import Core
                     if Core.FREE_MEMORY_MANUALLY==True{
                         del individual # dead
                     }
@@ -268,6 +272,7 @@ class EnhancedGenetic(GeneticAlgorithm){
         for i in custom_range {
             individual=individuals[i]
             if (individual.fitness<EnhancedGenetic.RECYCLE_THRESHOLD_PERCENT*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>EnhancedGenetic.RECYCLE_THRESHOLD_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
+                from Core import Core
                 if Core.FREE_MEMORY_MANUALLY==True{
                     del individual
                 }

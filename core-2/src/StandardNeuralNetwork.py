@@ -4,18 +4,17 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3' # DISABLE TENSORFLOW WARNING
 import pandas as pd
 import numpy as np
-import keras
-from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.layers import Dense, Dropout, Input
-from keras.models import Model, load_model
-import keras.backend as K
-from keras.optimizers import Adam, SGD
+from tensorflow import keras # import keras
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping # from keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.layers import Dense, Dropout, Input # from keras.layers import Dense, Dropout, Input
+from tensorflow.keras.models import Model, load_model # from keras.layers import Dense, Dropout, Input
+import tensorflow.keras.backend as K # import keras.backend as K
+from tensorflow.keras.optimizers import Adam, SGD # from keras.optimizers import Adam, SGD
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from Utils import Utils
 from Dataset import Dataset
 from Enums import NodeType 
-from Core import Core 
 
 class StandardNeuralNetwork(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -163,6 +162,7 @@ class StandardNeuralNetwork(object){
 			model_summary_lines=[]
 			model.summary(print_fn=lambda x: model_summary_lines.append(x))
 			model_summary_str='\n'.join(model_summary_lines)+'\n'
+			from Core import Core
 			Core.LOGGER.multiline(model_summary_str)
 		}
 		callbacks=[]
@@ -230,6 +230,7 @@ class StandardNeuralNetwork(object){
 		batch_size=max(min(len(labels_epoch),self.hyperparameters.batch_size),1)
 		batch_width=int(len(labels_epoch)/batch_size)
 		if self.verbose{
+			from Core import Core
 			Core.LOGGER.info('Epoch {} of {}'.format(e+1,self.hyperparameters.max_epochs))
 		}
 		epoch_metrics=None
@@ -272,6 +273,7 @@ class StandardNeuralNetwork(object){
 			}
 		}
 		if self.verbose{
+			from Core import Core
 			Core.LOGGER.logDict(epoch_metrics,'Epoch metrics',inline=True)
 			if val_labels is not None{
 				Core.LOGGER.logDict(val_metrics,'Validation metrics',inline=True)
@@ -281,6 +283,7 @@ class StandardNeuralNetwork(object){
 			if best_val is not None{
 				if best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]{
 					if self.verbose{
+						from Core import Core
 						Core.LOGGER.info('val_{} did not improve from {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
 					}
 					epochs_wo_improvement+=1
@@ -288,10 +291,12 @@ class StandardNeuralNetwork(object){
 					epochs_wo_improvement=0
 					best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 					if self.verbose{
+						from Core import Core
 						Core.LOGGER.info('val_{} improved to {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
 					}
 					if self.hyperparameters.model_checkpoint{
 						if self.verbose{
+							from Core import Core
 							Core.LOGGER.info('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
 						}
 						self.model.save(self.getModelPath(self.checkpoint_filename))
@@ -301,10 +306,12 @@ class StandardNeuralNetwork(object){
 				best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 			}
 			if self.verbose{
+				from Core import Core
 				Core.LOGGER.info()
 			}
 			if self.hyperparameters.patience_epochs>0 and epochs_wo_improvement>=self.hyperparameters.patience_epochs{
 				if self.verbose {
+					from Core import Core
 					Core.LOGGER.info('Early stopping...')
 				}
 				best_val=StandardNeuralNetwork.NO_PATIENCE_LEFT_STR
@@ -501,6 +508,7 @@ class StandardNeuralNetwork(object){
 			boosted_weights['B_{}'.format(i)]=bias
 		}
 		if (idx!=len(weights)){
+			from Core import Core
 			Core.LOGGER.warn('Casted {} weights of {}, check the getWeights function'.format(idx,len(weights)))
 		}
 		return boosted_weights
@@ -611,6 +619,7 @@ class StandardNeuralNetwork(object){
 			new_weights_shape.append(None)
 		}
 		if new_weights_shape!=desired_shape{
+			from Core import Core
 			Core.LOGGER.warn('Error on shrinkWeights, trying to format shape {} into {}, result {}'.format(shape,desired_shape,new_weights_shape))
 		}
 		return new_weights
@@ -678,6 +687,7 @@ class StandardNeuralNetwork(object){
 			new_weights_shape.append(1)
 		}
 		if new_weights_shape!=desired_shape{
+			from Core import Core
 			Core.LOGGER.warn('Error on fillWeights, trying to format biggest shape between {} and {}, result {} - expected {}'.format(shape_a,shape_b,new_weights_shape,desired_shape))
 		}
 		return new_weights

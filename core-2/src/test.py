@@ -125,7 +125,7 @@ def testEnhGenetic(){
     max_notables=5
     enh_elite=HallOfFame(max_notables, search_maximum)
     en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
-    enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details,after_gen_callback=lambda:print('After gen') if add_callback_after_gen else None)
+    enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details,after_gen_callback=lambda x:print('After gen') if add_callback_after_gen else None)
     enh_population.hall_of_fame=enh_elite
     enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
     
@@ -464,10 +464,10 @@ def testCustomEncodings(){
     print('base64-converted',Utils.base65ToBase64(base65))
 }
 
-# testStdGenetic()
-# testEnhGenetic()
+testStdGenetic()
+testEnhGenetic()
 # testStdVsEnhGenetic()
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
-testGeneticallyTunedNN() 
+# testGeneticallyTunedNN() 
 # testCustomEncodings()
