@@ -7,6 +7,9 @@ RUN pip install --user -r requirements.txt
 FROM python:3.8-slim
 WORKDIR /code
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends graphviz
+
 COPY --from=builder /root/.local /root/.local
 COPY Pytho{N}.py .
 COPY entrypoint.sh .
