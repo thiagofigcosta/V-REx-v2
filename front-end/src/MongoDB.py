@@ -393,33 +393,53 @@ class MongoDB(object){
     }
 
     def restoreDB(self,compressed_db_dump,db_name=None){
-        if not db_name{
+        if db_name is None{
             db_name=Utils.filenameFromPath(compressed_db_dump)
         }
         self.logger.info('Restoring database {} from file {}...'.format(db_name,compressed_db_dump))
         uncompressed_root=Utils.unzip(compressed_db_dump,db_name,delete=False)
         folders_inside=os.listdir(uncompressed_root)
-        if len(folders_inside)>1{
-            raise Exception('Wrong compressed file format on restoreDB, please use dumpDB to generate the compressed file. File:{}'.format(compressed_db_dump))
+        if len(folders_inside)!=1{
+            raise Exception('Wrong compressed file format on restoreDB, it should have one folder inside, please use dumpDB to generate the compressed file. File:{}'.format(compressed_db_dump))
         }
         uncompressed_path=Utils.joinPath(uncompressed_root,folders_inside[0])
-        db=self.getDB(db_name)
-        for col in os.listdir(uncompressed_path){
-            index=None
-            col_path=Utils.joinPath(uncompressed_path,col)
-            for doc in os.listdir(col_path){
-                if doc.endswith('.json'){
-                    pass
-                }elif doc.endswith('.idx'){
-                    index=Utils.removeExtFromFilename(doc)
-                }else{
-                    raise Exception('Wrong compressed file format on restoreDB, please use dumpDB to generate the compressed file. File:{}'.format(compressed_db_dump))
+        level=0
+        max_level=4
+        not_finished=True
+        while not_finished{
+            try{
+                db=self.getDB(db_name)
+                for col in os.listdir(uncompressed_path){
+                    index=None
+                    col_path=Utils.joinPath(uncompressed_path,col)
+                    for doc in os.listdir(col_path){
+                        if doc.endswith('.json'){
+                            pass
+                        }elif doc.endswith('.idx'){
+                            index=Utils.removeExtFromFilename(doc)
+                        }else{
+                            raise Exception('Wrong compressed file format on restoreDB, file format different from json or idx, please use dumpDB to generate the compressed file. File:{}'.format(compressed_db_dump))
+                        }
+                    }
+                    self.logger.info('Found files, starting to insert...')
+                    for doc in os.listdir(col_path){
+                        if doc.endswith('.json'){
+                            doc_path=Utils.joinPath(col_path,doc)
+                            self.insertOneOnDB(db,Utils.loadJson(doc_path,use_bson=True),col,index=index,verbose=False)
+                        }
+                    }
                 }
-            }
-            for doc in os.listdir(col_path){
-                if doc.endswith('.json'){
-                    doc_path=Utils.joinPath(col_path,doc)
-                    self.insertOneOnDB(db,Utils.loadJson(doc_path,use_bson=True),col,index=index,verbose=False)
+                not_finished=True
+            } except Exception as e{
+                if level<max_level{
+                    level+=1
+                    folders_inside=os.listdir(uncompressed_path)
+                    if len(folders_inside)!=1{
+                        raise Exception('Wrong compressed file format on restoreDB, it should have one folder inside, please use dumpDB to generate the compressed file. File:{}'.format(compressed_db_dump))
+                    }
+                    uncompressed_path=Utils.joinPath(uncompressed_path,folders_inside[0])
+                }else{
+                    raise e
                 }
             }
         }
