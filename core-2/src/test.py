@@ -355,7 +355,7 @@ def testNNBinLabel_KFolds(){
 }
 
 def testGeneticallyTunedNN(){
-    metric=Metric.RAW_LOSS
+    metric=Metric.F1
     search_space=SearchSpace()
     search_space.add(1,4,SearchSpace.Type.INT,'layers')
     search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
@@ -464,10 +464,10 @@ def testCustomEncodings(){
     print('base64-converted',Utils.base65ToBase64(base65))
 }
 
-testStdGenetic()
-testEnhGenetic()
+# testStdGenetic()
+# testEnhGenetic()
 # testStdVsEnhGenetic()
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
-# testGeneticallyTunedNN() 
+testGeneticallyTunedNN() 
 # testCustomEncodings()

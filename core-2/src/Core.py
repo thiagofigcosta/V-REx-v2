@@ -29,6 +29,7 @@ class Core(object){
 	def __init__(self, mongo, logger){
 		Core.LOGGER=logger
 		self.mongo=mongo
+		StandardNeuralNetwork.CLASSES_THRESHOLD=Core.THRESHOLD
 	}
 
 	def runGeneticSimulation(self,simulation_id){
@@ -323,7 +324,7 @@ class Core(object){
 		nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
 		Core.LOGGER.info('Created eval network...OK')
 		Core.LOGGER.info('Predicting...')
-		classes,activations=nn.predict(test_features,True,True,Core.THRESHOLD)
+		classes,activations=nn.predict(test_features,True,True)
 		statistics=Dataset.statisticalAnalysis(classes,test_labels)
 		Core.LOGGER.info('Predicted...OK')
 		Core.LOGGER.logDict(statistics,'Statistics')

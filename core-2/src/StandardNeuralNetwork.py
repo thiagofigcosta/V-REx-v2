@@ -21,7 +21,10 @@ class StandardNeuralNetwork(object){
 
 	MODELS_PATH='models'
 	MULTIPROCESSING=False
+	MANUAL_METRICS_NAMES=['accuracy','precision','recall','f1_score']
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
+	USE_MANUAL_METRICS=False # manual metrics are slower
+	CLASSES_THRESHOLD=.5
 
     def __init__(self,hyperparameters,dataset_name='',verbose=False){
         self.hyperparameters=hyperparameters
@@ -30,7 +33,6 @@ class StandardNeuralNetwork(object){
 		self.data=None
 		self.model=None
 		self.callbacks=None
-		self.metrics_names=None
 		self.basename='model'
 		self.checkpoint_filename=None
 		self.history=[]
@@ -56,8 +58,21 @@ class StandardNeuralNetwork(object){
 
 	def buildModel(self,input_size){
 		self.model,self.callbacks=self._buildModel(input_size)
-		self.metrics_names=self.model.metrics_names
 	} 
+
+	def getMetricsNames(self,include_manual=True){
+		if include_manual and StandardNeuralNetwork.USE_MANUAL_METRICS{
+			list_of=self.model.metrics_names
+			for el in StandardNeuralNetwork.MANUAL_METRICS_NAMES{
+				if el not in list_of{
+					list_of.append(el)
+				}
+			}
+			return list_of
+		}else{
+			return self.model.metrics_names
+		}
+	}
 
 	def _metricsFactory(self){
 		def auc(y_true, y_pred){
@@ -131,7 +146,12 @@ class StandardNeuralNetwork(object){
 		precision.__name__ = 'precision'
 		recall.__name__ = 'recall'
 		f1_score.__name__ = 'f1_score'
-		return [auc,precision,recall,f1_score,'accuracy']
+
+		if StandardNeuralNetwork.USE_MANUAL_METRICS{
+			return ['accuracy']
+		}else{
+			return [auc,precision,recall,f1_score,'accuracy']
+		}
 		# return [auc_original,auc,precision,recall,f1_score,'accuracy'] # TODO original auc not allowed
 	}
 
@@ -250,22 +270,30 @@ class StandardNeuralNetwork(object){
 		}
 		epoch_metrics=None
 		for b in range(amount_of_batches){
-			features_batch=features_epoch[b*0:(b+1)*batch_size]
-			labels_batch=labels_epoch[b*0:(b+1)*batch_size]
+			features_batch=np.array(features_epoch[b*0:(b+1)*batch_size])
+			labels_batch=np.array(labels_epoch[b*0:(b+1)*batch_size])
 			batch_metrics=self.model.train_on_batch(
-				np.array(features_batch),
-				np.array(labels_batch),
+				features_batch,
+				labels_batch,
 				reset_metrics=True
 			)
 			if epoch_metrics is None{
-				epoch_metrics=[[] for _ in range(len(self.model.metrics_names))]
+				epoch_metrics=[[] for _ in range(len(self.getMetricsNames()))]
 			}
 			for m,metric in enumerate(batch_metrics){
 				epoch_metrics[m].append(metric)
 			}
+			if StandardNeuralNetwork.USE_MANUAL_METRICS{
+				classes=self.predict(features_batch,get_classes=True,get_confidence=False)
+				for k,v in Dataset.statisticalAnalysis(classes,labels_batch).items(){
+					if k in epoch_metrics{
+						epoch_metrics[k].append(v)
+					}
+				}
+			}
 		}
 		if self.history is None{
-			all_metrics=self.model.metrics_names
+			all_metrics=self.getMetricsNames()
 			if val_labels is not None{
 				all_metrics+=['val_'+el for el in all_metrics]
 			}
@@ -279,12 +307,25 @@ class StandardNeuralNetwork(object){
 			self.history[k].append(v)
 		}
 		if val_labels is not None{
+			val_features=np.array(val_features)
+			val_labels=np.array(val_labels)
 			val_metrics=self.fillMetricsNames(self.model.test_on_batch(
-				np.array(val_features), np.array(val_labels), reset_metrics=True))
+				val_features,val_labels, reset_metrics=True))
 			for k,v in val_metrics.items(){
-				v=float(v[0])
-				val_metrics[k]=v
-				self.history['val_'+k].append(v)
+				if len(v)>0{
+					v=float(v[0])
+					val_metrics[k]=v
+					self.history['val_'+k].append(v)
+				}
+			}
+			if StandardNeuralNetwork.USE_MANUAL_METRICS{
+				classes=self.predict(val_features,get_classes=True,get_confidence=False)
+				for k,v in Dataset.statisticalAnalysis(classes,val_labels).items(){
+					k='val_'+k
+					if k in self.history{
+						self.history[k].append(v)
+					}
+				}
 			}
 		}
 		if self.verbose{
@@ -413,7 +454,7 @@ class StandardNeuralNetwork(object){
 		}
 	}
 
-	def predict(self,features,get_classes=True,get_confidence=False,threshold=.5){
+	def predict(self,features,get_classes=True,get_confidence=False){
 		pred_res=self.model.predict(features)
 		classes=[]
 		confidence=[]
@@ -423,7 +464,7 @@ class StandardNeuralNetwork(object){
 				row_class=[]
 				if self.hyperparameters.node_types[-1]!=NodeType.SOFTMAX{
 					for val in row{
-						if float(val)>=threshold{
+						if float(val)>=StandardNeuralNetwork.CLASSES_THRESHOLD{
 							row_class.append(1)
 						}else{
 							row_class.append(0)
@@ -455,13 +496,14 @@ class StandardNeuralNetwork(object){
 	}	
 
 	def fillMetricsNames(self,metrics){
-		self.metrics_names=self.model.metrics_names
 		output={}
-		for i,metric in enumerate(self.metrics_names){
+		for i,metric in enumerate(self.getMetricsNames()){
 			if metric not in output{
 				output[metric]=[]
 			}
-			output[metric].append(metrics[i])
+			if i<len(metrics){
+				output[metric].append(metrics[i])
+			}
 		}
 		return output
 	}

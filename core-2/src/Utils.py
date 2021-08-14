@@ -676,7 +676,7 @@ class Utils(object){
        for el in list_of_values{
            if el==el{ # avoid NaN
                 total+=el
-                count+1
+                count+=1
            }
        }
        if count>0{

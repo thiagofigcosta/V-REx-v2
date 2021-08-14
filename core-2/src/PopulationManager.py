@@ -58,6 +58,7 @@ class PopulationManager(object){
                 from Core import Core
                 Core.LOGGER.info('\tEvaluating individuals...')
             }
+            last_print=1
             for p,individual in enumerate(self.population){
                 individual.evaluate()
                 individual.gen=g
@@ -73,7 +74,8 @@ class PopulationManager(object){
                 }
                 if verbose{
                     percent=(p+1)/float(len(self.population))*100.0
-                    if int(percent)%PopulationManager.PRINT_REL_FREQUENCY==0 {
+                    if  percent>=last_print*PopulationManager.PRINT_REL_FREQUENCY {
+                        last_print+=1
                         from Core import Core
                         Core.LOGGER.info('\t\tprogress: {:2.2f}%'.format(percent))
                     }

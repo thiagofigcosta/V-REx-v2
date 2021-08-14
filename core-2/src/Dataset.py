@@ -232,9 +232,9 @@ class Dataset(object){
             }
             C=stats['precision']+stats['recall']
             if C!=0{
-                stats['f1']=2*(stats['precision']*stats['recall'])/(C)
+                stats['f1_score']=2*(stats['precision']*stats['recall'])/(C)
             }else{
-                stats['f1']=0
+                stats['f1_score']=0
             }
         }
         return stats
