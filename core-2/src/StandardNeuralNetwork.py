@@ -180,18 +180,30 @@ class StandardNeuralNetwork(object){
 		self._resetWeights(model)
 		return model,callbacks
 	}
+	
+	def parseNumpyToVanillaRecursivelly(self,element){
+		if type(element) == np.ndarray{
+			return self.parseNumpyToVanillaRecursivelly(element.tolist())
+		}elif type(element) == list{
+			if len(element) == 0{
+				return element
+			}elif type(element[0]) in (np.float64,np.float32,np.float){
+				return list(map(float,element)) # instead of map we should use recursion element by element to handle nested complex elements, but.... the way it is, is enough for now...
+			}elif type(element[0]) in (np.int64,np.int32,np.int){
+				return list(map(int,element))
+			}else{
+				raise Exception('Unhandled type {}'.format(type(element[0])))
+			}
+		}else{
+			raise Exception('Unhandled type {}'.format(type(element)))
+		}
+	}
+
 
 	def parseHistoryToVanilla(self){
 		new_hist = {}
 		for key in list(self.history.history.keys()){
-			new_hist[key]=self.history.history[key]
-			if type(self.history.history[key]) == np.ndarray{
-				new_hist[key] = self.history.history[key].tolist()
-			}elif type(self.history.history[key]) == list{
-				if  type(self.history.history[key][0]) == np.float64{
-					new_hist[key] = list(map(float, self.history.history[key]))
-				}
-			}
+			new_hist[key]=self.parseNumpyToVanillaRecursivelly(self.history.history[key])
 		}
 		self.history=new_hist
 	}
