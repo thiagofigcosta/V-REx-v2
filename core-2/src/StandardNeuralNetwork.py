@@ -239,16 +239,19 @@ class StandardNeuralNetwork(object){
 				val_features,val_labels=Dataset.shuffleDataset(val_features,val_labels)
 			}
 		}
-		batch_size=max(min(len(labels_epoch),self.hyperparameters.batch_size),1)
-		batch_width=int(len(labels_epoch)/batch_size)
+		batch_size=self.hyperparameters.batch_size
+		if batch_size==0{
+			batch_size=len(labels_epoch)
+		}
+		amount_of_batches=int(len(labels_epoch)/batch_size)
 		if self.verbose{
 			from Core import Core
 			Core.LOGGER.info('Epoch {} of {}'.format(e+1,self.hyperparameters.max_epochs))
 		}
 		epoch_metrics=None
-		for b in range(batch_size){
-			features_batch=features_epoch[b*0:(b+1)*batch_width]
-			labels_batch=labels_epoch[b*0:(b+1)*batch_width]
+		for b in range(amount_of_batches){
+			features_batch=features_epoch[b*0:(b+1)*batch_size]
+			labels_batch=labels_epoch[b*0:(b+1)*batch_size]
 			batch_metrics=self.model.train_on_batch(
 				np.array(features_batch),
 				np.array(labels_batch),
