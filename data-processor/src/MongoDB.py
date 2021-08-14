@@ -413,7 +413,9 @@ class MongoDB(object){
         while not_finished{
             try{
                 db=self.getDB(db_name)
-                for col in os.listdir(uncompressed_path){
+		contents=os.listdir(uncompressed_path)
+		total=len(contents)
+                for h,col in enumerate(contents){
                     index=None
                     col_path=Utils.joinPath(uncompressed_path,col)
                     for doc in os.listdir(col_path){
@@ -425,15 +427,16 @@ class MongoDB(object){
                             raise Exception('Wrong compressed file format on restoreDB, file format different from json or idx, please use dumpDB to generate the compressed file. File:{}'.format(compressed_db_dump))
                         }
                     }
-                    self.logger.info('Found files, starting to insert...')
+                    self.logger.info('Found files for collection {}, {} of {}, starting to insert...'.format(col,h+1,total))
                     for doc in os.listdir(col_path){
                         if doc.endswith('.json'){
                             doc_path=Utils.joinPath(col_path,doc)
                             self.insertOneOnDB(db,Utils.loadJson(doc_path,use_bson=True),col,index=index,verbose=False)
                         }
                     }
+                    self.logger.info('Finished insertion on collection {}...OK'.format(col))
                 }
-                not_finished=True
+                not_finished=False
             } except Exception as e{
                 if level<max_level{
                     level+=1
