@@ -16,4 +16,6 @@ core/src/vrex/*.o
 sensitive_files_ignore/
 core-2/models/
 core-2/res/models/
+core-2/saved_plots/
+core-2/res/saved_plots/
 core-2/neural_genome_cache/

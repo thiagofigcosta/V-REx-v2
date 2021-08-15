@@ -10,25 +10,27 @@ from tensorflow.keras.layers import Dense, Dropout, Input # from keras.layers im
 from tensorflow.keras.models import Model, load_model # from keras.layers import Dense, Dropout, Input
 import tensorflow.keras.backend as K # import keras.backend as K
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop # from keras.optimizers import Adam, SGD, RMSprop
+from tensorflow.keras.utils import plot_model # from keras.utils.vis_utils import plot_model
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from Utils import Utils
 from Dataset import Dataset
-from Enums import NodeType 
+from Enums import NodeType,Optimizers
 
 class StandardNeuralNetwork(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
 	MODELS_PATH='models'
+	SAVED_PLOTS_PATH='saved_plots'
 	MULTIPROCESSING=False
 	MANUAL_METRICS_NAMES=['accuracy','precision','recall','f1_score']
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
 	USE_MANUAL_METRICS=False # manual metrics are slower
 	CLASSES_THRESHOLD=.5
 
-    def __init__(self,hyperparameters,dataset_name='',verbose=False){
+    def __init__(self,hyperparameters,name='',verbose=False){
         self.hyperparameters=hyperparameters
-		self.dataset_name=dataset_name
+		self.name=name
 		self.verbose=verbose
 		self.data=None
 		self.model=None
@@ -38,6 +40,7 @@ class StandardNeuralNetwork(object){
 		self.history=[]
 		self.metrics={}
 		Utils.createFolder(StandardNeuralNetwork.MODELS_PATH)
+		Utils.createFolder(StandardNeuralNetwork.SAVED_PLOTS_PATH)
     }
 
 	def __del__(self){
@@ -54,6 +57,27 @@ class StandardNeuralNetwork(object){
 			path=Utils.joinPath(StandardNeuralNetwork.MODELS_PATH,filename)
 		}
 		return path
+	}
+
+	def getPlotsPath(self,filename){
+		path=filename
+		if Utils.appendToStrIfDoesNotEndsWith(StandardNeuralNetwork.SAVED_PLOTS_PATH,Utils.FILE_SEPARATOR) not in path{
+			path=Utils.joinPath(StandardNeuralNetwork.SAVED_PLOTS_PATH,filename)
+		}
+		return path
+	}
+
+	def saveModelSchemaToFile(self){
+		filepath=self.getPlotsPath('model_{}.png'.format(self.name))
+		if self.verbose{
+			print('Saving model diagram to file: {}'.format(filepath))
+		}
+		try{
+			plot_model(self.model,to_file=filepath,show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=300) # show_dtype=False,
+		}except Exception as e{
+			from Core import Core
+			Core.LOGGER.exception(e)
+		}	
 	}
 
 	def buildModel(self,input_size){
@@ -171,12 +195,15 @@ class StandardNeuralNetwork(object){
 			}
 		}
 		outputs=layer
-		model=Model(inputs=inputs, outputs=outputs,name=self.dataset_name)
-		if self.hyperparameters.adam==True{
-			opt=Adam(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
-		}else{
+		model=Model(inputs=inputs, outputs=outputs,name=self.name)
+		if self.hyperparameters.optmizer==Optimizers.SGD{
 			opt=SGD(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
-			# opt=RMSprop(learning_rate=self.hyperparameters.alpha, clipnorm=1.0) # TODO test me
+		}elif self.hyperparameters.optmizer==Optimizers.ADAM{
+			opt=Adam(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
+		}elif self.hyperparameters.optmizer==Optimizers.RMSPROP{
+			opt=RMSprop(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
+		}else{
+			raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optmizer))
 		}
 		model.compile(loss=self.hyperparameters.loss.toKerasName(),optimizer=opt,metrics=self._metricsFactory())
 		if self.verbose{

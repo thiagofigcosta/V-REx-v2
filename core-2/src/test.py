@@ -7,7 +7,7 @@ from Logger import Logger
 from Core import Core
 from Dataset import Dataset
 from Genome import Genome
-from Enums import LabelEncoding,NodeType,Loss,Metric
+from Enums import LabelEncoding,NodeType,Loss,Metric,Optimizers
 from Hyperparameters import Hyperparameters
 from HallOfFame import HallOfFame
 from StandardNeuralNetwork import StandardNeuralNetwork
@@ -282,14 +282,14 @@ def testNNIntLabel(){
     batch_size=5
     alpha=0.01
     shuffle=True
-    adam=True
+    optmizer=Optimizers.ADAM
     patience_epochs=0
     max_epochs=100
     loss=Loss.CATEGORICAL_CROSSENTROPY
     monitor_metric=Metric.F1
-    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
-    nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
+    nn=StandardNeuralNetwork(hyperparameters,name='iris',verbose=True)
     nn.buildModel(input_size)
     nn.train(train[0],train[1],val[0],val[1])
     history=nn.history
@@ -325,14 +325,14 @@ def testNNBinLabel_KFolds(){
     batch_size=5
     alpha=0.01
     shuffle=True
-    adam=True
+    optmizer=Optimizers.ADAM
     patience_epochs=15
     max_epochs=100
     loss=Loss.BINARY_CROSSENTROPY
     monitor_metric=Metric.RAW_LOSS
-    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
-    nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris',verbose=True)
+    nn=StandardNeuralNetwork(hyperparameters,name='iris',verbose=True)
     nn.buildModel(input_size)
     # KFolds
     nn.trainKFolds(train[0],train[1],8)
@@ -365,7 +365,7 @@ def testGeneticallyTunedNN(){
     search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
     search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
-    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'adam')
+    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optmizer')
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
     search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
@@ -396,7 +396,7 @@ def testGeneticallyTunedNN(){
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
         search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
-        nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
+        nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size)
         nn.setWeights(genome.getWeights())
         nn.trainKFolds(train_features,train_labels,kfolds)
@@ -443,8 +443,9 @@ def testGeneticallyTunedNN(){
         input_size=len(test_features[0])
         output_size=len(test_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
-        nn=StandardNeuralNetwork(hyperparameters,dataset_name='iris_{}'.format(genome.id),verbose=False)
+        nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size)
+        nn.saveModelSchemaToFile()
         nn.setWeights(genome.getWeights())
         print('Best genome encoded weights:',genome.getWeights(raw=True))
         preds,activations=nn.predict(test_features,True,True)

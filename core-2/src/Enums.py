@@ -122,3 +122,22 @@ class Loss(Enum){
         return None
     }
 }
+
+
+class Optimizers(Enum){
+    # 'Just':'to fix vscode coloring':'when using pytho{\}'
+    SGD = 0
+    ADAM = 1
+    RMSPROP = 2
+
+    def toKerasName(self){
+        if self == Optimizers.SGD{
+            return 'sgd'
+        }elif self == Optimizers.ADAM{
+            return 'adam'
+        }elif self == Optimizers.RMSPROP{
+            return 'rmsprop'
+        }
+        return None
+    }
+}

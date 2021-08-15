@@ -10,7 +10,7 @@ from PopulationManager import PopulationManager
 from StandardGenetic import StandardGenetic
 from EnhancedGenetic import EnhancedGenetic
 from Hyperparameters import Hyperparameters
-from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss
+from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss,Optimizers
 from Genome import Genome
 from Dataset import Dataset
 
@@ -94,7 +94,7 @@ class Core(object){
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
-			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_gen_{}'.format(genome.id),verbose=False)
+			nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
 			nn.buildModel(input_size)
 			nn.setWeights(genome.getWeights())
 			if cross_validation==CrossValidation.NONE{
@@ -221,7 +221,7 @@ class Core(object){
 			Core.LOGGER.info('Creating train network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train_{}'.format(independent_net_id),verbose=True)
+			nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
 			nn.buildModel(input_size)
 			Core.LOGGER.info('Created train network...OK')
 			Core.LOGGER.info('Training network...')
@@ -262,7 +262,7 @@ class Core(object){
 			Core.LOGGER.info('Creating test network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+			nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
 			nn.buildModel(input_size)
 			nn.setWeights(Genome.decodeWeights(trained_weights))
 			Core.LOGGER.info('Created test network...OK')
@@ -319,7 +319,7 @@ class Core(object){
 		Core.LOGGER.info('Creating eval network...')
 		input_size=len(test_features[0])
 		output_size=len(test_labels[0])
-		nn=StandardNeuralNetwork(hyperparameters,dataset_name='core_eval_{}'.format(independent_net_id),verbose=True)
+		nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
 		nn.buildModel(input_size)
 		nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
 		Core.LOGGER.info('Created eval network...OK')
@@ -444,7 +444,7 @@ class Core(object){
 		search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
 		search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
 		search_space.add(encoder,encoder,SearchSpace.Type.INT,'label_type')
-		search_space.add(search_space_db['adam']['min'] not in (0,False),search_space_db['adam']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'adam')
+		search_space.add(Optmizers(search_space_db['optmizer']['min']),Optmizers(search_space_db['optmizer']['max']),SearchSpace.Type.INT,'optmizer')
 		search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
 		search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
 		search_space.add(search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT,'layer_sizes')
@@ -497,13 +497,13 @@ class Core(object){
 		batch_size=int(hyperparameters['batch_size'])
 		alpha=float(hyperparameters['alpha'])
 		shuffle=bool(hyperparameters['shuffle'])
-		adam=bool(hyperparameters['adam'])
+		optmizer=Optimizers(hyperparameters['optmizer'])
 		patience_epochs=pat_epochs
 		max_epochs=epochs
 		loss=Loss(hyperparameters['loss'])
 		monitor_metric=metric
 		label_type=LabelEncoding(hyperparameters['label_type'])
-		return Hyperparameters(batch_size, alpha, shuffle, adam, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+		return Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 	}
 
 	# Disclaim, I'm to lazy to fix Pytho{\} dicts or to make a real Pytho{\} "compiler" with lexemes and stuff

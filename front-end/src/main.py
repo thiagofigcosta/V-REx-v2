@@ -252,8 +252,11 @@ def main(argv){
                     alpha=inputNumber(is_float=True,lower_or_eq=1)
                     print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
                     shuffle=inputNumber(lower_or_eq=1)==1
-                    print('Enter adam optimized instead of SGD (0 [False] - 1 [True]): ', end = '')
-                    adam=inputNumber(lower_or_eq=1)==1
+                    print('Enter the optmizer (0-2): ', end = '')
+                    print('\t0 - SGD')
+                    print('\t1 - Adam')
+                    print('\t2 - RMSProp')
+                    optmizer=inputNumber(lower_or_eq=2)
                     print('Enter the loss function (0-3):')
                     print('\t0 - Binary Crossentropy')
                     print('\t1 - Categorical Crossentropy')
@@ -320,8 +323,8 @@ def main(argv){
                         print('Enter use bias for layer {} (0 [False] - 1 [True]): '.format(i), end = '')
                         bias.append(inputNumber(lower_or_eq=1)==1)
                     }
-                    hyperparams={'core_version':'v2','name':hyper_name,'submitted_at':submitted_at,'batch_size':batch_size,'alpha':alpha,'shuffle':shuffle,'adam':adam,'loss':loss,'label_type':label_type,'layers':layers,'layer_sizes':layer_sizes,'bias':bias,'node_types':node_types,'dropouts':dropouts}
-                }else{
+                    hyperparams={'core_version':'v2','name':hyper_name,'submitted_at':submitted_at,'batch_size':batch_size,'alpha':alpha,'shuffle':shuffle,'optmizer':optmizer,'loss':loss,'label_type':label_type,'layers':layers,'layer_sizes':layer_sizes,'bias':bias,'node_types':node_types,'dropouts':dropouts}
+                }else{ # v1
                     print('Now type the hyperparameters for the Smart Neural Network...')
                     print('Enter the hyperparameters config name (unique): ', end = '')
                     hyper_name=input().strip()
@@ -718,11 +721,14 @@ def main(argv){
                     loss_min=inputNumber(lower_or_eq=3)
                     print('Max: ')
                     loss_max=inputNumber(lower_or_eq=3,greater_or_eq=loss_min)
-                    print('Use adam optimizer instead of SGD (0 [False] - 1 [True]):')
+                    print('Enter the optmizer (0-2): ')
+                    print('\t0 - SGD')
+                    print('\t1 - Adam')
+                    print('\t2 - RMSProp')
                     print('min: ')
-                    adam_min=inputNumber(lower_or_eq=1)==1
+                    optmizer_min=inputNumber(lower_or_eq=2)
                     print('Max: ')
-                    adam_max=inputNumber(lower_or_eq=1,greater_or_eq=adam_min)==1
+                    optmizer_max=inputNumber(lower_or_eq=2,greater_or_eq=optmizer_min)
                     if amount_of_layers_min>1 or amount_of_layers_max>1{
                         print('Enter the layer sizes: min: ')
                         layer_size_min=inputNumber(greater_or_eq=1)
@@ -763,7 +769,7 @@ def main(argv){
                     }
                     print('Now enter the activation function for the OUTPUT layer (0-9) recommended (1-2):')
                     activation_out=inputNumber(lower_or_eq=9)
-                    environment_to_insert={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'search_space':{'output_layer_node_type':activation_out,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'adam':{'min':adam_min,'max':adam_max}}}
+                    environment_to_insert={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'search_space':{'output_layer_node_type':activation_out,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'optmizer':{'min':optmizer_min,'max':optmizer_max}}}
                 }else{
                     print('Now type the minimum and maximums for each item of the Smart Neural Search Space...')
                     print('Enter the genetic environment name: ', end = '')
