@@ -369,7 +369,7 @@ def testGeneticallyTunedNN(){
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
     search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
-    search_space.add(Utils.getEnumBorder(NodeType,False),Utils.getEnumBorder(NodeType,True),SearchSpace.Type.INT,'node_types')
+    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types')
     search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
     search_space=Genome.enrichSearchSpace(search_space)

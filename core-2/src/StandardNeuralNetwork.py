@@ -9,7 +9,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping # from ker
 from tensorflow.keras.layers import Dense, Dropout, Input # from keras.layers import Dense, Dropout, Input
 from tensorflow.keras.models import Model, load_model # from keras.layers import Dense, Dropout, Input
 import tensorflow.keras.backend as K # import keras.backend as K
-from tensorflow.keras.optimizers import Adam, SGD # from keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop # from keras.optimizers import Adam, SGD, RMSprop
 import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from Utils import Utils
@@ -173,9 +173,10 @@ class StandardNeuralNetwork(object){
 		outputs=layer
 		model=Model(inputs=inputs, outputs=outputs,name=self.dataset_name)
 		if self.hyperparameters.adam==True{
-			opt=Adam(learning_rate=self.hyperparameters.alpha)
+			opt=Adam(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
 		}else{
-			opt=SGD(learning_rate=self.hyperparameters.alpha)
+			opt=SGD(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
+			# opt=RMSprop(learning_rate=self.hyperparameters.alpha, clipnorm=1.0) # TODO test me
 		}
 		model.compile(loss=self.hyperparameters.loss.toKerasName(),optimizer=opt,metrics=self._metricsFactory())
 		if self.verbose{
