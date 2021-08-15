@@ -24,7 +24,7 @@ from bson.json_util import dumps as bdumps
 from bson.json_util import loads as bloads
 from numpy.random import Generator, MT19937
 
-class Utils(object){
+class Utils(){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
     if os.name == 'nt'{
@@ -684,5 +684,68 @@ class Utils(object){
        }else{
            return float('NaN')
        }
+    }
+
+    class LazyCore(){
+        # 'Just':'to fix vscode coloring':'when using pytho{\}'
+        @staticmethod
+        def warn(msg=''){
+            try{
+                from Core import Core
+                Core.LOGGER.warn(msg)
+            }except{
+                print(msg)
+            }
+        }
+
+        @staticmethod
+        def info(msg=''){
+            try{
+                from Core import Core
+                Core.LOGGER.info(msg)
+            }except{
+                print(msg)
+            }
+        }
+
+        @staticmethod
+        def multiline(msg){
+            try{
+                from Core import Core
+                Core.LOGGER.multiline(msg)
+            }except{
+                print(msg)
+            }
+        }
+
+        @staticmethod
+        def exception(e){
+            try{
+                from Core import Core
+                Core.LOGGER.exception(e)
+            }except{
+                print(msg)
+            }
+        }
+
+        @staticmethod
+        def logDict(dictionary,name,inline=False){
+            try{
+                from Core import Core
+                Core.LOGGER.logDict(dictionary,name,inline=inline)
+            }except{
+                Utils.logDict(dictionary,name,inline=inline)
+            }
+        }
+
+        @staticmethod
+        def freeMemManually(){
+            try{
+                from Core import Core
+                return Core.FREE_MEMORY_MANUALLY
+            }except{
+                return true
+            }
+        }
     }
 }

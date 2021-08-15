@@ -4,8 +4,8 @@
 import time
 from Genome import Genome
 from Utils import Utils
-from StandardGenetic import StandardGenetic
-from EnhancedGenetic import EnhancedGenetic
+from StandardGeneticAlgorithm import StandardGeneticAlgorithm
+from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 
 
 class PopulationManager(object){
@@ -18,7 +18,7 @@ class PopulationManager(object){
         self.genetic_algorithm=genetic_algorithm
         self.space=self.genetic_algorithm.enrichSpace(search_space)
         has_age=False
-        if type(self.genetic_algorithm) is EnhancedGenetic{
+        if type(self.genetic_algorithm) is EnhancedGeneticAlgorithm{
             self.genetic_algorithm.max_population=population_start_size*2
             has_age=True
         }
@@ -35,8 +35,7 @@ class PopulationManager(object){
         self.genetic_algorithm=None
         self.space=None
         for individual in self.population{
-            from Core import Core
-            if Core.FREE_MEMORY_MANUALLY==True{
+            if Utils.LazyCore.freeMemManually(){
                 del individual
             }
         }
@@ -55,8 +54,7 @@ class PopulationManager(object){
                 best_out=float('inf')
             }
             if verbose{
-                from Core import Core
-                Core.LOGGER.info('\tEvaluating individuals...')
+                Utils.LazyCore.info('\tEvaluating individuals...')
             }
             last_print=1
             for p,individual in enumerate(self.population){
@@ -76,46 +74,39 @@ class PopulationManager(object){
                     percent=(p+1)/float(len(self.population))*100.0
                     if  percent>=last_print*PopulationManager.PRINT_REL_FREQUENCY {
                         last_print+=1
-                        from Core import Core
-                        Core.LOGGER.info('\t\tprogress: {:2.2f}%'.format(percent))
+                        Utils.LazyCore.info('\t\tprogress: {:2.2f}%'.format(percent))
                     }
                 }
             }
             if verbose{
-                from Core import Core
-                Core.LOGGER.info('\tEvaluated individuals...OK')
-                Core.LOGGER.info('\tCalculating fitness...')
+                Utils.LazyCore.info('\tEvaluated individuals...OK')
+                Utils.LazyCore.info('\tCalculating fitness...')
             }
             self.population=self.genetic_algorithm.fit(self.population)
             if verbose{
-                from Core import Core
-                Core.LOGGER.info('\tCalculated fitness...OK')
+                Utils.LazyCore.info('\tCalculated fitness...OK')
             }
             if self.hall_of_fame is not None {
                 if verbose{
-                    from Core import Core
-                    Core.LOGGER.info('\tSetting hall of fame...')
+                    Utils.LazyCore.info('\tSetting hall of fame...')
                 }
                 self.hall_of_fame.update(self.population,g)
                 if verbose{
-                    from Core import Core
-                    Core.LOGGER.info('\tSetted hall of fame...OK')
+                    Utils.LazyCore.info('\tSetted hall of fame...OK')
                 }
             }
             if g<gens{
                 if verbose{
-                    from Core import Core
-                    Core.LOGGER.info('\tSelecting and breeding individuals...')
+                    Utils.LazyCore.info('\tSelecting and breeding individuals...')
                 }
                 self.population=self.genetic_algorithm.select(self.population)
                 if verbose{
-                    from Core import Core
-                    Core.LOGGER.info('\tSelected and breed individuals...OK')
+                    Utils.LazyCore.info('\tSelected and breed individuals...OK')
                     enhanced_str=' and aging'
-                    if type(self.genetic_algorithm) is not EnhancedGenetic{
+                    if type(self.genetic_algorithm) is not EnhancedGeneticAlgorithm{
                         enhanced_str=''
                     }
-                    Core.LOGGER.info('\tMutating{} individuals...'.format(enhanced_str))
+                    Utils.LazyCore.info('\tMutating{} individuals...'.format(enhanced_str))
                 }
                 self.population=self.genetic_algorithm.mutate(self.population)
                 if g%PopulationManager.MT_DNA_VALIDITY==0{
@@ -125,11 +116,10 @@ class PopulationManager(object){
                 }
                 if verbose{
                     enhanced_str=' and aged'
-                    if type(self.genetic_algorithm) is not EnhancedGenetic{
+                    if type(self.genetic_algorithm) is not EnhancedGeneticAlgorithm{
                         enhanced_str=''
                     }
-                    from Core import Core
-                    Core.LOGGER.info('\tMutated{} individuals...OK'.format(enhanced_str))
+                    Utils.LazyCore.info('\tMutated{} individuals...OK'.format(enhanced_str))
                 }
             }else{
                 self.population.sort()
@@ -141,13 +131,11 @@ class PopulationManager(object){
                 self.after_gen_callback(args_list)
             }
             if len(self.population)<2{
-                from Core import Core
-                Core.LOGGER.warn('Early stopping generation {} due to its small size {}, this population died!'.format(g,len(self.population)))
+                Utils.LazyCore.warn('Early stopping generation {} due to its small size {}, this population died!'.format(g,len(self.population)))
                 break
             }
             if verbose_generations or self.print_deltas {
-                from Core import Core
-                Core.LOGGER.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
+                Utils.LazyCore.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
             }
         }
     }

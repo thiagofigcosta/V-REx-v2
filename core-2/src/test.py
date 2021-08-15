@@ -11,8 +11,9 @@ from Enums import LabelEncoding,NodeType,Loss,Metric,Optimizers
 from Hyperparameters import Hyperparameters
 from HallOfFame import HallOfFame
 from StandardNeuralNetwork import StandardNeuralNetwork
-from StandardGenetic import StandardGenetic
-from EnhancedGenetic import EnhancedGenetic
+from EnhancedNeuralNetwork import EnhancedNeuralNetwork
+from StandardGeneticAlgorithm import StandardGeneticAlgorithm
+from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 from PopulationManager import PopulationManager
 
 TMP_FOLDER='tmp/core/'
@@ -48,7 +49,7 @@ def testStdGenetic(){
     search_maximum=False
     max_notables=5
     elite_min=HallOfFame(max_notables, search_maximum)
-    ga=StandardGenetic(search_maximum,mutation_rate, sex_rate)
+    ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
     population=PopulationManager(ga,limits,eggHolder,population_size,neural_genome=False,print_deltas=verbose,after_gen_callback=lambda x:print('After gen'))
     population.hall_of_fame=elite_min
     population.naturalSelection(max_gens,verbose)
@@ -78,7 +79,7 @@ def testStdGenetic(){
     search_maximum=True
     max_notables=5
     elite_max=HallOfFame(max_notables, search_maximum)
-    ga=StandardGenetic(search_maximum,mutation_rate, sex_rate)
+    ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
     population=PopulationManager(ga,limits,easom,population_size,neural_genome=False,print_deltas=verbose,after_gen_callback=afterGen)
     population.hall_of_fame=elite_max
     population.naturalSelection(max_gens,verbose)
@@ -124,7 +125,7 @@ def testEnhGenetic(){
     search_maximum=False
     max_notables=5
     enh_elite=HallOfFame(max_notables, search_maximum)
-    en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details,after_gen_callback=lambda x:print('After gen') if add_callback_after_gen else None)
     enh_population.hall_of_fame=enh_elite
     enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
@@ -162,7 +163,7 @@ def testEnhGenetic(){
     search_maximum=True
     max_notables=5
     enh_elite=HallOfFame(max_notables, search_maximum)
-    en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details,after_gen_callback=afterGen if add_callback_after_gen else None)
     enh_population.hall_of_fame=enh_elite
     enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
@@ -204,25 +205,25 @@ def testStdVsEnhGenetic(){
     for x in range(tests){
         print('Test {} of {}'.format(x+1,tests))
         std_elite=HallOfFame(max_notables, search_maximum)
-        std_ga=StandardGenetic(search_maximum,mutation_rate, sex_rate)
+        std_ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
         std_population=PopulationManager(std_ga,limits,eggHolder,population_start_size_std)
         std_population.hall_of_fame=std_elite
         std_population.naturalSelection(max_gens)
         std_result=std_elite.best
         results['standard'].append(std_result)
-        if Core.FREE_MEMORY_MANUALLY==True{
+        if Utils.LazyCore.freeMemManually(){
             del std_elite
             del std_population
         }
 
         enh_elite=HallOfFame(max_notables, search_maximum)
-        en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+        en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
         enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh)
         enh_population.hall_of_fame=enh_elite
         enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
         results['enhanced'].append(enh_result)
-        if Core.FREE_MEMORY_MANUALLY==True{
+        if Utils.LazyCore.freeMemManually(){
             del enh_elite
             del enh_population
         }
@@ -290,7 +291,7 @@ def testNNIntLabel(){
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,name='iris',verbose=True)
-    nn.buildModel(input_size)
+    nn.buildModel(input_size=input_size)
     nn.train(train[0],train[1],val[0],val[1])
     history=nn.history
     Utils.printDict(history,'History')
@@ -333,7 +334,7 @@ def testNNBinLabel_KFolds(){
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,name='iris',verbose=True)
-    nn.buildModel(input_size)
+    nn.buildModel(input_size=input_size)
     # KFolds
     nn.trainKFolds(train[0],train[1],8)
     ############################################################
@@ -397,7 +398,7 @@ def testGeneticallyTunedNN(){
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
         search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
         nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
-        nn.buildModel(input_size)
+        nn.buildModel(input_size=input_size)
         nn.setWeights(genome.getWeights())
         nn.trainKFolds(train_features,train_labels,kfolds)
         output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
@@ -424,7 +425,7 @@ def testGeneticallyTunedNN(){
     max_notables=5
     search_maximum=metric!=Metric.RAW_LOSS
     enh_elite=HallOfFame(max_notables, search_maximum)
-    en_ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
     enh_population.hall_of_fame=enh_elite
     enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
@@ -444,7 +445,7 @@ def testGeneticallyTunedNN(){
         output_size=len(test_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
         nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
-        nn.buildModel(input_size)
+        nn.buildModel(input_size=input_size)
         nn.saveModelSchemaToFile()
         nn.setWeights(genome.getWeights())
         print('Best genome encoded weights:',genome.getWeights(raw=True))
@@ -465,10 +466,52 @@ def testCustomEncodings(){
     print('base64-converted',Utils.base65ToBase64(base65))
 }
 
+def testEnhancedNN(){
+    label_type=LabelEncoding.BINARY
+
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+    train,test=Dataset.splitDataset(features,labels,.7)
+
+    input_size=len(train[0][0])
+    output_size=len(train[1][0])
+    layers=2
+    dropouts=0
+    bias=True
+    layer_sizes=[5,output_size]
+    node_types=[NodeType.TANH,NodeType.SOFTMAX]
+    batch_size=5
+    alpha=0.01
+    shuffle=True
+    optmizer=Optimizers.SGD
+    patience_epochs=15
+    max_epochs=100
+    loss=Loss.BINARY_CROSSENTROPY
+    monitor_metric=Metric.RAW_LOSS
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+
+    enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
+    enn.buildModel(input_size=input_size)
+    # KFolds
+    enn.trainKFolds(train[0],train[1],8)
+    history=enn.history
+    preds,activations=enn.predict(test[0],True,True)
+    print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
+    eval_res=enn.eval(test[0],test[1])
+    del enn
+    Utils.printDict(eval_res,'Eval')
+    Dataset.compareAndPrintLabels(preds,activations,test[1],show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
+    Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
+}
+
 # testStdGenetic()
 # testEnhGenetic()
 # testStdVsEnhGenetic()
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
-testGeneticallyTunedNN() 
+# testGeneticallyTunedNN() 
 # testCustomEncodings()
+testEnhancedNN()

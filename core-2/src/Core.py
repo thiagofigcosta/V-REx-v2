@@ -6,9 +6,10 @@ from MongoDB import MongoDB
 from SearchSpace import SearchSpace
 from HallOfFame import HallOfFame
 from StandardNeuralNetwork import StandardNeuralNetwork
+from NeuralNetwork import NeuralNetwork
 from PopulationManager import PopulationManager
-from StandardGenetic import StandardGenetic
-from EnhancedGenetic import EnhancedGenetic
+from StandardGeneticAlgorithm import StandardGeneticAlgorithm
+from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 from Hyperparameters import Hyperparameters
 from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss,Optimizers
 from Genome import Genome
@@ -29,7 +30,7 @@ class Core(object){
 	def __init__(self, mongo, logger){
 		Core.LOGGER=logger
 		self.mongo=mongo
-		StandardNeuralNetwork.CLASSES_THRESHOLD=Core.THRESHOLD
+		NeuralNetwork.CLASSES_THRESHOLD=Core.THRESHOLD
 	}
 
 	def runGeneticSimulation(self,simulation_id){
@@ -95,7 +96,7 @@ class Core(object){
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
 			nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
-			nn.buildModel(input_size)
+			nn.buildModel(input_size=input_size)
 			nn.setWeights(genome.getWeights())
 			if cross_validation==CrossValidation.NONE{
 				nn.trainNoValidation(train_features,train_labels)
@@ -117,7 +118,7 @@ class Core(object){
 			if preserve_weights {
 				genome.setWeights(nn.mergeWeights(genome.getWeights()))
 			}
-			if Core.FREE_MEMORY_MANUALLY{
+			if Utils.LazyCore.freeMemManually(){
 				del nn
 			}
 			return output
@@ -154,9 +155,9 @@ class Core(object){
 		elite=HallOfFame(max_notables, search_maximum)
 		ga=None
 		if algorithm == GeneticAlgorithmType.ENHANCED{
-			ga=EnhancedGenetic(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+			ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
 		}elif algorithm == GeneticAlgorithmType.STANDARD{
-			ga=StandardGenetic(search_maximum,mutation_rate,sex_rate)
+			ga=StandardGeneticAlgorithm(search_maximum,mutation_rate,sex_rate)
 		}else{
 			raise Exception('Unknown algorithm {}'.format(algorithm))
 		}
@@ -172,7 +173,7 @@ class Core(object){
 		}
 		self.finishGeneticSimulation(simulation_id,Utils.getTodayDatetime())
 		Core.LOGGER.info('Runned genetic simulation {}...OK'.format(simulation_id))
-		if Core.FREE_MEMORY_MANUALLY{
+		if Utils.LazyCore.freeMemManually(){
 			del elite
 		}
 	}
@@ -222,7 +223,7 @@ class Core(object){
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
 			nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
-			nn.buildModel(input_size)
+			nn.buildModel(input_size=input_size)
 			Core.LOGGER.info('Created train network...OK')
 			Core.LOGGER.info('Training network...')
 			nn.trainRollingForecast(train_features,train_labels)
@@ -246,7 +247,7 @@ class Core(object){
 			self.appendTMetricsOnNeuralNet(independent_net_id,train_metrics)
 			self.saveWeightsOnNeuralNet(independent_net_id,trained_weights)
 			Core.LOGGER.info('Wrote weights...OK')
-			if Core.FREE_MEMORY_MANUALLY{
+			if Utils.LazyCore.freeMemManually(){
 				del nn
 			}
 		}
@@ -263,7 +264,7 @@ class Core(object){
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
 			nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
-			nn.buildModel(input_size)
+			nn.buildModel(input_size=input_size)
 			nn.setWeights(Genome.decodeWeights(trained_weights))
 			Core.LOGGER.info('Created test network...OK')
 			Core.LOGGER.info('Evaluating network...')
@@ -286,7 +287,7 @@ class Core(object){
 				self.appendStatsOnNeuralNet(independent_net_id,'test_stats',test_eval_res,test_metric.toKerasName())
 			}
 			Core.LOGGER.info('Wrote results...OK')
-			if Core.FREE_MEMORY_MANUALLY{
+			if Utils.LazyCore.freeMemManually(){
 				del nn
 			}
 		}
@@ -320,7 +321,7 @@ class Core(object){
 		input_size=len(test_features[0])
 		output_size=len(test_labels[0])
 		nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
-		nn.buildModel(input_size)
+		nn.buildModel(input_size=input_size)
 		nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
 		Core.LOGGER.info('Created eval network...OK')
 		Core.LOGGER.info('Predicting...')
@@ -332,7 +333,7 @@ class Core(object){
 		Core.LOGGER.info('Writing results...')
 		self.storeEvalNeuralNetResult(result_id,test_data_ids,classes,activations,test_labels,statistics)
 		Core.LOGGER.info('Wrote results...OK')
-		if Core.FREE_MEMORY_MANUALLY{
+		if Utils.LazyCore.freeMemManually(){
 			del nn
 		}
 		Core.LOGGER.info('Evaluated neural network {}...OK'.format(independent_net_id))

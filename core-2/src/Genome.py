@@ -145,8 +145,7 @@ class Genome(object){
                    Utils.saveObj(self._weights,self.cache_file)
                    success=True
                }except Exception as e{
-                   from Core import Core
-                   Core.LOGGER.exception(e)
+                   Utils.LazyCore.exception(e)
                    if (tries==max_tries-1){
                         self.cache_file=self.genCacheFilename()
                     }

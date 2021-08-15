@@ -7,7 +7,7 @@ from Enums import GeneticRankType
 from SearchSpace import SearchSpace
 from Utils import Utils
 
-class EnhancedGenetic(GeneticAlgorithm){
+class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
     WILL_OF_D_PERCENT=0.07
@@ -69,8 +69,7 @@ class EnhancedGenetic(GeneticAlgorithm){
         }
         non_selected_beings_set=set(individuals)-selected_beings_set
         for useless_being in non_selected_beings_set{
-            from Core import Core
-            if Core.FREE_MEMORY_MANUALLY==True{
+            if Utils.LazyCore.freeMemManually(){
                 del useless_being
             }
         }
@@ -83,8 +82,7 @@ class EnhancedGenetic(GeneticAlgorithm){
             self.current_population_size+=len(children)-2
         }
         for useful_being in selected_beings_set{
-            from Core import Core
-            if Core.FREE_MEMORY_MANUALLY==True{
+            if Utils.LazyCore.freeMemManually(){
                 del useful_being
             }
         }
@@ -120,14 +118,13 @@ class EnhancedGenetic(GeneticAlgorithm){
                 recycled,individuals=self.recycleBadIndividuals(individuals)
             }else{
                 recycled=False
-                max_allowed_population=self.max_population*EnhancedGenetic.CUTOFF_POPULATION_LIMIT
+                max_allowed_population=self.max_population*EnhancedGeneticAlgorithm.CUTOFF_POPULATION_LIMIT
                 to_cut_off=int(len(individuals)-max_allowed_population)
                 if to_cut_off > 0{
                     if self.rank_type==GeneticRankType.RELATIVE{
                         for e in range(len(individuals),len(individuals)-to_cut_off,-1){
                             individual=individuals[e]
-                            from Core import Core
-                            if Core.FREE_MEMORY_MANUALLY==True{ 
+                            if Utils.LazyCore.freeMemManually(){ 
                                 del individual
                             }
                         }
@@ -135,8 +132,7 @@ class EnhancedGenetic(GeneticAlgorithm){
                     }else{
                         for e in range(to_cut_off){
                             individual=individuals[e]
-                            from Core import Core
-                            if Core.FREE_MEMORY_MANUALLY==True{
+                            if Utils.LazyCore.freeMemManually(){
                                 del individual
                             }
                         }
@@ -200,9 +196,8 @@ class EnhancedGenetic(GeneticAlgorithm){
         for i,individual in enumerate(individuals){
             individual.age+=1
             if self.getLifeLeft(individual)<0 {
-                if (individual.fitness<=(1-EnhancedGenetic.WILL_OF_D_PERCENT)*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>=EnhancedGenetic.WILL_OF_D_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
-                    from Core import Core
-                    if Core.FREE_MEMORY_MANUALLY==True{
+                if (individual.fitness<=(1-EnhancedGeneticAlgorithm.WILL_OF_D_PERCENT)*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>=EnhancedGeneticAlgorithm.WILL_OF_D_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
+                    if Utils.LazyCore.freeMemManually(){
                         del individual # dead
                     }
                     cemetery.append(i)
@@ -271,12 +266,11 @@ class EnhancedGenetic(GeneticAlgorithm){
         }
         for i in custom_range {
             individual=individuals[i]
-            if (individual.fitness<EnhancedGenetic.RECYCLE_THRESHOLD_PERCENT*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>EnhancedGenetic.RECYCLE_THRESHOLD_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
-                from Core import Core
-                if Core.FREE_MEMORY_MANUALLY==True{
+            if (individual.fitness<EnhancedGeneticAlgorithm.RECYCLE_THRESHOLD_PERCENT*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>EnhancedGeneticAlgorithm.RECYCLE_THRESHOLD_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
+                if Utils.LazyCore.freeMemManually(){
                     del individual
                 }
-                idx_of_amazing_individual=int(EnhancedGenetic.WILL_OF_D_PERCENT*len(individuals)*Utils.random())
+                idx_of_amazing_individual=int(EnhancedGeneticAlgorithm.WILL_OF_D_PERCENT*len(individuals)*Utils.random())
                 if self.rank_type!=GeneticRankType.RELATIVE{
                     idx_of_amazing_individual=(len(individuals)-1)-idx_of_amazing_individual
                 }

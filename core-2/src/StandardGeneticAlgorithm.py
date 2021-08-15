@@ -5,7 +5,7 @@ from GeneticAlgorithm import GeneticAlgorithm
 from Enums import GeneticRankType
 from Utils import Utils
 
-class StandardGenetic(GeneticAlgorithm){
+class StandardGeneticAlgorithm(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
     def __init__(self, looking_highest_fitness, mutation_rate, sex_rate, rank_type=GeneticRankType.RELATIVE){
@@ -45,8 +45,7 @@ class StandardGenetic(GeneticAlgorithm){
             next_gen+=children
         }
         for individual in individuals {
-            from Core import Core
-            if Core.FREE_MEMORY_MANUALLY==True{
+            if Utils.LazyCore.freeMemManually(){
                 del individual
             }
         }
