@@ -470,7 +470,7 @@ def testCustomEncodings(){
 }
 
 def testEnhancedNN(){
-    label_type=LabelEncoding.BINARY
+    label_type=LabelEncoding.SPARSE
 
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
     labels,label_map=Dataset.enumfyDatasetLabels(labels)

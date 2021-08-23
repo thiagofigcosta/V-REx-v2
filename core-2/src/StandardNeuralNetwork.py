@@ -5,7 +5,8 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping # from ker
 from tensorflow.keras.layers import Dense, Dropout, Input # from keras.layers import Dense, Dropout, Input
 from tensorflow.keras.models import Model # from keras.models import Model
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop # from keras.optimizers import Adam, SGD, RMSprop
-from Enums import Optimizers
+from tensorflow.python.keras.layers.advanced_activations import LeakyReLU
+from Enums import Optimizers,NodeType
 from Utils import Utils
 import numpy as np
 
@@ -27,7 +28,17 @@ class StandardNeuralNetwork(NeuralNetwork){
 			}else{
 				last_layer=layer
 			}
-			layer=Dense(self.hyperparameters.layer_sizes[l], name='L{}'.format(l),activation=self.hyperparameters.node_types[l].toKerasName(), use_bias=self.hyperparameters.bias[l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
+			if self.hyperparameters.node_types[l]!=NodeType.RELU or not NeuralNetwork.USE_LEAKY_RELU{
+				activation=self.hyperparameters.node_types[l].toKerasName()
+				advanced_activation=False
+			}else{
+				activation=NodeType.LINEAR.toKerasName()
+				advanced_activation=True
+			}
+			layer=Dense(self.hyperparameters.layer_sizes[l], name='L{}'.format(l),activation=activation, use_bias=self.hyperparameters.bias[l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
+			if advanced_activation{
+				layer=LeakyReLU(alpha=0.1, name='LeakyRelu{}'.format(l))(layer)
+			}
 			if self.hyperparameters.dropouts[l]>0{
 				layer=Dropout(self.hyperparameters.dropouts[l], name='D{}'.format(l))(layer)
 			}

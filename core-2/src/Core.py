@@ -6,6 +6,7 @@ from MongoDB import MongoDB
 from SearchSpace import SearchSpace
 from HallOfFame import HallOfFame
 from StandardNeuralNetwork import StandardNeuralNetwork
+from EnhancedNeuralNetwork import EnhancedNeuralNetwork
 from NeuralNetwork import NeuralNetwork
 from PopulationManager import PopulationManager
 from StandardGeneticAlgorithm import StandardGeneticAlgorithm
@@ -26,6 +27,7 @@ class Core(object){
 	ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
 	FIXED_VALIDATION_PERCENT=.2
 	THRESHOLD=0.5
+	USE_ENHANCED_NN=True
 
 	def __init__(self, mongo, logger){
 		Core.LOGGER=logger
@@ -95,7 +97,11 @@ class Core(object){
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
-			nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+			if Core.EnhancedNeuralNetwork{
+				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+			}else{
+				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+			}
 			nn.buildModel(input_size=input_size)
 			nn.setWeights(genome.getWeights())
 			if cross_validation==CrossValidation.NONE{
@@ -225,7 +231,11 @@ class Core(object){
 			Core.LOGGER.info('Creating train network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
+			if Core.EnhancedNeuralNetwork{
+				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
+			}else{
+				nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
+			}
 			nn.buildModel(input_size=input_size)
 			Core.LOGGER.info('Created train network...OK')
 			Core.LOGGER.info('Training network...')
@@ -266,7 +276,11 @@ class Core(object){
 			Core.LOGGER.info('Creating test network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+			if Core.EnhancedNeuralNetwork{
+				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+			}else{
+				nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+			}
 			nn.buildModel(input_size=input_size)
 			nn.setWeights(Genome.decodeWeights(trained_weights))
 			Core.LOGGER.info('Created test network...OK')
@@ -323,7 +337,11 @@ class Core(object){
 		Core.LOGGER.info('Creating eval network...')
 		input_size=len(test_features[0])
 		output_size=len(test_labels[0])
-		nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
+		if Core.EnhancedNeuralNetwork{
+			nn=EnhancedNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
+		}else{
+			nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
+		}
 		nn.buildModel(input_size=input_size)
 		nn.setWeights(Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id)))
 		Core.LOGGER.info('Created eval network...OK')

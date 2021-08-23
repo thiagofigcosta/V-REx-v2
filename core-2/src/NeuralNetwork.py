@@ -26,6 +26,7 @@ class NeuralNetwork(ABC){
 	USE_MANUAL_METRICS=False # manual metrics are slower
 	CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
+	USE_LEAKY_RELU=False
 
     def __init__(self,hyperparameters,name='',verbose=False){
         self.hyperparameters=hyperparameters
@@ -50,18 +51,27 @@ class NeuralNetwork(ABC){
 		keras.backend.clear_session()
 	}
 
+	def _load_model_partial(self,path){
+		custom_objects={}
+		if not NeuralNetwork.USE_MANUAL_METRICS{
+			custom_metrics=self._metricsFactory()
+			for i in range(len(custom_metrics)-1){
+				custom_objects[custom_metrics[i].__name__]=custom_metrics[i]
+			}
+		}
+		return custom_objects
+	}
+
+
+	def load_model(self,path){
+		objs=self._load_model_partial(path)
+		loaded_model=load_model(path,custom_objects=objs)
+		return loaded_model
+	}
+
 	def restoreCheckpointWeights(self,delete_after=True){
 		if self.checkpoint_filename is not None and Utils.checkIfPathExists(self.getModelPath(self.checkpoint_filename)){
-			if NeuralNetwork.USE_MANUAL_METRICS{
-				loaded_model=load_model(self.getModelPath(self.checkpoint_filename))
-			}else{
-				custom_metrics=self._metricsFactory()
-				custom_objects={}
-				for i in range(len(custom_metrics)-1){
-					custom_objects[custom_metrics[i].__name__]=custom_metrics[i]
-				}
-				loaded_model=load_model(self.getModelPath(self.checkpoint_filename),custom_objects=custom_objects)
-			}
+			loaded_model=self.load_model(self.getModelPath(self.checkpoint_filename))	
 			if self.verbose {
 				Utils.LazyCore.info('Restoring model checkpoint...')
 			}
