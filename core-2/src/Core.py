@@ -90,7 +90,7 @@ class Core(object){
 		Core.LOGGER.multiline(str(search_space))
 		def train_callback(genome){
 			nonlocal train_features,train_labels,cross_validation,output_layer_node_type
-			preserve_weights=True
+			preserve_weights=False # TODO fix when true, to avoid nan outputs
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
@@ -109,6 +109,9 @@ class Core(object){
 				nn.trainCustomValidation(train[0],train[1],test[0],test[1])
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
+			}
+			if preserve_weights and hyperparameters.model_checkpoint{
+				nn.restoreCheckpointWeights()
 			}
 			output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
 			if output!=output{ # Not a Number, ignore this genome

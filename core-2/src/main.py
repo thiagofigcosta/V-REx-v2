@@ -22,26 +22,12 @@ def loopOnQueue(core){
             try{
                 LOGGER.info('Running job {}-{}...'.format(task,job.job_id))
                 if task=='Genetic'{
-                    done=False
                     core.runGeneticSimulation(payload['args']['simulation_id'])
-                    if not done{
-                        raise Exception('Failed to run genetic experiment using simulation: {}'.format(payload['args']['simulation_id']))
-                    }
                 }elif task=='Train SNN'{
-                    done=False
                     core.trainNeuralNetwork(payload['args']['independent_net_id'],False,True)
                     core.trainNeuralNetwork(payload['args']['independent_net_id'],True,False)
-                    if not done{
-                        raise Exception('Failed to train network ({}) [step 1/2] and eval network ({}) train [step 2/2]'.format(payload['args']['independent_net_id'],payload['args']['independent_net_id']))
-                    }
                 }elif task=='Eval SNN'{
-                    done=False
                     core.predictNeuralNetwork(payload['args']['independent_net_id'],payload['args']['result_id'],payload['args']['eval_data'])
-                    if not done{
-                        raise Exception('Failed to eval neural network ({}) with data: {}'.format(payload['args']['independent_net_id'],payload['args']['eval_data']))
-                    }else{
-                        LOGGER.info('Result stored at {}/neural_db/eval_results/{}'.format(mongo_addr,payload['args']['result_id']))
-                    }
                 }
                 if job{
                     job.complete()

@@ -389,7 +389,7 @@ def testGeneticallyTunedNN(){
     def train_callback(genome){
         nonlocal train
         kfolds=5
-        preserve_weights=True
+        preserve_weights=False # TODO fix when true, to avoid nan outputs
         train_features=train[0]
         train_labels=train[1]
         train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
@@ -401,6 +401,9 @@ def testGeneticallyTunedNN(){
         nn.buildModel(input_size=input_size)
         nn.setWeights(genome.getWeights())
         nn.trainKFolds(train_features,train_labels,kfolds)
+        if preserve_weights and hyperparameters.model_checkpoint{
+            nn.restoreCheckpointWeights()
+        }
         output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
         if output!=output{ # Not a Number, ignore this genome
             Core.LOGGER.warn('Not a number metric mean')

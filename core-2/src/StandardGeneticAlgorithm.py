@@ -119,9 +119,9 @@ class StandardGeneticAlgorithm(GeneticAlgorithm){
     def randomize(self){
         r=Utils.randomFloat(0,0.1)
         if (Utils.random()>0.5){
-            r=-(1+r);
+            r=-(1+r)
         }else{
-            r=(1+r);
+            r=(1+r)
         }
         return r
     }

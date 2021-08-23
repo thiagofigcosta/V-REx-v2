@@ -25,6 +25,7 @@ class NeuralNetwork(ABC){
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
 	USE_MANUAL_METRICS=False # manual metrics are slower
 	CLASSES_THRESHOLD=.5
+	CLIP_NORM_INSTEAD_OF_VALUE=True
 
     def __init__(self,hyperparameters,name='',verbose=False){
         self.hyperparameters=hyperparameters
@@ -49,6 +50,32 @@ class NeuralNetwork(ABC){
 		keras.backend.clear_session()
 	}
 
+	def restoreCheckpointWeights(self,delete_after=True){
+		if self.checkpoint_filename is not None and Utils.checkIfPathExists(self.getModelPath(self.checkpoint_filename)){
+			if NeuralNetwork.USE_MANUAL_METRICS{
+				loaded_model=load_model(self.getModelPath(self.checkpoint_filename))
+			}else{
+				custom_metrics=self._metricsFactory()
+				custom_objects={}
+				for i in range(len(custom_metrics)-1){
+					custom_objects[custom_metrics[i].__name__]=custom_metrics[i]
+				}
+				loaded_model=load_model(self.getModelPath(self.checkpoint_filename),custom_objects=custom_objects)
+			}
+			if self.verbose {
+				Utils.LazyCore.info('Restoring model checkpoint...')
+			}
+			if self.model is None {
+				self.model=loaded_model
+			}else{
+				self.model.set_weights(loaded_model.get_weights())
+			}
+		}
+		if delete_after{
+			Utils.deleteFile(self.getModelPath(self.checkpoint_filename))
+		}
+	}
+
 	def getModelPath(self,filename){
 		path=filename
 		if Utils.appendToStrIfDoesNotEndsWith(NeuralNetwork.MODELS_PATH,Utils.FILE_SEPARATOR) not in path{
@@ -68,7 +95,7 @@ class NeuralNetwork(ABC){
 	def saveModelSchemaToFile(self){
 		filepath=self.getPlotsPath('model_{}.png'.format(self.name))
 		if self.verbose{
-			print('Saving model diagram to file: {}'.format(filepath))
+			Utils.LazyCore.info('Saving model diagram to file: {}'.format(filepath))
 		}
 		try{
 			plot_model(self.model,to_file=filepath,show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=300) # show_dtype=False,

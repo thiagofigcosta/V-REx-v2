@@ -36,12 +36,18 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 		}
 		outputs=layer
 		model=EnhancedNeuralNetwork.EnhancedModel(inputs=inputs, outputs=outputs,name=self.name)
+		clip_dict={}
+		if NeuralNetwork.CLIP_NORM_INSTEAD_OF_VALUE{
+			clip_dict['clipnorm']=1.0
+		}else{
+			clip_dict['clipvalue']=0.5
+		}
 		if self.hyperparameters.optmizer==Optimizers.SGD{
-			opt=SGD(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
+			opt=SGD(learning_rate=self.hyperparameters.alpha, **clip_dict)
 		}elif self.hyperparameters.optmizer==Optimizers.ADAM{
-			opt=Adam(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
+			opt=Adam(learning_rate=self.hyperparameters.alpha, **clip_dict)
 		}elif self.hyperparameters.optmizer==Optimizers.RMSPROP{
-			opt=RMSprop(learning_rate=self.hyperparameters.alpha, clipnorm=1.0)
+			opt=RMSprop(learning_rate=self.hyperparameters.alpha, **clip_dict)
 		}else{
 			raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optmizer))
 		}
@@ -114,9 +120,9 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 				# Compute the loss value
 				# (the loss function is configured in `compile()`)
 				loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
-
-				print('1 | y_pred: {}, y: {}, loss: {}'.format(y_pred,y,loss))
 			}
+
+			print('1 | y_pred: {}, y: {}, loss: {}'.format(y_pred,y,loss))
 
 			# Compute gradients
 			trainable_vars = self.trainable_variables

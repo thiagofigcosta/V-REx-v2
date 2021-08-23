@@ -53,7 +53,7 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
                     if current_roulette>=roulette_number {
                         if ( len(potential_parents)<1 or not self.isRelative(potential_parents[0],individual)){
                             potential_parents.append(individual)
-                            break;
+                            break
                         }elif backup_individual is None{
                             backup_individual=individual
                         }
@@ -246,9 +246,9 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
             r=Utils.randomFloat(0.333,0.666)
         }
         if (Utils.random()>0.5){
-            r=-(1+r);
+            r=-(1+r)
         }else{
-            r=(1+r);
+            r=(1+r)
         }
         return r
     }
