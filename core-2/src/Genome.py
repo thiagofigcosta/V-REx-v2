@@ -256,7 +256,7 @@ class Genome(object){
             label_type=search_space['label_type']
             #optional
             # adam=search_space['adam'] # deprecated in favor of Optimizers
-            optmizer=search_space['optmizer']
+            optimizer=search_space['optimizer']
             monitor_metric=search_space['monitor_metric']
             model_checkpoint=search_space['model_checkpoint']
             # layer dependent
@@ -266,8 +266,8 @@ class Genome(object){
             dropouts=search_space['dropouts']
             bias=search_space['bias']
 
-            if optmizer is None{
-                optmizer=SearchSpace.Dimension(SearchSpace.Type.INT,Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),name='optimizer')
+            if optimizer is None{
+                optimizer=SearchSpace.Dimension(SearchSpace.Type.INT,Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),name='optimizer')
             }
             if monitor_metric is None{
                 monitor_metric=SearchSpace.Dimension(SearchSpace.Type.INT,Metric.RAW_LOSS,Metric.RAW_LOSS,name='monitor_metric')
@@ -285,7 +285,7 @@ class Genome(object){
             enriched_search_space.add(loss.min_value,loss.max_value,loss.data_type,loss.name)
             enriched_search_space.add(label_type.min_value,label_type.max_value,label_type.data_type,label_type.name)
 
-            enriched_search_space.add(optmizer.min_value,optmizer.max_value,optmizer.data_type,optmizer.name)
+            enriched_search_space.add(optimizer.min_value,optimizer.max_value,optimizer.data_type,optimizer.name)
             enriched_search_space.add(monitor_metric.min_value,monitor_metric.max_value,monitor_metric.data_type,monitor_metric.name)
             enriched_search_space.add(model_checkpoint.min_value,model_checkpoint.max_value,model_checkpoint.data_type,model_checkpoint.name)
             
@@ -315,7 +315,7 @@ class Genome(object){
             loss=Loss(self.dna[5])
             label_type=self.getHyperparametersEncoder()
 
-            optmizer=Optimizers(self.dna[7])
+            optimizer=Optimizers(self.dna[7])
             monitor_metric=Metric(self.dna[8])
             model_checkpoint=self.dna[9]
 
@@ -332,7 +332,7 @@ class Genome(object){
                 dropouts.append(self.dna[(first_layer_dependent+2)+amount_of_dependent*l])
                 bias.append(self.dna[(first_layer_dependent+3)+amount_of_dependent*l])
             }
-            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
+            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
             hyperparameters.setLastLayer(output_size,output_layer_type)
             return hyperparameters
         }

@@ -448,7 +448,7 @@ class Core(object){
 		search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
 		search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
 		search_space.add(encoder,encoder,SearchSpace.Type.INT,'label_type')
-		search_space.add(Optmizers(search_space_db['optmizer']['min']),Optmizers(search_space_db['optmizer']['max']),SearchSpace.Type.INT,'optmizer')
+		search_space.add(Optimizers(search_space_db['optimizer']['min']),Optimizers(search_space_db['optimizer']['max']),SearchSpace.Type.INT,'optimizer')
 		search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
 		search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
 		search_space.add(search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT,'layer_sizes')
@@ -501,13 +501,13 @@ class Core(object){
 		batch_size=int(hyperparameters['batch_size'])
 		alpha=float(hyperparameters['alpha'])
 		shuffle=bool(hyperparameters['shuffle'])
-		optmizer=Optimizers(hyperparameters['optmizer'])
+		optimizer=Optimizers(hyperparameters['optimizer'])
 		patience_epochs=pat_epochs
 		max_epochs=epochs
 		loss=Loss(hyperparameters['loss'])
 		monitor_metric=metric
 		label_type=LabelEncoding(hyperparameters['label_type'])
-		return Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+		return Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 	}
 
 	# Disclaim, I'm to lazy to fix Pytho{\} dicts or to make a real Pytho{\} "compiler" with lexemes and stuff

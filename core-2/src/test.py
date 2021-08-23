@@ -283,12 +283,12 @@ def testNNIntLabel(){
     batch_size=5
     alpha=0.01
     shuffle=True
-    optmizer=Optimizers.ADAM
+    optimizer=Optimizers.ADAM
     patience_epochs=0
     max_epochs=100
     loss=Loss.CATEGORICAL_CROSSENTROPY
     monitor_metric=Metric.F1
-    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,name='iris',verbose=True)
     nn.buildModel(input_size=input_size)
@@ -326,12 +326,12 @@ def testNNBinLabel_KFolds(){
     batch_size=5
     alpha=0.01
     shuffle=True
-    optmizer=Optimizers.ADAM
+    optimizer=Optimizers.ADAM
     patience_epochs=15
     max_epochs=100
     loss=Loss.BINARY_CROSSENTROPY
     monitor_metric=Metric.RAW_LOSS
-    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     nn=StandardNeuralNetwork(hyperparameters,name='iris',verbose=True)
     nn.buildModel(input_size=input_size)
@@ -366,7 +366,7 @@ def testGeneticallyTunedNN(){
     search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
     search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
-    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optmizer')
+    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optimizer')
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
     search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
@@ -489,12 +489,12 @@ def testEnhancedNN(){
     batch_size=5
     alpha=0.01
     shuffle=True
-    optmizer=Optimizers.SGD
+    optimizer=Optimizers.SGD
     patience_epochs=15
     max_epochs=100
     loss=Loss.BINARY_CROSSENTROPY
     monitor_metric=Metric.RAW_LOSS
-    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 
     enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
     enn.buildModel(input_size=input_size)

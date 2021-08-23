@@ -70,9 +70,9 @@ class NeuralNetwork(ABC){
 			}else{
 				self.model.set_weights(loaded_model.get_weights())
 			}
-		}
-		if delete_after{
-			Utils.deleteFile(self.getModelPath(self.checkpoint_filename))
+			if delete_after{
+				Utils.deleteFile(self.getModelPath(self.checkpoint_filename))
+			}
 		}
 	}
 

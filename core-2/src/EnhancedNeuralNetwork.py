@@ -42,14 +42,14 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 		}else{
 			clip_dict['clipvalue']=0.5
 		}
-		if self.hyperparameters.optmizer==Optimizers.SGD{
+		if self.hyperparameters.optimizer==Optimizers.SGD{
 			opt=SGD(learning_rate=self.hyperparameters.alpha, **clip_dict)
-		}elif self.hyperparameters.optmizer==Optimizers.ADAM{
+		}elif self.hyperparameters.optimizer==Optimizers.ADAM{
 			opt=Adam(learning_rate=self.hyperparameters.alpha, **clip_dict)
-		}elif self.hyperparameters.optmizer==Optimizers.RMSPROP{
+		}elif self.hyperparameters.optimizer==Optimizers.RMSPROP{
 			opt=RMSprop(learning_rate=self.hyperparameters.alpha, **clip_dict)
 		}else{
-			raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optmizer))
+			raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optimizer))
 		}
 		model.compile(loss=self.hyperparameters.loss.toKerasName(),optimizer=opt,metrics=self._metricsFactory())
 		if self.verbose{

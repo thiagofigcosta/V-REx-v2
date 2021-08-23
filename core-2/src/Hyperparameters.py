@@ -5,11 +5,11 @@ from Enums import Metric,NodeType
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    def __init__(self, batch_size, alpha, shuffle, optmizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS){
+    def __init__(self, batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS){
         self.batch_size=batch_size
 		self.alpha=alpha
 		self.shuffle=shuffle
-		self.optmizer=optmizer
+		self.optimizer=optimizer
 		self.label_type=label_type
 		self.model_checkpoint=model_checkpoint
 		self.patience_epochs=patience_epochs
@@ -50,7 +50,7 @@ class Hyperparameters(object){
 		str_out+='\t{}: {}'.format('batch_size',self.batch_size)
 		str_out+='\t{}: {}'.format('alpha',self.alpha)
 		str_out+='\t{}: {}'.format('shuffle',self.shuffle)
-		str_out+='\t{}: {}'.format('optmizer',self.optmizer)
+		str_out+='\t{}: {}'.format('optimizer',self.optimizer)
 		str_out+='\t{}: {}'.format('label_type',self.label_type)
 		str_out+='\t{}: {}'.format('model_checkpoint',self.model_checkpoint)
 		str_out+='\t{}: {}'.format('max_epochs',self.max_epochs)
