@@ -33,11 +33,6 @@ To follow logs type one of the commands below
 docker logs --follow $(docker container ls | grep core-2 | cut -f 1 -d' ')
 ```
 
-### Core V1
-```
-docker logs --follow $(docker container ls | grep core_1 | cut -f 1 -d' ')
-```
-
 ### Data Crawler
 ```
 docker logs --follow $(docker container ls | grep data-crawler | cut -f 1 -d' ')
@@ -122,14 +117,6 @@ docker build -t core:v2.0.0 core-2/  # build image
 docker rmi -f $(docker images -f "dangling=true" -q) # cleanup <none> images
 ```
 
-#### Core V1
-```
-./update_Pytho\{N\}.sh # update Pytho{\}
-docker build -f deprecated/core/BaseImage.dockerfile -t ubuntu_2004_vrex_core_build deprecated/core/ # build base image
-docker build -f deprecated/core/Dockerfile -t core:v1.0.0 deprecated/core/ # build image
-docker rmi -f $(docker images -f "dangling=true" -q) # cleanup <none> images
-```
-
 ### Running docker images
 
 #### Data crawler
@@ -145,33 +132,6 @@ docker run front-end:v1.0.0
 #### Core V2
 ```
 docker run core:v2.0.0
-```
-
-#### Core V1
-
-##### With Controller
-```
-docker run core:v1.0.0
-```
-
-##### Standalone
-```
-docker run core:v1.0.0
-```
-
-To debug with gdb use:
-```
-docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -it core:v1.0.0 args --debug
-```
-
-To profile with valgrind use:
-```
-docker run --cap-add=SYS_PTRACE --security-opt seccomp=unconfined core:v1.0.0 args --profiling
-```
-
-To limit memoru usage use:
-```
-docker run --memory="25G" core:v1.0.0
 ```
 
 ## Cleanup docker compose volumes

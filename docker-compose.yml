@@ -1,23 +1,7 @@
 version: '3.3'
 
 services:
-    core-1:
-        build: 
-            context: deprecated/core
-            dockerfile: Dockerfile
-        restart: always
-        depends_on:
-            - mongo
-        networks:
-            - mongo-network
-        deploy:
-            replicas: 0
-            resources:
-                limits:
-                    memory: 60G
-                reservations:
-                    memory: 10G
-    
+   
     core-2:
         build: 
             context: core-2
