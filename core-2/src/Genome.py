@@ -302,24 +302,26 @@ class Genome(object){
                 enriched_search_space.add(bias.min_value,bias.max_value,bias.data_type,bias.name+'_{}'.format(l))
             }
             return enriched_search_space
+        }else{
+            pass # TODO code
         }
     }
 
     def toHyperparameters(self,output_size,output_layer_type,enh_neural_network=False){
         if not enh_neural_network{
-            batch_size=self.dna[0]
-            alpha=self.dna[1]
-            shuffle=self.dna[2]
-            patience_epochs=self.dna[3]
-            max_epochs=self.dna[4]
+            batch_size=int(self.dna[0])
+            alpha=float(self.dna[1])
+            shuffle=bool(self.dna[2])
+            patience_epochs=int(self.dna[3])
+            max_epochs=int(self.dna[4])
             loss=Loss(self.dna[5])
             label_type=self.getHyperparametersEncoder()
 
             optimizer=Optimizers(self.dna[7])
             monitor_metric=Metric(self.dna[8])
-            model_checkpoint=self.dna[9]
+            model_checkpoint=bool(self.dna[9])
 
-            layers=self.dna[10]
+            layers=int(self.dna[10])
             first_layer_dependent=11
             layer_sizes=[]
             node_types=[]
@@ -327,14 +329,16 @@ class Genome(object){
             bias=[]
             amount_of_dependent=4
             for l in range(layers){
-                layer_sizes.append(self.dna[(first_layer_dependent+0)+amount_of_dependent*l])
+                layer_sizes.append(int(self.dna[(first_layer_dependent+0)+amount_of_dependent*l]))
                 node_types.append(NodeType(self.dna[(first_layer_dependent+1)+amount_of_dependent*l]))
-                dropouts.append(self.dna[(first_layer_dependent+2)+amount_of_dependent*l])
-                bias.append(self.dna[(first_layer_dependent+3)+amount_of_dependent*l])
+                dropouts.append(float(self.dna[(first_layer_dependent+2)+amount_of_dependent*l]))
+                bias.append(bool(self.dna[(first_layer_dependent+3)+amount_of_dependent*l]))
             }
             hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
             hyperparameters.setLastLayer(output_size,output_layer_type)
             return hyperparameters
+        }else{
+            pass # TODO code
         }
     }
 

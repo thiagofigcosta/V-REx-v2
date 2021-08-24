@@ -45,7 +45,7 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 			}
 			layer=Dense(self.hyperparameters.layer_sizes[l], name='L{}'.format(l),activation=activation, use_bias=self.hyperparameters.bias[l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
 			if advanced_activation{
-				layer=LeakyReLU(alpha=0.1, name='LeakyRelu{}'.format(l))(layer)
+				layer=LeakyReLU(alpha=0.1, name='Act{}'.format(l))(layer)
 			}
 			if self.hyperparameters.dropouts[l]>0{
 				layer=Dropout(self.hyperparameters.dropouts[l], name='D{}'.format(l))(layer)

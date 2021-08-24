@@ -469,7 +469,7 @@ def testCustomEncodings(){
     print('base64-converted',Utils.base65ToBase64(base65))
 }
 
-def testEnhancedNN(){
+def testEnhancedNN_SingleNet(){
     label_type=LabelEncoding.SPARSE
 
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
@@ -498,6 +498,79 @@ def testEnhancedNN(){
 
     enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
     enn.buildModel(input_size=input_size)
+    enn.trainKFolds(train[0],train[1],8)
+    history=enn.history
+    preds,activations=enn.predict(test[0],True,True)
+    print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
+    eval_res=enn.eval(test[0],test[1])
+    del enn
+    Utils.printDict(eval_res,'Eval')
+    Dataset.compareAndPrintLabels(preds,activations,test[1],show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
+    Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
+}
+
+
+def testEnhancedNN_MultiNet(){
+    label_type=LabelEncoding.SPARSE
+
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+    train,test=Dataset.splitDataset(features,labels,.7)
+    groups=[[0,2],[2,-1]]
+    print('Before division [0]:',train[0][0])
+
+    train[0]=Dataset.divideFeaturesIntoMultipleGroups(train[0],groups)
+    test[0]=Dataset.divideFeaturesIntoMultipleGroups(test[0],groups)
+    print('After division [0]:', train[0][0][0],'and',train[0][1][0])
+    print()
+    # BEFORE
+        # in - hid - out
+        # in - hid - out
+        # in - hid - out
+        # in - hid -
+        #      hid -
+        #
+        # Hyper: input_size=4, output_size = 3, hidden_size= 5
+
+    # NOW
+        # in - hid - out  | in - hid - out
+        # in - hid - out  | in - hid - out
+        #      hid -             hid - out
+    
+        # in - hid - out  | in - hid -
+        # in - hid -
+        #      hid -
+        #
+        # Hyper: networks=3 (considering 1 to concatenate) 
+        #   Net A: input_size=2, output_size = 2, hidden_size= 3
+        #   Net B: input_size=2, output_size = 1, hidden_size= 3
+        #
+        #   Net Concat: intput size=(NetA_output_size+NetB_output_size), output_size=3, hidden_size=4
+    #
+    amount_of_networks=3
+    input_sizes=[len(el) for el in train[0][0]]
+    intermediary_sizes=[2,1]
+    output_size=len(train[1][0])
+    layers=[2,2,2]
+    dropouts=[0,0,0]
+    bias=[True,True,True]
+    layer_sizes=[[3,2],[3,1],[4,output_size]]
+    node_types=[[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.SOFTMAX]]
+    batch_size=5
+    alpha=[0.01,0.01,0.01]
+    shuffle=[True,True,True]
+    optimizer=[Optimizers.SGD,Optimizers.SGD,Optimizers.SGD]
+    patience_epochs=15
+    max_epochs=100
+    loss=[Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY]
+    monitor_metric=Metric.RAW_LOSS
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric,amount_of_networks=amount_of_networks)
+
+    enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
+    enn.buildModel(input_size=input_size)
     # KFolds
     enn.trainKFolds(train[0],train[1],8)
     history=enn.history
@@ -517,4 +590,5 @@ def testEnhancedNN(){
 # testNNBinLabel_KFolds()
 # testGeneticallyTunedNN() 
 # testCustomEncodings()
-testEnhancedNN()
+# testEnhancedNN_SingleNet()
+testEnhancedNN_MultiNet()

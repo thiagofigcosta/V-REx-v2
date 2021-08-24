@@ -15,6 +15,20 @@ class Dataset(object){
         return Utils.joinPath(Dataset.DATASET_PATH,path)
     }
 
+     @staticmethod
+    def divideFeaturesIntoMultipleGroups(features,groups=[[0,-1]]){
+        group_features=[[] for _ in groups]
+        for feature in features{
+            for g,group in enumerate(groups){
+                if group[-1]==-1{
+                    group[-1]=len(feature)
+                }
+                group_features[g].append(feature[group[0]:group[1]])
+            }
+        }
+        return group_features
+    }
+
     @staticmethod
     def readLabeledCsvDataset(path,separator=','){
         labels=[]
@@ -166,7 +180,7 @@ class Dataset(object){
     @staticmethod
     def splitDataset(features,labels,percentage){
         firstSize=int(len(features)*percentage)
-        return (features[:firstSize],labels[:firstSize]),(features[firstSize:],labels[firstSize:])
+        return [features[:firstSize],labels[:firstSize]],[features[firstSize:],labels[firstSize:]]
     }
 
     @staticmethod

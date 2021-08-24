@@ -1,11 +1,11 @@
 #!/bin/python
 
-from Enums import Metric,NodeType
+from Enums import Metric,NodeType,Optimizers,LabelEncoding,Loss
 
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    def __init__(self, batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS){
+    def __init__(self, batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS,amount_of_networks=1){
         self.batch_size=batch_size
 		self.alpha=alpha
 		self.shuffle=shuffle
@@ -21,12 +21,63 @@ class Hyperparameters(object){
 		self.bias=bias
 		self.loss=loss
 		self.monitor_metric=monitor_metric
+		self.amount_of_networks=amount_of_networks
+
+		if type(self.amount_of_networks) is not int {
+			raise Exception('amount_of_networks must be integer')
+		}
+		if type(self.batch_size) is not int {
+			raise Exception('batch_size must be integer')
+		}
+		if type(self.alpha) not in (float,int) {
+			raise Exception('alpha must be float')
+		}
+		if type(self.shuffle) is not bool {
+			raise Exception('shuffle must be bool')
+		}
+		if type(self.optimizer) is not Optimizers {
+			raise Exception('optimizer must be Optimizers')
+		}
+		if type(self.label_type) is not LabelEncoding {
+			raise Exception('label_type must be LabelEncoding')
+		}
+		if type(self.model_checkpoint) is not bool {
+			raise Exception('model_checkpoint must be bool')
+		}
+		if type(self.patience_epochs) is not int {
+			raise Exception('patience_epochs must be integer')
+		}
+		if type(self.max_epochs) is not int {
+			raise Exception('max_epochs must be integer')
+		}
+		if type(self.layers) is not int {
+			raise Exception('layers must be integer')
+		}
+		if type(self.layer_sizes[0]) is not int {
+			raise Exception('layer_sizes must contain integers')
+		}
+		if type(self.node_types[0]) is not NodeType {
+			raise Exception('node_types must contain NodeTypes')
+		}
+		if type(self.loss) is not Loss {
+			raise Exception('loss must be Loss')
+		}
+		if type(self.monitor_metric) is not Metric {
+			raise Exception('monitor_metric must be Metric')
+		}
 
 		if type(self.dropouts) is not list {
 			self.dropouts=[self.dropouts]*self.layers
 		}
 		if type(self.bias) is not list {
 			self.bias=[self.bias]*self.layers
+		}
+
+		if type(self.bias[0]) is not bool {
+			raise Exception('bias must contain bools')
+		}
+		if type(self.dropouts[0]) not in (float,int) {
+			raise Exception('dropouts must contain floats')
 		}
 
 		if self.layers != len(self.layer_sizes){
@@ -47,6 +98,7 @@ class Hyperparameters(object){
 
 	def __str__(self){
 		str_out='Hyperparameters: {\n'
+		str_out+='\t{}: {}'.format('amount_of_networks',self.amount_of_networks)
 		str_out+='\t{}: {}'.format('batch_size',self.batch_size)
 		str_out+='\t{}: {}'.format('alpha',self.alpha)
 		str_out+='\t{}: {}'.format('shuffle',self.shuffle)

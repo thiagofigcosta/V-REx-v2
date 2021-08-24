@@ -26,7 +26,7 @@ class NeuralNetwork(ABC){
 	USE_MANUAL_METRICS=False # manual metrics are slower
 	CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
-	USE_LEAKY_RELU=False
+	USE_LEAKY_RELU=True
 
     def __init__(self,hyperparameters,name='',verbose=False){
         self.hyperparameters=hyperparameters
