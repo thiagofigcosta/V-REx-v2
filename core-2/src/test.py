@@ -551,13 +551,13 @@ def testEnhancedNN_MultiNet(){
         #   Net Concat: intput size=(NetA_output_size+NetB_output_size), output_size=3, hidden_size=4
     #
     amount_of_networks=3
-    input_sizes=[len(el) for el in train[0][0]]
-    intermediary_sizes=[2,1]
+    input_size=[len(el) for el in train[0][0]]
+    intermediary_size=[2,1]
     output_size=len(train[1][0])
     layers=[2,2,2]
     dropouts=[0,0,0]
     bias=[True,True,True]
-    layer_sizes=[[3,2],[3,1],[4,output_size]]
+    layer_sizes=[[3,intermediary_size[0]],[3,intermediary_size[1]],[4,output_size]]
     node_types=[[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.SOFTMAX]]
     batch_size=5
     alpha=[0.01,0.01,0.01]
@@ -571,8 +571,9 @@ def testEnhancedNN_MultiNet(){
 
     enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
     enn.buildModel(input_size=input_size)
-    # KFolds
-    enn.trainKFolds(train[0],train[1],8)
+    enn.saveModelSchemaToFile()
+    enn.train(train[0],train[1])
+    # enn.trainKFolds(train[0],train[1],8)
     history=enn.history
     preds,activations=enn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))

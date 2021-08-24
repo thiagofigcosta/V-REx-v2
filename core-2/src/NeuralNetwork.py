@@ -62,6 +62,20 @@ class NeuralNetwork(ABC){
 		return custom_objects
 	}
 
+	def formatFeatures(self,features){
+		if self.hyperparameters.amount_of_networks==1{
+			return np.array(features)
+		}
+		f=[]
+		for feature in features{
+			f.append(np.array(feature))
+		}
+		return f
+	}
+
+	def formatLabels(self,labels){
+		return np.array(labels)
+	}
 
 	def load_model(self,path){
 		objs=self._load_model_partial(path)
@@ -255,8 +269,8 @@ class NeuralNetwork(ABC){
 			verbose=2
 		}
 		self.history=self.model.fit(
-			x=features,
-			y=labels,
+			x=self.formatFeatures(features),
+			y=self.formatLabels(labels),
 			batch_size=self.hyperparameters.batch_size,
 			epochs=self.hyperparameters.max_epochs,
 			verbose=verbose,
@@ -271,9 +285,13 @@ class NeuralNetwork(ABC){
 
 	def _trainEpoch(self,e,features_epoch,labels_epoch,val_features=None,val_labels=None,best_val=None,epochs_wo_improvement=None){
 		if (self.hyperparameters.shuffle){
-			features_epoch,labels_epoch=Dataset.shuffleDataset(features_epoch,labels_epoch)
-			if val_labels is not None{
-				val_features,val_labels=Dataset.shuffleDataset(val_features,val_labels)
+			if self.hyperparameters.amount_of_networks==1{
+				features_epoch,labels_epoch=Dataset.shuffleDataset(features_epoch,labels_epoch)
+				if val_labels is not None{
+					val_features,val_labels=Dataset.shuffleDataset(val_features,val_labels)
+				}
+			}else{
+				raise Exception('Not implemented yet!')
 			}
 		}
 		batch_size=self.hyperparameters.batch_size
@@ -286,11 +304,15 @@ class NeuralNetwork(ABC){
 		}
 		epoch_metrics=None
 		for b in range(amount_of_batches){
-			features_batch=np.array(features_epoch[b*0:(b+1)*batch_size])
-			labels_batch=np.array(labels_epoch[b*0:(b+1)*batch_size])
+			if self.hyperparameters.amount_of_networks==1{
+				features_batch=features_epoch[b*0:(b+1)*batch_size]
+				labels_batch=labels_epoch[b*0:(b+1)*batch_size]
+			}else{
+				raise Exception('Not implemented yet!')
+			}
 			batch_metrics=self.model.train_on_batch(
-				features_batch,
-				labels_batch,
+				self.formatFeatures(features_batch),
+				self.formatLabels(labels_batch),
 				reset_metrics=True
 			)
 			if epoch_metrics is None{
@@ -323,10 +345,10 @@ class NeuralNetwork(ABC){
 			self.history[k].append(v)
 		}
 		if val_labels is not None{
-			val_features=np.array(val_features)
-			val_labels=np.array(val_labels)
+			val_features=val_features
+			val_labels=val_labels
 			val_metrics=self.fillMetricsNames(self.model.test_on_batch(
-				val_features,val_labels, reset_metrics=True))
+				self.formatFeatures(val_features),self.formatLabels(val_labels), reset_metrics=True))
 			for k,v in val_metrics.items(){
 				if len(v)>0{
 					v=float(v[0])
@@ -399,13 +421,17 @@ class NeuralNetwork(ABC){
 		for e in range(self.hyperparameters.max_epochs){
 			val_fold=int((folds-1)*Utils.random())
 			if folds>1{
-				features_epoch=features[0:val_fold*fold_size]
-				labels_epoch=labels[0:val_fold*fold_size]
-				val_features=features[val_fold*fold_size:(val_fold+1)*fold_size]
-				val_labels=labels[val_fold*fold_size:(val_fold+1)*fold_size]
-				if (val_fold!=(folds-1)){
-					features_epoch+=features[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
-					labels_epoch+=labels[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+				if self.hyperparameters.amount_of_networks==1{
+					features_epoch=features[0:val_fold*fold_size]
+					labels_epoch=labels[0:val_fold*fold_size]
+					val_features=features[val_fold*fold_size:(val_fold+1)*fold_size]
+					val_labels=labels[val_fold*fold_size:(val_fold+1)*fold_size]
+					if (val_fold!=(folds-1)){
+						features_epoch+=features[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+						labels_epoch+=labels[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+					}
+				}else{
+					raise Exception('Not implemented yet!')
 				}
 			}else{
 				features_epoch=features
@@ -453,10 +479,14 @@ class NeuralNetwork(ABC){
 			while start_val >= len(labels){
 				start_val-=window_size
 			}
-			features_epoch=features[0:start_val]
-			labels_epoch=labels[0:start_val]
-			val_features=features[start_val:start_val+window_size]
-			val_labels=labels[start_val:start_val+window_size]
+			if self.hyperparameters.amount_of_networks==1{
+				features_epoch=features[0:start_val]
+				labels_epoch=labels[0:start_val]
+				val_features=features[start_val:start_val+window_size]
+				val_labels=labels[start_val:start_val+window_size]
+			}else{
+				raise Exception('Not implemented yet!')
+			}
 			best_val,epochs_wo_improvement=self._trainEpoch(e,features_epoch,labels_epoch,val_features,val_labels,best_val,epochs_wo_improvement)
 			if best_val==NeuralNetwork.NO_PATIENCE_LEFT_STR{
 				break
@@ -465,7 +495,7 @@ class NeuralNetwork(ABC){
 	}
 
 	def predict(self,features,get_classes=True,get_confidence=False){
-		pred_res=self.model.predict(features)
+		pred_res=self.model.predict(self.formatFeatures(features))
 		classes=[]
 		confidence=[]
 		if get_classes or get_confidence {
@@ -520,8 +550,8 @@ class NeuralNetwork(ABC){
 
 	def eval(self,features,labels){
 		metrics=self.model.evaluate(
-			x=features,
-			y=labels,
+			x=self.formatFeatures(features),
+			y=self.formatLabels(labels),
 			verbose=0,
 			workers=1,
 			use_multiprocessing=NeuralNetwork.MULTIPROCESSING

@@ -2,7 +2,7 @@
 
 from NeuralNetwork import NeuralNetwork
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping # from keras.callbacks import ModelCheckpoint, EarlyStopping
-from tensorflow.keras.layers import Dense, Dropout, Input # from keras.layers import Dense, Dropout, Input
+from tensorflow.keras.layers import Dense, Dropout, Input, concatenate # from keras.layers import Dense, Dropout, Input, concatenate
 from tensorflow.keras.models import Model # from keras.models import Model
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop # from keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.keras.utils import unpack_x_y_sample_weight
@@ -29,51 +29,143 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 		input_size=kwargs.get('input_size')
 		batch_size=self.hyperparameters.batch_size
 		batch_size=None # already using batch size on train function
-		inputs=Input(shape=(input_size,),batch_size=batch_size,dtype=np.float32,name='In')
-		for l in range(self.hyperparameters.layers){
-			if l==0{
-				last_layer=inputs
+		if self.hyperparameters.amount_of_networks == 1{ 
+			inputs=Input(shape=(input_size,),batch_size=batch_size,dtype=np.float32,name='In')
+			for l in range(self.hyperparameters.layers){
+				if l==0{
+					last_layer=inputs
+				}else{
+					last_layer=layer
+				}
+				if self.hyperparameters.node_types[l]!=NodeType.RELU or not NeuralNetwork.USE_LEAKY_RELU{
+					activation=self.hyperparameters.node_types[l].toKerasName()
+					advanced_activation=False
+				}else{
+					activation=NodeType.LINEAR.toKerasName()
+					advanced_activation=True
+				}
+				layer=Dense(self.hyperparameters.layer_sizes[l], name='L{}'.format(l),activation=activation, use_bias=self.hyperparameters.bias[l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
+				if advanced_activation{
+					layer=LeakyReLU(alpha=0.1, name='Act{}'.format(l))(layer)
+				}
+				if self.hyperparameters.dropouts[l]>0{
+					layer=Dropout(self.hyperparameters.dropouts[l], name='D{}'.format(l))(layer)
+				}
+			}
+			outputs=layer
+			model=EnhancedNeuralNetwork.EnhancedModel(inputs=inputs, outputs=outputs, name=self.name, print_tensors=False)
+			clip_dict={}
+			if NeuralNetwork.CLIP_NORM_INSTEAD_OF_VALUE{
+				clip_dict['clipnorm']=1.0
 			}else{
-				last_layer=layer
+				clip_dict['clipvalue']=0.5
 			}
-			if self.hyperparameters.node_types[l]!=NodeType.RELU or not NeuralNetwork.USE_LEAKY_RELU{
-				activation=self.hyperparameters.node_types[l].toKerasName()
-				advanced_activation=False
+			if self.hyperparameters.optimizer==Optimizers.SGD{
+				opt=SGD(learning_rate=self.hyperparameters.alpha, **clip_dict)
+			}elif self.hyperparameters.optimizer==Optimizers.ADAM{
+				opt=Adam(learning_rate=self.hyperparameters.alpha, **clip_dict)
+			}elif self.hyperparameters.optimizer==Optimizers.RMSPROP{
+				opt=RMSprop(learning_rate=self.hyperparameters.alpha, **clip_dict)
 			}else{
-				activation=NodeType.LINEAR.toKerasName()
-				advanced_activation=True
+				raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optimizer))
 			}
-			layer=Dense(self.hyperparameters.layer_sizes[l], name='L{}'.format(l),activation=activation, use_bias=self.hyperparameters.bias[l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
-			if advanced_activation{
-				layer=LeakyReLU(alpha=0.1, name='Act{}'.format(l))(layer)
-			}
-			if self.hyperparameters.dropouts[l]>0{
-				layer=Dropout(self.hyperparameters.dropouts[l], name='D{}'.format(l))(layer)
-			}
-		}
-		outputs=layer
-		model=EnhancedNeuralNetwork.EnhancedModel(inputs=inputs, outputs=outputs, name=self.name, print_tensors=False)
-		clip_dict={}
-		if NeuralNetwork.CLIP_NORM_INSTEAD_OF_VALUE{
-			clip_dict['clipnorm']=1.0
+			model.compile(loss=self.enhancedLoss(self.hyperparameters.loss.toKerasName()),optimizer=opt,metrics=self._metricsFactory())
 		}else{
-			clip_dict['clipvalue']=0.5
-		}
-		if self.hyperparameters.optimizer==Optimizers.SGD{
-			opt=SGD(learning_rate=self.hyperparameters.alpha, **clip_dict)
-		}elif self.hyperparameters.optimizer==Optimizers.ADAM{
-			opt=Adam(learning_rate=self.hyperparameters.alpha, **clip_dict)
-		}elif self.hyperparameters.optimizer==Optimizers.RMSPROP{
-			opt=RMSprop(learning_rate=self.hyperparameters.alpha, **clip_dict)
-		}else{
-			raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optimizer))
-		}
-		model.compile(loss=self.enhancedLoss(self.hyperparameters.loss.toKerasName()),optimizer=opt,metrics=self._metricsFactory())
-		if self.verbose{
-			model_summary_lines=[]
-			model.summary(print_fn=lambda x: model_summary_lines.append(x))
-			model_summary_str='\n'.join(model_summary_lines)+'\n'
-			Utils.LazyCore.multiline(model_summary_str)
+			inputs=[]
+			outputs=[]
+			models=[]
+			for n in range(self.hyperparameters.amount_of_networks-1){
+				inputs.append(Input(shape=(input_size[n],),batch_size=batch_size,dtype=np.float32,name='In_{}'.format(n)))
+				for l in range(self.hyperparameters.layers[n]){
+					if l==0{
+						last_layer=inputs[-1]
+					}else{
+						last_layer=layer
+					}
+					if self.hyperparameters.node_types[n][l]!=NodeType.RELU or not NeuralNetwork.USE_LEAKY_RELU{
+						activation=self.hyperparameters.node_types[n][l].toKerasName()
+						advanced_activation=False
+					}else{
+						activation=NodeType.LINEAR.toKerasName()
+						advanced_activation=True
+					}
+					layer=Dense(self.hyperparameters.layer_sizes[n][l], name='L-{}-{}'.format(n,l),activation=activation, use_bias=self.hyperparameters.bias[n][l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
+					if advanced_activation{
+						layer=LeakyReLU(alpha=0.1, name='Act-{}-{}'.format(n,l))(layer)
+					}
+					if self.hyperparameters.dropouts[n][l]>0{
+						layer=Dropout(self.hyperparameters.dropouts[n][l], name='D-{}-{}'.format(n,l))(layer)
+					}
+				}
+				outputs.append(layer)
+				models.append(EnhancedNeuralNetwork.EnhancedModel(inputs=inputs[-1], outputs=outputs[-1], name=self.name+'_part-{}'.format(n), print_tensors=False))
+				clip_dict={}
+				if NeuralNetwork.CLIP_NORM_INSTEAD_OF_VALUE{
+					clip_dict['clipnorm']=1.0
+				}else{
+					clip_dict['clipvalue']=0.5
+				}
+				if self.hyperparameters.optimizer[n]==Optimizers.SGD{
+					opt=SGD(learning_rate=self.hyperparameters.alpha[n], **clip_dict)
+				}elif self.hyperparameters.optimizer[n]==Optimizers.ADAM{
+					opt=Adam(learning_rate=self.hyperparameters.alpha[n], **clip_dict)
+				}elif self.hyperparameters.optimizer[n]==Optimizers.RMSPROP{
+					opt=RMSprop(learning_rate=self.hyperparameters.alpha[n], **clip_dict)
+				}else{
+					raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optimizer[n]))
+				}
+				models[-1].compile(loss=self.enhancedLoss(self.hyperparameters.loss[n].toKerasName()),optimizer=opt,metrics=self._metricsFactory())
+			}
+			
+			n=self.hyperparameters.amount_of_networks-1
+			final_model=concatenate([el.output for el in models])
+
+			for l in range(self.hyperparameters.layers[n]){
+				if l==0{
+					last_layer=final_model
+				}else{
+					last_layer=layer
+				}
+				if self.hyperparameters.node_types[n][l]!=NodeType.RELU or not NeuralNetwork.USE_LEAKY_RELU{
+					activation=self.hyperparameters.node_types[n][l].toKerasName()
+					advanced_activation=False
+				}else{
+					activation=NodeType.LINEAR.toKerasName()
+					advanced_activation=True
+				}
+				layer=Dense(self.hyperparameters.layer_sizes[n][l], name='L-{}-{}'.format(n,l),activation=activation, use_bias=self.hyperparameters.bias[n][l], kernel_initializer='glorot_uniform', bias_initializer='zeros')(last_layer)
+				if advanced_activation{
+					layer=LeakyReLU(alpha=0.1, name='Act-{}-{}'.format(n,l))(layer)
+				}
+				if self.hyperparameters.dropouts[n][l]>0{
+					layer=Dropout(self.hyperparameters.dropouts[n][l], name='D-{}-{}'.format(n,l))(layer)
+				}
+			}
+			outputs.append(layer)
+			models.append(EnhancedNeuralNetwork.EnhancedModel(inputs=[el.input for el in models], outputs=outputs[-1], name=self.name+'_enhanced', print_tensors=False))
+			clip_dict={}
+			if NeuralNetwork.CLIP_NORM_INSTEAD_OF_VALUE{
+				clip_dict['clipnorm']=1.0
+			}else{
+				clip_dict['clipvalue']=0.5
+			}
+			if self.hyperparameters.optimizer[n]==Optimizers.SGD{
+				opt=SGD(learning_rate=self.hyperparameters.alpha[n], **clip_dict)
+			}elif self.hyperparameters.optimizer[n]==Optimizers.ADAM{
+				opt=Adam(learning_rate=self.hyperparameters.alpha[n], **clip_dict)
+			}elif self.hyperparameters.optimizer[n]==Optimizers.RMSPROP{
+				opt=RMSprop(learning_rate=self.hyperparameters.alpha[n], **clip_dict)
+			}else{
+				raise Exception('Unknown optimizer {}'.format(self.hyperparameters.optimizer[n]))
+			}
+			models[-1].compile(loss=self.enhancedLoss(self.hyperparameters.loss[n].toKerasName()),optimizer=opt,metrics=self._metricsFactory())
+			if self.verbose{ 
+				model_summary_lines=[]
+				models[-1].summary(print_fn=lambda x: model_summary_lines.append(x))
+				model_summary_str='\n'.join(model_summary_lines)+'\n'
+				Utils.LazyCore.multiline(model_summary_str)
+			}
+			model=models[-1]
 		}
 		callbacks=[]
 		if self.hyperparameters.patience_epochs>0{
