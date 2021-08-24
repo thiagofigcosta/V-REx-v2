@@ -166,7 +166,7 @@ class Dataset(object){
 
     @staticmethod
     def shuffleDataset(features,labels){
-        indexes=list(range(len(features)))
+        indexes=list(range(len(labels)))
         indexes=Utils.shuffle(indexes)
         random_features=[]
         random_labels=[]
@@ -178,8 +178,23 @@ class Dataset(object){
     }
 
     @staticmethod
+    def shuffleFeatureGroupedDataset(features,labels){
+        indexes=list(range(len(labels)))
+        indexes=Utils.shuffle(indexes)
+        random_features=[[] for _ in features]
+        random_labels=[]
+        for idx in indexes{
+            for i,feature in enumerate(features){
+                random_features[i].append(feature[idx])
+            }
+            random_labels.append(labels[idx])
+        }
+        return random_features,random_labels
+    }
+
+    @staticmethod
     def splitDataset(features,labels,percentage){
-        firstSize=int(len(features)*percentage)
+        firstSize=int(len(labels)*percentage)
         return [features[:firstSize],labels[:firstSize]],[features[firstSize:],labels[firstSize:]]
     }
 

@@ -563,17 +563,17 @@ def testEnhancedNN_MultiNet(){
     alpha=[0.01,0.01,0.01]
     shuffle=[True,True,True]
     optimizer=[Optimizers.SGD,Optimizers.SGD,Optimizers.SGD]
-    patience_epochs=15
-    max_epochs=100
-    loss=[Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY,Loss.BINARY_CROSSENTROPY]
+    patience_epochs=30
+    max_epochs=200
+    loss=[Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY]
     monitor_metric=Metric.RAW_LOSS
     hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric,amount_of_networks=amount_of_networks)
 
     enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
     enn.buildModel(input_size=input_size)
     enn.saveModelSchemaToFile()
-    enn.train(train[0],train[1])
-    # enn.trainKFolds(train[0],train[1],8)
+    # enn.train(train[0],train[1])
+    enn.trainKFolds(train[0],train[1],8)
     history=enn.history
     preds,activations=enn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))

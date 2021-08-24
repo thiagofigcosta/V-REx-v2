@@ -149,6 +149,8 @@ class Hyperparameters(object){
 					raise Exception('len(bias[{}]) different from amount of layers'.format(i))
 				} 
 			}
+
+			self.setLastLayer(self.layer_sizes[-1][-1],self.node_types[-1][-1])
 		}
     }
 
@@ -178,7 +180,12 @@ class Hyperparameters(object){
 		if out_node_type==NodeType.SOFTMAX and output_size==1{
 			out_node_type=NodeType.SIGMOID # keras returns 1 and 0 for 1 sized softmax
 		}
-		self.layer_sizes[-1]=output_size
-		self.node_types[-1]=out_node_type
+		if self.amount_of_networks==1{
+			self.layer_sizes[-1]=output_size
+			self.node_types[-1]=out_node_type
+		}else{
+			self.layer_sizes[-1][-1]=output_size
+			self.node_types[-1][-1]=out_node_type
+		}
 	}
 }
