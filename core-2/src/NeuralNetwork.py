@@ -116,8 +116,11 @@ class NeuralNetwork(ABC){
 		return path
 	}
 
-	def saveModelSchemaToFile(self){
-		filepath=self.getPlotsPath('model_{}.png'.format(self.name))
+	def saveModelSchemaToFile(self,folder=''){
+		base=self.getPlotsPath(folder)
+		Utils.createFolderIfNotExists(base)
+		filename='model_{}.png'.format(self.name)
+		filepath=Utils.joinPath(base,filename)
 		if self.verbose{
 			Utils.LazyCore.info('Saving model diagram to file: {}'.format(filepath))
 		}

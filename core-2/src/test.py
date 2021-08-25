@@ -584,12 +584,123 @@ def testEnhancedNN_MultiNet(){
     Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
 }
 
+def testGeneticallyTunedEnhancedNN_MultiNet(){
+    metric=Metric.F1
+    search_space=SearchSpace()
+    search_space.add(1,4,SearchSpace.Type.INT,'layers')
+    search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
+    search_space.add(0.0001,0.1,SearchSpace.Type.FLOAT,'alpha')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
+    search_space.add(15,30,SearchSpace.Type.INT,'patience_epochs')
+    search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
+    search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
+    search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
+    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optimizer')
+    search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
+    search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
+    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
+    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types')
+    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
+    search_space=Genome.enrichSearchSpace(search_space,enh_neural_network=True)
+
+    Genome.CACHE_WEIGHTS=False
+
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    features,labels=Dataset.balanceDataset(features,labels)
+    # labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+    train,test=Dataset.splitDataset(features,labels,.7)
+    groups=[[0,2],[2,-1]]
+    train[0]=Dataset.divideFeaturesIntoMultipleGroups(train[0],groups)
+    test[0]=Dataset.divideFeaturesIntoMultipleGroups(test[0],groups)
+
+    def train_callback(genome){
+        nonlocal train
+        kfolds=5
+        preserve_weights=False # TODO fix when true, to avoid nan outputs
+        train_features=train[0]
+        train_labels=train[1]
+        train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
+        input_size=[len(el) for el in test_features[0]]
+        output_size=len(test_labels[0])
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
+        search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+        enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
+        enn.buildModel(input_size=input_size)
+        enn.saveModelSchemaToFile('population_nets')
+        enn.setWeights(genome.getWeights())
+        enn.trainKFolds(train_features,train_labels,kfolds)
+        if preserve_weights and hyperparameters.model_checkpoint{
+            enn.restoreCheckpointWeights()
+        }
+        output=enn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
+        if output!=output{ # Not a Number, ignore this genome
+            Core.LOGGER.warn('Not a number metric mean')
+            output=float('-inf') if search_maximum else float('inf')
+        }
+        if preserve_weights {
+            genome.setWeights(enn.mergeWeights(genome.getWeights()))
+        }
+        del enn
+        return output
+    }
+
+    verbose_natural_selection=True
+    verbose_population_details=True
+    population_start_size_enh=10
+    max_gens=10
+    max_age=2
+    max_children=3
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    max_notables=5
+    search_maximum=metric!=Metric.RAW_LOSS
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+    
+    for individual in enh_elite.notables{
+        print(str(individual))
+    }
+    Utils.printDict(enh_elite.best,'Elite')
+    print('Evaluating best')
+
+    def test_callback(genome){
+        nonlocal test
+        test_features=test[0]
+        test_labels=test[1]
+        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder())
+        input_size=[len(el) for el in test_features[0]]
+        output_size=len(test_labels[0])
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
+        enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
+        enn.buildModel(input_size=input_size)
+        enn.saveModelSchemaToFile()
+        enn.setWeights(genome.getWeights())
+        print('Best genome encoded weights:',genome.getWeights(raw=True))
+        preds,activations=enn.predict(test_features,True,True)
+        del enn
+        Dataset.compareAndPrintLabels(preds,activations,test_labels,show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
+        Utils.printDict(Dataset.statisticalAnalysis(preds,test_labels),'Statistical Analysis')
+    }
+
+    test_callback(enh_elite.getBestGenome())
+}
+
 # testStdGenetic()
 # testEnhGenetic()
 # testStdVsEnhGenetic()
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
-# testGeneticallyTunedNN() 
+# testGeneticallyTunedNN()
 # testCustomEncodings()
 # testEnhancedNN_SingleNet()
-testEnhancedNN_MultiNet()
+# testEnhancedNN_MultiNet()
+testGeneticallyTunedEnhancedNN_MultiNet()
