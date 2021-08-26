@@ -72,13 +72,13 @@ def inputArrayNumber(is_float=False,greater_or_eq=0,lower_or_eq=None){
 }
 
 def main(argv){
-    HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]'
+    HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--count-features]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]'
     args=[]
     zombie=False
     global ITERATIVE
     to_run=[]
     try{ 
-        opts, args = getopt.getopt(argv,"hq",["keep-alive-as-zombie","download-source=","download-all-sources","check-jobs","quit","get-queue-names","empty-queue=","empty-all-queues","get-all-db-names","dump-db=","restore-db=","run-processor-pipeline","run-flattern-and-simplify-all","run-flattern-and-simplify=","run-filter-exploits","run-transform-all","run-transform=","run-enrich","run-analyze","run-filter-and-normalize","run-merge-cve","create-genetic-env","list-genetic-envs","rm-genetic-env=","run-genetic","show-genetic-results","create-neural-hyperparams","list-neural-hyperparams","rm-neural-hyperparams=","train-neural","eval-neural","parse-dna-to-hyperparams"])
+        opts, args = getopt.getopt(argv,"hq",["keep-alive-as-zombie","download-source=","download-all-sources","check-jobs","quit","get-queue-names","empty-queue=","empty-all-queues","get-all-db-names","dump-db=","restore-db=","run-processor-pipeline","run-flattern-and-simplify-all","run-flattern-and-simplify=","run-filter-exploits","run-transform-all","run-transform=","run-enrich","run-analyze","run-filter-and-normalize","run-merge-cve","create-genetic-env","list-genetic-envs","rm-genetic-env=","run-genetic","show-genetic-results","create-neural-hyperparams","list-neural-hyperparams","rm-neural-hyperparams=","train-neural","eval-neural","parse-dna-to-hyperparams","count-features"])
     }except getopt.GetoptError{
         print (HELP_STR)
         if not ITERATIVE {
@@ -93,6 +93,41 @@ def main(argv){
                 exit()
             }elif opt == "--keep-alive-as-zombie"{
                 zombie=True
+            }elif opt == "--count-features"{
+                processed_db=mongo.getProcessedDB()
+                query={}
+                cve=mongo.findOneOnDB(processed_db,'dataset',query)
+                if cve is not None{
+                    total=0
+                    cvss_enum=0
+                    description=0
+                    reference=0
+                    vendor=0
+                    other=0
+                    for k,_ in cve['features'].items(){
+                        total+=1
+                        if 'cvss_' in k and '_ENUM_' in k {
+                            cvss_enum+=1
+                        }elif 'description_' in k {
+                            description+=1
+                        }elif 'reference_' in k {
+                            reference+=1
+                        }elif 'vendor_' in k {
+                            vendor+=1
+                        }else{
+                            other+=1
+                        }
+                        LOGGER.info('Total features on dataset: {}'.format(total))
+                        LOGGER.info('\nGroupped features count:')
+                        LOGGER.info('\tCVSS/ENUM features: {}'.format(cvss_enum))
+                        LOGGER.info('\tDescription features: {}'.format(description))
+                        LOGGER.info('\tReference features: {}'.format(reference))
+                        LOGGER.info('\tVendor features: {}'.format(vendor))
+                        LOGGER.info('\tOther features: {}'.format(other))
+                    }
+                }else{
+                    LOGGER.warn('No dataset found...')
+                }
             }elif opt == "--dump-db"{
                 splited_arg=arg.split('#')
                 if len(splited_arg)>0 and len(splited_arg)<=2{
