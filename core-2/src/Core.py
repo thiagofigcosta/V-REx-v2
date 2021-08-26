@@ -126,6 +126,8 @@ class Core(object){
 			}
 			if preserve_weights {
 				genome.setWeights(nn.mergeWeights(genome.getWeights()))
+			}else{
+				genome.setWeights(nn.getWeights())
 			}
 			if Utils.LazyCore.freeMemManually(){
 				del nn

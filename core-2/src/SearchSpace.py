@@ -85,11 +85,11 @@ class SearchSpace(object){
 
     def __getitem__(self, i){
         if type(i) is int {
-            return self.search_space[i]
+            return self.search_space[i].copy()
         }elif type(i) is str{
             for el in self.search_space{
                 if el.name==i{
-                    return el
+                    return el.copy()
                 }
             }
         }

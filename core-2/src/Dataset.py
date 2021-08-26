@@ -237,16 +237,16 @@ class Dataset(object){
             }else{
                 wrong+=1
                 if(positive){
-                    false_negative+=1
+                    false_negative+=1  # yes, its correct
                     pos_count+=1
                 }else{
-                    false_positive+=1
+                    false_positive+=1  # yes, its correct
                 }
             }
         }
         stats={}
         stats['accuracy']=float(hits)/float(total)
-        if (len(corrects[0])==1 and pos_count>0){
+        if (len(corrects[0])==1){
             A=true_positive+false_positive
             if A!=0{
                 stats['precision']=float(true_positive)/float(A)

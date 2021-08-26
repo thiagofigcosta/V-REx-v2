@@ -303,7 +303,116 @@ class Genome(object){
             }
             return enriched_search_space
         }else{
-            pass # TODO code
+            networks=search_space['networks']
+            if networks.min_value!=networks.max_value {
+                raise Exception('The amount of networks must be static due to dataset division, networks.min_value must be equal to networks.max_value')
+            }
+            amount_of_networks=networks.max_value
+            layers=[]
+            layer_sizes=[]
+            node_types=[]
+            dropouts=[]
+
+            alpha=[]
+            shuffle=[]
+            bias=[]
+            loss=[]
+            optimizer=[]
+
+            # variables mandatory for every network
+            for n in range(amount_of_networks){
+                layers.append(search_space['layers'+'_{}'.format(n)])
+                layer_sizes.append(search_space['layer_sizes'+'_{}'.format(n)])
+                node_types.append(search_space['node_types'+'_{}'.format(n)])
+                dropouts.append(search_space['dropouts'+'_{}'.format(n)])
+            }
+            # network variable that does not need to be specified for every single net
+            for n in range(amount_of_networks){
+                specific_name='alpha'+'_{}'.format(n)
+                variable=search_space[specific_name]
+                if variable is None{
+                    variable=search_space['alpha']
+                    variable.name=specific_name
+                }
+                alpha.append(variable)
+                specific_name='shuffle'+'_{}'.format(n)
+                variable=search_space[specific_name]
+                if variable is None{
+                    variable=search_space['shuffle']
+                    variable.name=specific_name
+                }
+                shuffle.append(variable)
+                specific_name='bias'+'_{}'.format(n)
+                variable=search_space[specific_name]
+                if variable is None{
+                    variable=search_space['bias']
+                    variable.name=specific_name
+                }
+                bias.append(variable)
+                specific_name='loss'+'_{}'.format(n)
+                variable=search_space[specific_name]
+                if variable is None{
+                    variable=search_space['loss']
+                    variable.name=specific_name
+                }
+                loss.append(variable)
+                specific_name='optimizer'+'_{}'.format(n)
+                variable=search_space[specific_name]
+                if variable is None{
+                    variable=search_space['optimizer']
+                    if variable is None{ # default
+                        variable=SearchSpace.Dimension(SearchSpace.Type.INT,Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),name='optimizer')
+                    }
+                    variable.name=specific_name
+                }
+                optimizer.append(variable)
+            }
+            # static variables for every net
+            # mandatory
+            batch_size=search_space['batch_size']
+            patience_epochs=search_space['patience_epochs']
+            max_epochs=search_space['max_epochs']
+            label_type=search_space['label_type']
+            #optional
+            monitor_metric=search_space['monitor_metric']
+            model_checkpoint=search_space['model_checkpoint']
+            
+            if monitor_metric is None{
+                monitor_metric=SearchSpace.Dimension(SearchSpace.Type.INT,Metric.RAW_LOSS,Metric.RAW_LOSS,name='monitor_metric')
+            }
+            if model_checkpoint is None{
+                model_checkpoint=SearchSpace.Dimension(SearchSpace.Type.BOOLEAN,True,True,name='model_checkpoint')
+            }
+
+            enriched_search_space=SearchSpace()
+            enriched_search_space.add(batch_size.min_value,batch_size.max_value,batch_size.data_type,batch_size.name)
+            enriched_search_space.add(patience_epochs.min_value,patience_epochs.max_value,patience_epochs.data_type,patience_epochs.name)
+            enriched_search_space.add(max_epochs.min_value,max_epochs.max_value,max_epochs.data_type,max_epochs.name)
+            enriched_search_space.add(label_type.min_value,label_type.max_value,label_type.data_type,label_type.name)
+            enriched_search_space.add(monitor_metric.min_value,monitor_metric.max_value,monitor_metric.data_type,monitor_metric.name)
+            enriched_search_space.add(model_checkpoint.min_value,model_checkpoint.max_value,model_checkpoint.data_type,model_checkpoint.name)
+
+            enriched_search_space.add(networks.min_value,networks.max_value,networks.data_type,networks.name)
+            for n in range(amount_of_networks){
+                enriched_search_space.add(alpha[n].min_value,alpha[n].max_value,alpha[n].data_type,alpha[n].name)
+                enriched_search_space.add(shuffle[n].min_value,shuffle[n].max_value,shuffle[n].data_type,shuffle[n].name)
+                enriched_search_space.add(loss[n].min_value,loss[n].max_value,loss[n].data_type,loss[n].name)
+                enriched_search_space.add(optimizer[n].min_value,optimizer[n].max_value,optimizer[n].data_type,optimizer[n].name)
+                enriched_search_space.add(layers[n].min_value,layers[n].max_value,layers[n].data_type,layers[n].name)
+                enriched_search_space.add(layers[n].max_value,layers[n].max_value,layers[n].data_type,'max_layers'+'_{}'.format(n))
+                for l in range(layers[n].max_value){
+                    if l+1<layers[n].max_value or n+1<amount_of_networks{
+                        enriched_search_space.add(layer_sizes[n].min_value,layer_sizes[n].max_value,layer_sizes[n].data_type,layer_sizes[n].name[:-2]+'_{}-{}'.format(n,l))
+                        enriched_search_space.add(node_types[n].min_value,node_types[n].max_value,node_types[n].data_type,node_types[n].name[:-2]+'_{}-{}'.format(n,l))
+                    }else{
+                        enriched_search_space.add(0,0,layer_sizes[n].data_type,'out_layer-size')
+                        enriched_search_space.add(0,0,node_types[n].data_type,'out_layer-type')
+                    }
+                    enriched_search_space.add(dropouts[n].min_value,dropouts[n].max_value,dropouts[n].data_type,dropouts[n].name[:-2]+'_{}-{}'.format(n,l))
+                    enriched_search_space.add(bias[n].min_value,bias[n].max_value,bias[n].data_type,bias[n].name[:-2]+'_{}-{}'.format(n,l))
+                }
+            }
+            return enriched_search_space
         }
     }
 
@@ -338,7 +447,50 @@ class Genome(object){
             hyperparameters.setLastLayer(output_size,output_layer_type)
             return hyperparameters
         }else{
-            pass # TODO code
+            batch_size=int(self.dna[0])
+            patience_epochs=int(self.dna[1])
+            max_epochs=int(self.dna[2])
+            label_type=LabelEncoding(self.dna[3])
+            monitor_metric=Metric(self.dna[4])
+            model_checkpoint=bool(self.dna[5])
+
+            networks=int(self.dna[6])
+            last_index=7
+            alpha=[]
+            shuffle=[]
+            loss=[]
+            optimizer=[]
+            layers=[]
+            layer_sizes=[]
+            node_types=[]
+            dropouts=[]
+            bias=[]
+            network_parameters=10
+            layer_parameters=4
+            offset=0
+            for n in range(networks){
+                alpha.append(float(self.dna[(last_index+0)+network_parameters*n+offset]))
+                shuffle.append(bool(self.dna[(last_index+1)+network_parameters*n+offset]))
+                loss.append(Loss(self.dna[(last_index+2)+network_parameters*n+offset]))
+                optimizer.append(Optimizers(self.dna[(last_index+3)+network_parameters*n+offset]))
+                layers.append(int(self.dna[(last_index+4)+network_parameters*n+offset]))
+                max_layers=int(self.dna[(last_index+5)+network_parameters*n+offset])
+                layer_sizes.append([])
+                node_types.append([])
+                dropouts.append([])
+                bias.append([])
+                for l in range(layers[-1]){
+                    layer_sizes[-1].append(int(self.dna[(last_index+6)+network_parameters*n+offset]))
+                    node_types[-1].append(NodeType(self.dna[(last_index+7)+network_parameters*n+offset]))
+                    dropouts[-1].append(float(self.dna[(last_index+8)+network_parameters*n+offset]))
+                    bias[-1].append(bool(self.dna[(last_index+9)+network_parameters*n+offset]))
+                    offset+=layer_parameters
+                }
+                offset+=(max_layers-layers[-1]-1)*layer_parameters
+            }
+            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric, amount_of_networks=networks)
+            hyperparameters.setLastLayer(output_size,output_layer_type)
+            return hyperparameters
         }
     }
 

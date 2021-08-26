@@ -587,21 +587,36 @@ def testEnhancedNN_MultiNet(){
 def testGeneticallyTunedEnhancedNN_MultiNet(){
     metric=Metric.F1
     search_space=SearchSpace()
-    search_space.add(1,4,SearchSpace.Type.INT,'layers')
-    search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
+    search_space.add(3,3,SearchSpace.Type.INT,'networks') # amount of networks including the final
+    # variables mandatory for every network
+        # network a
+    search_space.add(1,4,SearchSpace.Type.INT,'layers_0')
+    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes_0')
+    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types_0')
+    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts_0')
+        # network b
+    search_space.add(1,4,SearchSpace.Type.INT,'layers_1')
+    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes_1')
+    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types_1')
+    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts_1')
+        # concatenation network
+    search_space.add(1,4,SearchSpace.Type.INT,'layers_2')
+    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes_2')
+    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types_2')
+    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts_2')
+    # network variable that does not need to be specified for every single net
     search_space.add(0.0001,0.1,SearchSpace.Type.FLOAT,'alpha')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
+    search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
+    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optimizer')
+    # static variables for every net
+    search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
     search_space.add(15,30,SearchSpace.Type.INT,'patience_epochs')
     search_space.add(20,150,SearchSpace.Type.INT,'max_epochs')
-    search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
-    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optimizer')
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
-    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
-    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types')
-    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts')
-    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
     search_space=Genome.enrichSearchSpace(search_space,enh_neural_network=True)
 
     Genome.CACHE_WEIGHTS=False
@@ -625,8 +640,8 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
         train_features=train[0]
         train_labels=train[1]
         train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
-        input_size=[len(el) for el in test_features[0]]
-        output_size=len(test_labels[0])
+        input_size=[len(el) for el in train_features[0]]
+        output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
         search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
         enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)

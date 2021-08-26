@@ -184,14 +184,23 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 	}
 
 	def enhancedLoss(self,loss_name){
+		USE_ALL_INSTEAD_OF_ANY=True
+		LOSS_NEGATIVE_LABEL_WEIGHT=.4
+		LOSS_POSITIVE_LABEL_WEIGHT=.9
+
+
 		def loss(y_true, y_pred){
 			loss_fn=tf.keras.losses.get(loss_name)
 			loss=loss_fn(y_true, y_pred)
-			loss_negative_label=loss*.3
-			loss_positive_label=loss*.9
+			loss_negative_label=loss*LOSS_NEGATIVE_LABEL_WEIGHT
+			loss_positive_label=loss*LOSS_POSITIVE_LABEL_WEIGHT
 			cond=tf.keras.backend.greater_equal(y_true,1)
-			cond=tf.keras.backend.all(cond,axis=1)
-			loss=tf.keras.backend.switch(cond,loss_positive_label,loss_negative_label) # returns loss_positive_label when all y_true>=1
+			if USE_ALL_INSTEAD_OF_ANY{
+				cond=tf.keras.backend.all(cond,axis=1)
+			}else{
+				cond=tf.keras.backend.any(cond,axis=1)
+			}
+			loss=tf.keras.backend.switch(cond,loss_positive_label,loss_negative_label) # returns loss_positive_label when all y_true>=1 (or one of them for any)
 			return loss
 		}
 		return loss
