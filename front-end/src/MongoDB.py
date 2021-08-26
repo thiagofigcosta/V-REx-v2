@@ -16,6 +16,7 @@ class MongoDB(object){
     QUEUE_COL_PROCESSOR_NAME='processor'
     QUEUE_COL_CORE_NAME='core'
     RAW_DATA_DB_NAME='raw_data'
+    PROCESSED_DATA_DB_NAME='processed_data'
     DUMMY_FOLDER='tmp/front/DummyMongo/'
     QUEUE_TIMEOUT_WITHOUT_PROGRESS=1500
 
@@ -104,6 +105,10 @@ class MongoDB(object){
             self.logger.warn('Database {} does not exists, creating it...'.format(MongoDB.RAW_DATA_DB_NAME))
         }
         self.raw_db = self.client[MongoDB.RAW_DATA_DB_NAME]
+        if MongoDB.PROCESSED_DATA_DB_NAME not in dblist{
+            self.logger.warn('Database {} does not exists, creating it...'.format(MongoDB.PROCESSED_DATA_DB_NAME))
+        }
+        self.processed_db = self.client[MongoDB.PROCESSED_DATA_DB_NAME]
     }
 
     def getDB(self,name){
@@ -112,6 +117,10 @@ class MongoDB(object){
 
     def getRawDB(self){
         return self.raw_db
+    }
+
+    def getProcessedDB(self){
+        return self.processed_db
     }
 
     def insertOneOnDB(self,db,document,collection,index=None,verbose=True,ignore_lock=False){

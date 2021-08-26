@@ -376,7 +376,7 @@ class Core(object){
 			for cur_cve in cur_cves {
 				data_ids.append(cur_cve['cve'])
 				parsed_cve_features=[]
-				for k,v in cur_cve['features'].items(){
+				for k,v in sorted(cur_cve['features'].items()){
 					parsed_cve_features.append(float(v))
 				}
 				data_features.append(parsed_cve_features)

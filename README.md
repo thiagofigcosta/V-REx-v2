@@ -58,7 +58,6 @@ Inside .env file
 
 ## Running with Docker compose (recommended)
 ```
-docker build -f deprecated/core/BaseImage.dockerfile -t ubuntu_2004_vrex_core_build deprecated/core/ # only once because this is a cache image with just libraries
 docker-compose build
 docker-compose up
 ```

@@ -117,14 +117,14 @@ def main(argv){
                         }else{
                             other+=1
                         }
-                        LOGGER.info('Total features on dataset: {}'.format(total))
-                        LOGGER.info('\nGroupped features count:')
-                        LOGGER.info('\tCVSS/ENUM features: {}'.format(cvss_enum))
-                        LOGGER.info('\tDescription features: {}'.format(description))
-                        LOGGER.info('\tReference features: {}'.format(reference))
-                        LOGGER.info('\tVendor features: {}'.format(vendor))
-                        LOGGER.info('\tOther features: {}'.format(other))
                     }
+                    LOGGER.info('Total features on dataset: {}'.format(total))
+                    LOGGER.info('\nGroupped features count:')
+                    LOGGER.info('\tCVSS/ENUM features: {}'.format(cvss_enum))
+                    LOGGER.info('\tDescription features: {}'.format(description))
+                    LOGGER.info('\tReference features: {}'.format(reference))
+                    LOGGER.info('\tVendor features: {}'.format(vendor))
+                    LOGGER.info('\tOther features: {}'.format(other))
                 }else{
                     LOGGER.warn('No dataset found...')
                 }
