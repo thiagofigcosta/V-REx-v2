@@ -732,88 +732,249 @@ def main(argv){
                 version=inputNumber(greater_or_eq=1,lower_or_eq=2)
                 print()
                 if version==2{
-                    print('Now type the minimum and maximums for each item of the Smart Neural Search Space...')
-                    print('Enter the genetic environment name: ', end = '')
-                    gen_name=input().strip()
-                    submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
-                    print('Enter the amount of layers: min: ')
-                    amount_of_layers_min=inputNumber(greater_or_eq=1)
-                    print('Max: ')
-                    amount_of_layers_max=inputNumber(greater_or_eq=amount_of_layers_min)
-                    print('Enter the maximum epochs: min: ')
-                    epochs_min=inputNumber(greater_or_eq=1)
-                    print('Max: ')
-                    epochs_max=inputNumber(greater_or_eq=epochs_min)
-                    print('Enter the patience epochs (0 means no patience): min: ')
-                    patience_epochs_min=inputNumber()
-                    print('Max: ')
-                    patience_epochs_max=inputNumber(greater_or_eq=patience_epochs_min)
-                    print('Enter the alpha: min: ')
-                    alpha_min=inputNumber(is_float=True,lower_or_eq=1)
-                    print('Max: ')
-                    alpha_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=alpha_min)
-                    print('Enter the batch size: min: ')
-                    batch_size_min=inputNumber()
-                    print('Max: ')
-                    batch_size_max=inputNumber(greater_or_eq=batch_size_min)
-                    print('Enter the loss functions (0-3):')
-                    print('\t0 - Binary Crossentropy')
-                    print('\t1 - Categorical Crossentropy')
-                    print('\t2 - Mean Squared Error')
-                    print('\t3 - Mean Absolute Error')
-                    print('min: ')
-                    loss_min=inputNumber(lower_or_eq=3)
-                    print('Max: ')
-                    loss_max=inputNumber(lower_or_eq=3,greater_or_eq=loss_min)
-                    print('Enter the optimizer (0-2): ')
-                    print('\t0 - SGD')
-                    print('\t1 - Adam')
-                    print('\t2 - RMSProp')
-                    print('min: ')
-                    optimizer_min=inputNumber(lower_or_eq=2)
-                    print('Max: ')
-                    optimizer_max=inputNumber(lower_or_eq=2,greater_or_eq=optimizer_min)
-                    if amount_of_layers_min>1 or amount_of_layers_max>1{
-                        print('Enter the layer sizes: min: ')
-                        layer_size_min=inputNumber(greater_or_eq=1)
+                    print('Use multiple networks (0 [False] - 1 [True]):')
+                    multiple_networks=inputNumber(lower_or_eq=1)==1
+                    if multiple_networks {
+                        print('Now type the minimum and maximums for each item of the Smart Neural Search Space...')
+                        print('Enter the genetic environment name: ', end = '')
+                        gen_name=input().strip()
+                        submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
+                        print('Enter the maximum epochs: min: ')
+                        epochs_min=inputNumber(greater_or_eq=1)
                         print('Max: ')
-                        layer_size_max=inputNumber(greater_or_eq=layer_size_min)
-                    }else{
-                        layer_size_min=0
-                        layer_size_max=0
-                    }
-                    print('Use bias on layers (0 [False] - 1 [True]):')
-                    print('min: ')
-                    bias_min=inputNumber(lower_or_eq=1)==1
-                    print('Max: ')
-                    bias_max=inputNumber(lower_or_eq=1,greater_or_eq=bias_min)==1
-                    print('Enter the dropouts layer value: min: ')
-                    dropouts_min=inputNumber(is_float=True,lower_or_eq=1)
-                    print('Max: ')
-                    dropouts_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=dropouts_min)
-                    print('Activation functions (0-9):')
-                    print('\t0 - ReLU')
-                    print('\t1 - Softmax')
-                    print('\t2 - Sigmoid')
-                    print('\t3 - Tanh')
-                    print('\t4 - Softplus')
-                    print('\t5 - Softsign')
-                    print('\t6 - Selu')
-                    print('\t7 - Elu')
-                    print('\t8 - Exponential')
-                    print('\t9 - Linear')
-                    if amount_of_layers_min>1 or amount_of_layers_max>1{
-                        print('Enter the activation functions for all nodes except output layer: min: ')
-                        activation_min=inputNumber(lower_or_eq=9)
+                        epochs_max=inputNumber(greater_or_eq=epochs_min)
+                        print('Enter the patience epochs (0 means no patience): min: ')
+                        patience_epochs_min=inputNumber()
                         print('Max: ')
-                        activation_max=inputNumber(lower_or_eq=9,greater_or_eq=activation_min)
+                        patience_epochs_max=inputNumber(greater_or_eq=patience_epochs_min)
+                        print('Enter the batch size: min: ')
+                        batch_size_min=inputNumber()
+                        print('Max: ')
+                        batch_size_max=inputNumber(greater_or_eq=batch_size_min)
+                        print()
+                        print('We\'ll use 5 networks for each group of feature and one final network to concatenate every other, now we\'ll define the parameters for them')
+                        network_names=['Main features','CVSS ENUM features','Description features','Reference Features','Vendor Features','Concatenation']
+                        amount_of_layers_min=[None for _ in range(len(network_names))]
+                        amount_of_layers_max=[None for _ in range(len(network_names))]
+                        layer_size_min=[None for _ in range(len(network_names))]
+                        layer_size_max=[None for _ in range(len(network_names))]
+                        activation_min=[None for _ in range(len(network_names))]
+                        activation_max=[None for _ in range(len(network_names))]
+                        dropouts_min=[None for _ in range(len(network_names))]
+                        dropouts_max=[None for _ in range(len(network_names))]
+                        use_same_alpha=None
+                        use_same_bias=None
+                        use_same_loss=None
+                        use_same_optimizer=None
+                        alpha_min=[None for _ in range(len(network_names))]
+                        alpha_max=[None for _ in range(len(network_names))]
+                        bias_min=[None for _ in range(len(network_names))]
+                        bias_max=[None for _ in range(len(network_names))]
+                        loss_min=[None for _ in range(len(network_names))]
+                        loss_max=[None for _ in range(len(network_names))]
+                        optimizer_min=[None for _ in range(len(network_names))]
+                        optimizer_max=[None for _ in range(len(network_names))]
+                        for n in range(len(network_names)){
+                            print('Now enter data regarding the {} network'.format(network_names[n]))
+                            print('Enter the amount of layers: min: ')
+                            amount_of_layers_min[n]=inputNumber(greater_or_eq=1)
+                            print('Max: ')
+                            amount_of_layers_max[n]=inputNumber(greater_or_eq=amount_of_layers_min[n])
+                            if (amount_of_layers_min[n]>1 or amount_of_layers_max[n]>1) and n==len(network_names)-1{
+                                print('Enter the layer sizes: min: ')
+                                layer_size_min[n]=inputNumber(greater_or_eq=1)
+                                print('Max: ')
+                                layer_size_max[n]=inputNumber(greater_or_eq=layer_size_min[n])
+                            }else{
+                                layer_size_min[n]=0
+                                layer_size_max[n]=0
+                            }
+                            print('Activation functions (0-9):')
+                            print('\t0 - ReLU')
+                            print('\t1 - Softmax')
+                            print('\t2 - Sigmoid')
+                            print('\t3 - Tanh')
+                            print('\t4 - Softplus')
+                            print('\t5 - Softsign')
+                            print('\t6 - Selu')
+                            print('\t7 - Elu')
+                            print('\t8 - Exponential')
+                            print('\t9 - Linear')
+                            if (amount_of_layers_min[n]>1 or amount_of_layers_max[n]>1) and n==len(network_names)-1{
+                                print('Enter the activation functions for all nodes except output layer: min: ')
+                                activation_min[n]=inputNumber(lower_or_eq=9)
+                                print('Max: ')
+                                activation_max[n]=inputNumber(lower_or_eq=9,greater_or_eq=activation_min[n])
+                            }else{
+                                activation_min[n]=0
+                                activation_max[n]=0
+                            }
+                            print('Enter the dropouts layer value: min: ')
+                            dropouts_min[n]=inputNumber(is_float=True,lower_or_eq=1)
+                            print('Max: ')
+                            dropouts_max[n]=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=dropouts_min[n])
+                            if use_same_alpha is None {
+                                print('Should we use the same alpha for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_alpha=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_alpha or alpha_min[0] is None {
+                                print('Enter the alpha: min: ')
+                                alpha_min[n]=inputNumber(is_float=True,lower_or_eq=1)
+                                print('Max: ')
+                                alpha_max[n]=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=alpha_min[n])
+                            }else{
+                                alpha_min[n]=alpha_min[0]
+                                alpha_max[n]=alpha_max[0]
+                            }
+                            if use_same_bias is None {
+                                print('Should we use the same bias for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_bias=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_bias or bias_min[0] is None {
+                                print('Use bias on layers (0 [False] - 1 [True]):')
+                                print('min: ')
+                                bias_min[n]=inputNumber(lower_or_eq=1)==1
+                                print('Max: ')
+                                bias_max[n]=inputNumber(lower_or_eq=1,greater_or_eq=bias_min[n])==1
+                            }else{
+                                bias_min[n]=bias_min[0]
+                                bias_max[n]=bias_max[0]
+                            }
+                            if use_same_loss is None {
+                                print('Should we use the same loss for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_loss=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_loss or loss_min[0] is None {
+                                print('Enter the loss functions (0-3):')
+                                print('\t0 - Binary Crossentropy')
+                                print('\t1 - Categorical Crossentropy')
+                                print('\t2 - Mean Squared Error')
+                                print('\t3 - Mean Absolute Error')
+                                print('min: ')
+                                loss_min[n]=inputNumber(lower_or_eq=3)
+                                print('Max: ')
+                                loss_max[n]=inputNumber(lower_or_eq=3,greater_or_eq=loss_min[n])
+                            }else{
+                                loss_min[n]=loss_min[0]
+                                loss_max[n]=loss_max[0]
+                            }
+                            if use_same_optimizer is None {
+                                print('Should we use the same optimizer for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_optimizer=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_optimizer or optimizer_min[0] is None {
+                                print('Enter the optimizer (0-2): ')
+                                print('\t0 - SGD')
+                                print('\t1 - Adam')
+                                print('\t2 - RMSProp')
+                                print('min: ')
+                                optimizer_min[n]=inputNumber(lower_or_eq=2)
+                                print('Max: ')
+                                optimizer_max[n]=inputNumber(lower_or_eq=2,greater_or_eq=optimizer_min[n])
+                            }else{
+                                optimizer_min[n]=optimizer_min[0]
+                                optimizer_max[n]=optimizer_max[0]
+                            }
+                            print()
+                        }
+                        print('Activation functions (0-9):')
+                        print('\t0 - ReLU')
+                        print('\t1 - Softmax')
+                        print('\t2 - Sigmoid')
+                        print('\t3 - Tanh')
+                        print('\t4 - Softplus')
+                        print('\t5 - Softsign')
+                        print('\t6 - Selu')
+                        print('\t7 - Elu')
+                        print('\t8 - Exponential')
+                        print('\t9 - Linear')
+                        print('Now enter the activation function for the OUTPUT layer of the Concatenation network (0-9) recommended (1-2):')
+                        activation_out=inputNumber(lower_or_eq=9)
+                        environment_to_insert={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'multiple_networks':multiple_networks,'amount_of_networks':len(network_names),'search_space':{'output_layer_node_type':activation_out,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'optimizer':{'min':optimizer_min,'max':optimizer_max}}}
                     }else{
-                        activation_min=0
-                        activation_max=0
+                        print('Now type the minimum and maximums for each item of the Smart Neural Search Space...')
+                        print('Enter the genetic environment name: ', end = '')
+                        gen_name=input().strip()
+                        submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
+                        print('Enter the amount of layers: min: ')
+                        amount_of_layers_min=inputNumber(greater_or_eq=1)
+                        print('Max: ')
+                        amount_of_layers_max=inputNumber(greater_or_eq=amount_of_layers_min)
+                        print('Enter the maximum epochs: min: ')
+                        epochs_min=inputNumber(greater_or_eq=1)
+                        print('Max: ')
+                        epochs_max=inputNumber(greater_or_eq=epochs_min)
+                        print('Enter the patience epochs (0 means no patience): min: ')
+                        patience_epochs_min=inputNumber()
+                        print('Max: ')
+                        patience_epochs_max=inputNumber(greater_or_eq=patience_epochs_min)
+                        print('Enter the alpha: min: ')
+                        alpha_min=inputNumber(is_float=True,lower_or_eq=1)
+                        print('Max: ')
+                        alpha_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=alpha_min)
+                        print('Enter the batch size: min: ')
+                        batch_size_min=inputNumber()
+                        print('Max: ')
+                        batch_size_max=inputNumber(greater_or_eq=batch_size_min)
+                        print('Enter the loss functions (0-3):')
+                        print('\t0 - Binary Crossentropy')
+                        print('\t1 - Categorical Crossentropy')
+                        print('\t2 - Mean Squared Error')
+                        print('\t3 - Mean Absolute Error')
+                        print('min: ')
+                        loss_min=inputNumber(lower_or_eq=3)
+                        print('Max: ')
+                        loss_max=inputNumber(lower_or_eq=3,greater_or_eq=loss_min)
+                        print('Enter the optimizer (0-2): ')
+                        print('\t0 - SGD')
+                        print('\t1 - Adam')
+                        print('\t2 - RMSProp')
+                        print('min: ')
+                        optimizer_min=inputNumber(lower_or_eq=2)
+                        print('Max: ')
+                        optimizer_max=inputNumber(lower_or_eq=2,greater_or_eq=optimizer_min)
+                        if amount_of_layers_min>1 or amount_of_layers_max>1{
+                            print('Enter the layer sizes: min: ')
+                            layer_size_min=inputNumber(greater_or_eq=1)
+                            print('Max: ')
+                            layer_size_max=inputNumber(greater_or_eq=layer_size_min)
+                        }else{
+                            layer_size_min=0
+                            layer_size_max=0
+                        }
+                        print('Use bias on layers (0 [False] - 1 [True]):')
+                        print('min: ')
+                        bias_min=inputNumber(lower_or_eq=1)==1
+                        print('Max: ')
+                        bias_max=inputNumber(lower_or_eq=1,greater_or_eq=bias_min)==1
+                        print('Enter the dropouts layer value: min: ')
+                        dropouts_min=inputNumber(is_float=True,lower_or_eq=1)
+                        print('Max: ')
+                        dropouts_max=inputNumber(is_float=True,lower_or_eq=1,greater_or_eq=dropouts_min)
+                        print('Activation functions (0-9):')
+                        print('\t0 - ReLU')
+                        print('\t1 - Softmax')
+                        print('\t2 - Sigmoid')
+                        print('\t3 - Tanh')
+                        print('\t4 - Softplus')
+                        print('\t5 - Softsign')
+                        print('\t6 - Selu')
+                        print('\t7 - Elu')
+                        print('\t8 - Exponential')
+                        print('\t9 - Linear')
+                        if amount_of_layers_min>1 or amount_of_layers_max>1{
+                            print('Enter the activation functions for all nodes except output layer: min: ')
+                            activation_min=inputNumber(lower_or_eq=9)
+                            print('Max: ')
+                            activation_max=inputNumber(lower_or_eq=9,greater_or_eq=activation_min)
+                        }else{
+                            activation_min=0
+                            activation_max=0
+                        }
+                        print('Now enter the activation function for the OUTPUT layer (0-9) recommended (1-2):')
+                        activation_out=inputNumber(lower_or_eq=9)
+                        environment_to_insert={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'multiple_networks':multiple_networks,'search_space':{'output_layer_node_type':activation_out,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'optimizer':{'min':optimizer_min,'max':optimizer_max}}}
                     }
-                    print('Now enter the activation function for the OUTPUT layer (0-9) recommended (1-2):')
-                    activation_out=inputNumber(lower_or_eq=9)
-                    environment_to_insert={'core_version':'v2','name':gen_name,'submitted_at':submitted_at,'search_space':{'output_layer_node_type':activation_out,'amount_of_layers':{'min':amount_of_layers_min,'max':amount_of_layers_max},'epochs':{'min':epochs_min,'max':epochs_max},'patience_epochs':{'min':patience_epochs_min,'max':patience_epochs_max},'batch_size':{'min':batch_size_min,'max':batch_size_max},'layer_sizes':{'min':layer_size_min,'max':layer_size_max},'activation_functions':{'min':activation_min,'max':activation_max},'dropouts':{'min':dropouts_min,'max':dropouts_max},'alpha':{'min':alpha_min,'max':alpha_max},'loss':{'min':loss_min,'max':loss_max},'bias':{'min':bias_min,'max':bias_max},'optimizer':{'min':optimizer_min,'max':optimizer_max}}}
                 }else{
                     print('Now type the minimum and maximums for each item of the Smart Neural Search Space...')
                     print('Enter the genetic environment name: ', end = '')

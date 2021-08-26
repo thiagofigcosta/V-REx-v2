@@ -395,6 +395,52 @@ class Core(object){
 		return data_ids,data_features,data_labels
 	}
 
+	def loadDatasetMultiNet(self,years,limit){
+		processed_db=self.mongo.getProcessedDB()
+		amount_of_groups=5
+		data_ids=[]
+		data_features=[]
+		data_labels=[]
+		for year in years {
+			cur_cves=self.mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
+			if cur_cves is None {
+				raise Exception('Unable to find cves from {}:{}'.format(year,limit))
+			}
+			parsed_cves=0
+			for cur_cve in cur_cves {
+				data_ids.append(cur_cve['cve'])
+				parsed_cve_features=[[] for _ in range(amount_of_groups)]
+				for k,v in sorted(cur_cve['features'].items()){
+					index=-1
+					if 'cvss_' in k and '_ENUM_' in k {
+						index=1
+					}elif 'description_' in k {
+						index=2
+					}elif 'reference_' in k {
+						index=3
+					}elif 'vendor_' in k {
+						index=4
+					}else{
+						index=0
+					}
+					parsed_cve_features[index].append(float(v))
+				}
+				data_features.append(parsed_cve_features)
+				parsed_cve_labels=[]
+				parsed_cve_labels.append(int(cur_cve['labels']['exploits_has']))
+				if len(parsed_cve_labels)==1{
+					parsed_cve_labels=parsed_cve_labels[0] # to avoid enumfication of the dataset later
+				}
+				data_labels.append(parsed_cve_labels)
+				parsed_cves+=1
+				if limit>0 and parsed_cves >= limit {
+					break
+				}
+			}
+		}
+		return data_ids,data_features,data_labels
+	}
+
 	def parseDatasetMetadataStrRepresentation(self,data_meta){
 		limit=0
 		if ':' in data_meta{
