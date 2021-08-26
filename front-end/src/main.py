@@ -119,7 +119,8 @@ def main(argv){
                         }
                     }
                     LOGGER.info('Total features on dataset: {}'.format(total))
-                    LOGGER.info('\nGroupped features count:')
+                    LOGGER.info('')
+                    LOGGER.info('Groupped features count:')
                     LOGGER.info('\tCVSS/ENUM features: {}'.format(cvss_enum))
                     LOGGER.info('\tDescription features: {}'.format(description))
                     LOGGER.info('\tReference features: {}'.format(reference))
@@ -780,7 +781,7 @@ def main(argv){
                             amount_of_layers_min[n]=inputNumber(greater_or_eq=1)
                             print('Max: ')
                             amount_of_layers_max[n]=inputNumber(greater_or_eq=amount_of_layers_min[n])
-                            if (amount_of_layers_min[n]>1 or amount_of_layers_max[n]>1) and n==len(network_names)-1{
+                            if amount_of_layers_min[n]>1 or amount_of_layers_max[n]>1 or n!=len(network_names)-1{
                                 print('Enter the layer sizes: min: ')
                                 layer_size_min[n]=inputNumber(greater_or_eq=1)
                                 print('Max: ')
@@ -789,18 +790,18 @@ def main(argv){
                                 layer_size_min[n]=0
                                 layer_size_max[n]=0
                             }
-                            print('Activation functions (0-9):')
-                            print('\t0 - ReLU')
-                            print('\t1 - Softmax')
-                            print('\t2 - Sigmoid')
-                            print('\t3 - Tanh')
-                            print('\t4 - Softplus')
-                            print('\t5 - Softsign')
-                            print('\t6 - Selu')
-                            print('\t7 - Elu')
-                            print('\t8 - Exponential')
-                            print('\t9 - Linear')
-                            if (amount_of_layers_min[n]>1 or amount_of_layers_max[n]>1) and n==len(network_names)-1{
+                            if amount_of_layers_min[n]>1 or amount_of_layers_max[n]>1 or n!=len(network_names)-1{
+                                print('Activation functions (0-9):')
+                                print('\t0 - ReLU')
+                                print('\t1 - Softmax')
+                                print('\t2 - Sigmoid')
+                                print('\t3 - Tanh')
+                                print('\t4 - Softplus')
+                                print('\t5 - Softsign')
+                                print('\t6 - Selu')
+                                print('\t7 - Elu')
+                                print('\t8 - Exponential')
+                                print('\t9 - Linear')
                                 print('Enter the activation functions for all nodes except output layer: min: ')
                                 activation_min[n]=inputNumber(lower_or_eq=9)
                                 print('Max: ')
