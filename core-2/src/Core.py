@@ -106,7 +106,7 @@ class Core(object){
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,enh_neural_network=multiple_networks)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
-			if Core.EnhancedNeuralNetwork or multiple_networks{
+			if Core.USE_ENHANCED_NN or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
@@ -243,7 +243,7 @@ class Core(object){
 			Core.LOGGER.info('Creating train network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			if Core.EnhancedNeuralNetwork{
+			if Core.USE_ENHANCED_NN{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
@@ -288,7 +288,7 @@ class Core(object){
 			Core.LOGGER.info('Creating test network...')
 			input_size=len(train_features[0])
 			output_size=len(train_labels[0])
-			if Core.EnhancedNeuralNetwork{
+			if Core.USE_ENHANCED_NN{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
@@ -349,7 +349,7 @@ class Core(object){
 		Core.LOGGER.info('Creating eval network...')
 		input_size=len(test_features[0])
 		output_size=len(test_labels[0])
-		if Core.EnhancedNeuralNetwork{
+		if Core.USE_ENHANCED_NN{
 			nn=EnhancedNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
 		}else{
 			nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
