@@ -246,7 +246,7 @@ class Core(object){
 		trained_weights=None
 		if load {
 			Core.LOGGER.info('Loading weights...')
-			trained_weights=Genome.decodeWeights(self.loadWeightsFromNeuralNet(independent_net_id))
+			trained_weights=self.loadWeightsFromNeuralNet(independent_net_id)
 			Core.LOGGER.info('Loaded weights...OK')
 		}else{
 			Core.LOGGER.info('Creating train network...')
