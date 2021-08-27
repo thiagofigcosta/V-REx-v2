@@ -91,7 +91,7 @@ class Core(object){
 		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
-		search_space=Genome.enrichSearchSpace(search_space,enh_neural_network=multiple_networks)
+		search_space=Genome.enrichSearchSpace(search_space,multi_net_enhanced_nn=multiple_networks)
 		Core.LOGGER.info('\t{}: {}'.format('output_layer_node_type',output_layer_node_type))
 		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.multiline(str(search_space))
@@ -104,7 +104,7 @@ class Core(object){
 				input_size=len(train_features[0])
 			}
 			output_size=len(train_labels[0])
-			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,enh_neural_network=multiple_networks)
+			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,multi_net_enhanced_nn=multiple_networks)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
 			if Core.USE_ENHANCED_NN or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)

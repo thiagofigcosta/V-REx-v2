@@ -244,8 +244,8 @@ class Genome(object){
     }
 
     @staticmethod
-    def enrichSearchSpace(search_space,enh_neural_network=False){
-        if not enh_neural_network{
+    def enrichSearchSpace(search_space,multi_net_enhanced_nn=False){
+        if not multi_net_enhanced_nn{
             # mandatory
             batch_size=search_space['batch_size']
             alpha=search_space['alpha']
@@ -416,15 +416,15 @@ class Genome(object){
         }
     }
 
-    def toHyperparameters(self,output_size,output_layer_type,enh_neural_network=False){
-        if not enh_neural_network{
+    def toHyperparameters(self,output_size,output_layer_type,multi_net_enhanced_nn=False){
+        if not multi_net_enhanced_nn{
             batch_size=int(self.dna[0])
             alpha=float(self.dna[1])
             shuffle=bool(self.dna[2])
             patience_epochs=int(self.dna[3])
             max_epochs=int(self.dna[4])
             loss=Loss(self.dna[5])
-            label_type=self.getHyperparametersEncoder()
+            label_type=self.getHyperparametersEncoder(multi_net_enhanced_nn)
 
             optimizer=Optimizers(self.dna[7])
             monitor_metric=Metric(self.dna[8])
@@ -450,7 +450,7 @@ class Genome(object){
             batch_size=int(self.dna[0])
             patience_epochs=int(self.dna[1])
             max_epochs=int(self.dna[2])
-            label_type=LabelEncoding(self.dna[3])
+            label_type=self.getHyperparametersEncoder(multi_net_enhanced_nn)
             monitor_metric=Metric(self.dna[4])
             model_checkpoint=bool(self.dna[5])
 
@@ -494,7 +494,11 @@ class Genome(object){
         }
     }
 
-    def getHyperparametersEncoder(self){
-        return LabelEncoding(self.dna[6])
+    def getHyperparametersEncoder(self,multi_net_enhanced_nn){
+        if multi_net_enhanced_nn{
+            return LabelEncoding(self.dna[3])
+        }else{
+            return LabelEncoding(self.dna[6])
+        }
     }
 }

@@ -392,7 +392,7 @@ def testGeneticallyTunedNN(){
         preserve_weights=False # TODO fix when true, to avoid nan outputs
         train_features=train[0]
         train_labels=train[1]
-        train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
+        train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder(False))
         input_size=len(train_features[0])
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
@@ -443,7 +443,7 @@ def testGeneticallyTunedNN(){
         nonlocal test
         test_features=test[0]
         test_labels=test[1]
-        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder())
+        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder(False))
         input_size=len(test_features[0])
         output_size=len(test_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
@@ -619,7 +619,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
-    search_space=Genome.enrichSearchSpace(search_space,enh_neural_network=True)
+    search_space=Genome.enrichSearchSpace(search_space,multi_net_enhanced_nn=True)
 
     Genome.CACHE_WEIGHTS=False
 
@@ -641,10 +641,10 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
         preserve_weights=False # TODO fix when true, to avoid nan outputs
         train_features=train[0]
         train_labels=train[1]
-        train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
+        train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder(True))
         input_size=[len(train_features[i][0]) for i in range(len(train_features))]
         output_size=len(train_labels[0])
-        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,multi_net_enhanced_nn=True)
         search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
         enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         enn.buildModel(input_size=input_size)
@@ -693,10 +693,10 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
         nonlocal test
         test_features=test[0]
         test_labels=test[1]
-        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder())
+        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder(True))
         input_size=[len(test_features[i][0]) for i in range(len(test_features))]
         output_size=len(test_labels[0])
-        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,multi_net_enhanced_nn=True)
         enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         enn.buildModel(input_size=input_size)
         enn.saveModelSchemaToFile()

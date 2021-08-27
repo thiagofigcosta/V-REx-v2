@@ -158,7 +158,148 @@ def main(argv){
                 version=inputNumber(greater_or_eq=1,lower_or_eq=2)
                 print()
                 if version==2{
-                    LOGGER.error('Not implemented yet!')
+                    LOGGER.info('Casting DNA...')
+                    print('Enter the DNA (e.g. [ 10 0.001 False 10 80 0 1 1 1 True 1 0 2 0.1 True ]): ', end = '')
+                    not_filled=True
+                    dna=''
+                    while not_filled {
+                        dna=input().strip().replace('[','',1).replace(']','',1).strip()
+                        if re.match(r'^(:?([0-9\.]|True|False)* ?)*$',dna){
+                            not_filled=False
+                        }else{
+                            print('ERROR - Wrong DNA format')
+                        }
+                    }
+                    dna=dna.split()
+                    for s,gene in enumerate(dna){
+                        if '.' in gene {
+                            dna[s]=float(gene)
+                        }elif any(c.isalpha() for c in gene){
+                            dna[s]=bool(gene)
+                        }else{
+                            dna[s]=int(gene)
+                        }
+                    }
+                    is_ok=True
+                    if type(dna[2]) is bool { # single network
+                        batch_size=int(dna[0])
+                        alpha=float(dna[1])
+                        shuffle=bool(dna[2])
+                        patience_epochs=int(dna[3])
+                        max_epochs=int(dna[4])
+                        loss=int(dna[5])
+                        label_type=int(dna[6])
+
+                        optimizer=int(dna[7])
+                        monitor_metric=int(dna[8])
+                        model_checkpoint=bool(dna[9])
+
+                        layers=int(dna[10])
+                        first_layer_dependent=11
+                        layer_sizes=[]
+                        node_types=[]
+                        dropouts=[]
+                        bias=[]
+                        amount_of_dependent=4
+                        for l in range(layers){
+                            layer_sizes.append(int(dna[(first_layer_dependent+0)+amount_of_dependent*l]))
+                            node_types.append(int(dna[(first_layer_dependent+1)+amount_of_dependent*l]))
+                            dropouts.append(float(dna[(first_layer_dependent+2)+amount_of_dependent*l]))
+                            bias.append(bool(dna[(first_layer_dependent+3)+amount_of_dependent*l]))
+                        }
+                        layer_sizes[-1]='Output Size'
+                        node_types[-1]='NodeType.SIGMOID(2)'
+                        LOGGER.info('amount_of_networks: {}'.format(1))
+                        LOGGER.info('batch_size: {}'.format(batch_size))
+                        LOGGER.info('alpha: {}'.format(alpha))
+                        LOGGER.info('shuffle: {}'.format(shuffle))
+                        LOGGER.info('max_epochs: {}'.format(max_epochs))
+                        LOGGER.info('patience_epochs: {}'.format(patience_epochs))
+                        LOGGER.info('loss: {}'.format(loss))
+                        LOGGER.info('label_type: {}'.format(label_type))
+                        LOGGER.info('optimizer: {}'.format(optimizer))
+                        LOGGER.info('monitor_metric: {}'.format(monitor_metric))
+                        LOGGER.info('model_checkpoint: {}'.format(model_checkpoint))
+                        LOGGER.info('layers: {}'.format(layers))
+                        LOGGER.info('layer_sizes: {}'.format(str(layer_sizes)))
+                        LOGGER.info('node_types: {}'.format(str(node_types)))
+                        LOGGER.info('dropouts: {}'.format(str(dropouts)))
+                        LOGGER.info('bias: {}'.format(str(bias)))
+                    }elif type(dna[5]) is bool { # multi network
+                        batch_size=int(dna[0])
+                        patience_epochs=int(dna[1])
+                        max_epochs=int(dna[2])
+                        label_type=int(dna[3])
+                        monitor_metric=int(dna[4])
+                        model_checkpoint=bool(dna[5])
+
+                        networks=int(dna[6])
+                        last_index=7
+                        alpha=[]
+                        shuffle=[]
+                        loss=[]
+                        optimizer=[]
+                        layers=[]
+                        layer_sizes=[]
+                        node_types=[]
+                        dropouts=[]
+                        bias=[]
+                        network_parameters=10
+                        layer_parameters=4
+                        offset=0
+                        for n in range(networks){
+                            alpha.append(float(dna[(last_index+0)+network_parameters*n+offset]))
+                            shuffle.append(bool(dna[(last_index+1)+network_parameters*n+offset]))
+                            loss.append(int(dna[(last_index+2)+network_parameters*n+offset]))
+                            optimizer.append(int(dna[(last_index+3)+network_parameters*n+offset]))
+                            layers.append(int(dna[(last_index+4)+network_parameters*n+offset]))
+                            max_layers=int(dna[(last_index+5)+network_parameters*n+offset])
+                            layer_sizes.append([])
+                            node_types.append([])
+                            dropouts.append([])
+                            bias.append([])
+                            for l in range(layers[-1]){
+                                layer_sizes[-1].append(int(dna[(last_index+6)+network_parameters*n+offset]))
+                                node_types[-1].append(int(dna[(last_index+7)+network_parameters*n+offset]))
+                                dropouts[-1].append(float(dna[(last_index+8)+network_parameters*n+offset]))
+                                bias[-1].append(bool(dna[(last_index+9)+network_parameters*n+offset]))
+                                offset+=layer_parameters
+                            }
+                            offset+=(max_layers-layers[-1]-1)*layer_parameters
+                        }
+                        layer_sizes[-1][-1]='Output Size'
+                        node_types[-1][-1]='NodeType.SIGMOID(2)'
+                        LOGGER.info('amount_of_networks: {}'.format(networks))
+                        LOGGER.info('batch_size: {}'.format(batch_size))
+                        LOGGER.info('max_epochs: {}'.format(max_epochs))
+                        LOGGER.info('patience_epochs: {}'.format(patience_epochs))
+                        LOGGER.info('label_type: {}'.format(label_type))
+                        LOGGER.info('monitor_metric: {}'.format(monitor_metric))
+                        LOGGER.info('model_checkpoint: {}'.format(model_checkpoint))
+                        for n in range(networks){
+                            if n!=networks-1{
+                                LOGGER.info('Network {} of {}'.format(n+1,networks))
+                            }else{
+                                LOGGER.info('Concatenation Network')
+                            }
+                            LOGGER.info('\talpha: {}'.format(str(alpha[n])))
+                            LOGGER.info('\tshuffle: {}'.format(str(shuffle[n])))
+                            LOGGER.info('\tloss: {}'.format(str(loss[n])))
+                            LOGGER.info('\toptimizer: {}'.format(str(optimizer[n])))
+                            LOGGER.info('\tlayers: {}'.format(str(layers[n])))
+                            LOGGER.info('\tlayer_sizes: {}'.format(str(layer_sizes[n])))
+                            LOGGER.info('\tnode_types: {}'.format(str(node_types[n])))
+                            LOGGER.info('\tdropouts: {}'.format(str(dropouts[n])))
+                            LOGGER.info('\tbias: {}'.format(str(bias[n])))
+                        }
+                    }else{
+                        is_ok=False
+                        LOGGER.error('Unkown DNA format!')
+                        LOGGER.error('Cast DNA...FAIL')
+                    }
+                    if is_ok {
+                        LOGGER.info('Cast DNA...OK')
+                    }
                 }else{
                     LOGGER.info('Casting dna...')
                     print('Enter the int dna (e.g. [ 2, 5, 1, 1, 16, 2, 45 ]): ', end = '')
@@ -278,58 +419,232 @@ def main(argv){
                 version=inputNumber(greater_or_eq=1,lower_or_eq=2)
                 print()
                 if version==2{
-                    print('Now type the hyperparameters for the Neural Network...')
-                    print('Enter the hyperparameters config name (unique): ', end = '')
-                    hyper_name=input().strip()
-                    submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
-                    print('Enter the batch size: ', end = '')
-                    batch_size=inputNumber()
-                    print('Enter the alpha: ', end = '')
-                    alpha=inputNumber(is_float=True,lower_or_eq=1)
-                    print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
-                    shuffle=inputNumber(lower_or_eq=1)==1
-                    print('Enter the optimizer (0-2): ', end = '')
-                    print('\t0 - SGD')
-                    print('\t1 - Adam')
-                    print('\t2 - RMSProp')
-                    optimizer=inputNumber(lower_or_eq=2)
-                    print('Enter the loss function (0-3):')
-                    print('\t0 - Binary Crossentropy')
-                    print('\t1 - Categorical Crossentropy')
-                    print('\t2 - Mean Squared Error')
-                    print('\t3 - Mean Absolute Error')
-                    print('min: ')
-                    loss=inputNumber(lower_or_eq=3)
-                    print('Enter the label type ([0-1]+[3-8]):')
-                    print('\t0 - INCREMENTAL')
-                    print('\t1 - BINARY')
-                    # print('\t2 - NEURON_BY_NEURON_LOG_LOSS DEPRECATED')
-                    print('\t3 - BINARY_PLUS_ONE')
-                    print('\t4 - SPARSE')
-                    print('\t5 - DISTINCT_SPARSE')
-                    print('\t6 - DISTINCT_SPARSE_PLUS_ONE')
-                    print('\t7 - INCREMENTAL_PLUS_ONE')
-                    print('\t8 - EXPONENTIAL')
-                    print('value: ', end='')
-                    label_type=inputNumber(lower_or_eq=8)
-                    while label_type==2{
-                        print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
+                    print('Use multiple networks (0 [False] - 1 [True]):')
+                    multiple_networks=inputNumber(lower_or_eq=1)==1
+                    if multiple_networks{
+                        print('Now type the hyperparameters for the Neural Networks...')
+                        print('Enter the hyperparameters config name (unique): ', end = '')
+                        hyper_name=input().strip()
+                        submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
+                        print('Enter the batch size: ', end = '')
+                        print('Enter the label type ([0-1]+[3-8]):')
+                        print('\t0 - INCREMENTAL')
+                        print('\t1 - BINARY')
+                        # print('\t2 - NEURON_BY_NEURON_LOG_LOSS DEPRECATED')
+                        print('\t3 - BINARY_PLUS_ONE')
+                        print('\t4 - SPARSE')
+                        print('\t5 - DISTINCT_SPARSE')
+                        print('\t6 - DISTINCT_SPARSE_PLUS_ONE')
+                        print('\t7 - INCREMENTAL_PLUS_ONE')
+                        print('\t8 - EXPONENTIAL')
+                        print('value: ', end='')
                         label_type=inputNumber(lower_or_eq=8)
-                    }
-                    print('Enter amount of layers: ', end = '')
-                    layers=inputNumber(greater_or_eq=1)
-                    layer_sizes=[]
-                    for i in range(layers-1){
-                        if i==0{
-                            print('Ignoring first and last layers, the size for them is set on core: ', end = '')
-                            layer_sizes.append(0) # input layer
-                        }else{
-                            print('Enter the layer size for layer {}: '.format(i), end = '')
-                            layer_sizes.append(inputNumber())
+                        while label_type==2{
+                            print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
+                            label_type=inputNumber(lower_or_eq=8)
                         }
-                    }
-                    layer_sizes.append(0) # output layer
-                    if layers > 1 {
+                        batch_size=inputNumber()
+                        use_same_alpha=None
+                        alpha=[None for _ in range(len(network_names))]
+                        use_same_shuffle=None
+                        shuffle=[None for _ in range(len(network_names))]
+                        use_same_optimizer=None
+                        optimizer=[None for _ in range(len(network_names))]
+                        use_same_loss=None
+                        loss=[None for _ in range(len(network_names))]
+                        layers=[None for _ in range(len(network_names))]
+                        layer_sizes=[None for _ in range(len(network_names))]
+                        node_types=[None for _ in range(len(network_names))]
+                        dropouts=[None for _ in range(len(network_names))]
+                        bias=[None for _ in range(len(network_names))]
+
+                        print('We\'ll use 5 networks for each group of feature and one final network to concatenate every other, now we\'ll define the parameters for them')
+                        network_names=['Main features','CVSS ENUM features','Description features','Reference Features','Vendor Features','Concatenation']
+                        amount_of_networks=len(network_names)
+                        for n in range(len(network_names)){
+                            print('Now enter data regarding the {} network'.format(network_names[n]))
+                            if use_same_alpha is None {
+                                print('Should we use the same alpha for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_alpha=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_alpha or alpha[0] is None {
+                                print('Enter the alpha: ', end = '')
+                                alpha[n]=inputNumber(is_float=True,lower_or_eq=1)
+                            }else{
+                                alpha[n]=alpha[0]
+                            }
+                            if use_same_shuffle is None {
+                                print('Should we use the same shuffle for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_shuffle=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_shuffle or shuffle[0] is None {
+                                print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
+                                shuffle[n]=inputNumber(lower_or_eq=1)==1
+                            }else{
+                                shuffle[n]=shuffle[0]
+                            }
+                            if use_same_optimizer is None {
+                                print('Should we use the same optmizer for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_optimizer=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_optimizer or optimizer[0] is None {
+                                print('Enter the optimizer (0-2): ', end = '')
+                                print('\t0 - SGD')
+                                print('\t1 - Adam')
+                                print('\t2 - RMSProp')
+                                optimizer[n]=inputNumber(lower_or_eq=2)
+                            }else{
+                                optimizer[n]=optimizer[0]
+                            }
+                            if use_same_loss is None {
+                                print('Should we use the same loss for every network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_loss=inputNumber(lower_or_eq=1)==1
+                            }
+                            if not use_same_loss or loss[0] is None {
+                                print('Enter the loss function (0-3):')
+                                print('\t0 - Binary Crossentropy')
+                                print('\t1 - Categorical Crossentropy')
+                                print('\t2 - Mean Squared Error')
+                                print('\t3 - Mean Absolute Error')
+                                print('value: ')
+                                loss[n]=inputNumber(lower_or_eq=3)
+                            }else{
+                                loss[n]=loss[0]
+                            }
+                            print('Enter amount of layers: ', end = '')
+                            layers[n]=inputNumber(greater_or_eq=1)
+                            tmp_layer_sizes=[]
+                            if n!=len(network_names)-1{
+                                for i in range(layers[n]){
+                                    if i==0{
+                                        print('Ignoring the first layer, its size is set on core: ', end = '')
+                                        tmp_layer_sizes.append(0) # input layer
+                                    }else{
+                                        print('Enter the layer size for layer {}: '.format(i), end = '')
+                                        tmp_layer_sizes.append(inputNumber())
+                                    }
+                                }
+                            }else{
+                                for i in range(layers[n]-1){
+                                    if i==0{
+                                        print('Ignoring first and last layers, the size for them is set on core: ', end = '')
+                                        tmp_layer_sizes.append(0) # input layer
+                                    }else{
+                                        print('Enter the layer size for layer {}: '.format(i), end = '')
+                                        tmp_layer_sizes.append(inputNumber())
+                                    }
+                                }
+                                tmp_layer_sizes.append(0) # output layer
+                            }
+                            layer_sizes[n]=tmp_layer_sizes
+                            print('Enter the nodes activation functions (0-9):')
+                            print('\t0 - ReLU')
+                            print('\t1 - Softmax')
+                            print('\t2 - Sigmoid')
+                            print('\t3 - Tanh')
+                            print('\t4 - Softplus')
+                            print('\t5 - Softsign')
+                            print('\t6 - Selu')
+                            print('\t7 - Elu')
+                            print('\t8 - Exponential')
+                            print('\t9 - Linear')
+                            tmp_node_types=[]
+                            if n!=len(network_names)-1{
+                                for i in range(layers[n]){
+                                    print('Enter the node type for layer {}: '.format(i), end = '')
+                                    tmp_node_types.append(inputNumber(lower_or_eq=9))
+                                }
+                            }else{
+                                for i in range(layers[n]-1){
+                                    print('Enter the node type for layer {}: '.format(i), end = '')
+                                    tmp_node_types.append(inputNumber(lower_or_eq=9))
+                                }
+                                print('Enter the node type for the OUTPUT layer (recommended softmax or sigmoid): ', end = '')
+                                tmp_node_types.append(inputNumber(lower_or_eq=9))
+                            }
+                            node_types[n]=tmp_node_types
+                            print('Should we use the same dropouts for every layer of this network instead of specify one for each? (0 [False] - 1 [True]):')
+                            use_same_dropouts=inputNumber(lower_or_eq=1)==1
+                            tmp_dropouts=[]
+                            for i in range(layers[n]){
+                                if not use_same_dropouts or len(tmp_dropouts)==0{
+                                    print('Enter the dropout for layer {}: '.format(i), end = '')
+                                    tmp_dropouts.append(inputNumber(is_float=True,lower_or_eq=1))
+                                }else{
+                                    tmp_dropouts[i]=tmp_dropouts[0]
+                                }
+                            }
+                            dropouts[n]=tmp_dropouts
+                            print('Should we use the same bias for every layer of this network instead of specify one for each? (0 [False] - 1 [True]):')
+                            use_same_bias=inputNumber(lower_or_eq=1)==1
+                            tmp_bias=[]
+                            for i in range(layers[n]){
+                                if not use_same_bias or len(tmp_bias)==0{
+                                    print('Enter use bias for layer {} (0 [False] - 1 [True]): '.format(i), end = '')
+                                    tmp_bias.append(inputNumber(lower_or_eq=1)==1)
+                                }else{
+                                    tmp_bias[i]=tmp_bias[0]
+                                }
+                            }
+                            bias[n]=tmp_bias
+
+                            if n!=len(network_names)-1{
+                                print()
+                            }
+                        }
+                    }else{
+                        amount_of_networks=1
+                        print('Now type the hyperparameters for the Neural Network...')
+                        print('Enter the hyperparameters config name (unique): ', end = '')
+                        hyper_name=input().strip()
+                        submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
+                        print('Enter the batch size: ', end = '')
+                        batch_size=inputNumber()
+                        print('Enter the alpha: ', end = '')
+                        alpha=inputNumber(is_float=True,lower_or_eq=1)
+                        print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
+                        shuffle=inputNumber(lower_or_eq=1)==1
+                        print('Enter the optimizer (0-2): ', end = '')
+                        print('\t0 - SGD')
+                        print('\t1 - Adam')
+                        print('\t2 - RMSProp')
+                        optimizer=inputNumber(lower_or_eq=2)
+                        print('Enter the loss function (0-3):')
+                        print('\t0 - Binary Crossentropy')
+                        print('\t1 - Categorical Crossentropy')
+                        print('\t2 - Mean Squared Error')
+                        print('\t3 - Mean Absolute Error')
+                        print('value: ')
+                        loss=inputNumber(lower_or_eq=3)
+                        print('Enter the label type ([0-1]+[3-8]):')
+                        print('\t0 - INCREMENTAL')
+                        print('\t1 - BINARY')
+                        # print('\t2 - NEURON_BY_NEURON_LOG_LOSS DEPRECATED')
+                        print('\t3 - BINARY_PLUS_ONE')
+                        print('\t4 - SPARSE')
+                        print('\t5 - DISTINCT_SPARSE')
+                        print('\t6 - DISTINCT_SPARSE_PLUS_ONE')
+                        print('\t7 - INCREMENTAL_PLUS_ONE')
+                        print('\t8 - EXPONENTIAL')
+                        print('value: ', end='')
+                        label_type=inputNumber(lower_or_eq=8)
+                        while label_type==2{
+                            print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
+                            label_type=inputNumber(lower_or_eq=8)
+                        }
+                        print('Enter amount of layers: ', end = '')
+                        layers=inputNumber(greater_or_eq=1)
+                        layer_sizes=[]
+                        for i in range(layers-1){
+                            if i==0{
+                                print('Ignoring first and last layers, the size for them is set on core: ', end = '')
+                                layer_sizes.append(0) # input layer
+                            }else{
+                                print('Enter the layer size for layer {}: '.format(i), end = '')
+                                layer_sizes.append(inputNumber())
+                            }
+                        }
+                        layer_sizes.append(0) # output layer
                         print('Enter the nodes activation functions (0-9):')
                         print('\t0 - ReLU')
                         print('\t1 - Softmax')
@@ -341,25 +656,25 @@ def main(argv){
                         print('\t7 - Elu')
                         print('\t8 - Exponential')
                         print('\t9 - Linear')
-                    }
-                    node_types=[]
-                    for i in range(layers-1){
-                        print('Enter the node type for layer {}: '.format(i), end = '')
+                        node_types=[]
+                        for i in range(layers-1){
+                            print('Enter the node type for layer {}: '.format(i), end = '')
+                            node_types.append(inputNumber(lower_or_eq=9))
+                        }
+                        print('Enter the node type for the OUTPUT layer (recommended softmax or sigmoid): ', end = '')
                         node_types.append(inputNumber(lower_or_eq=9))
+                        dropouts=[]
+                        for i in range(layers){
+                            print('Enter the dropout for layer {}: '.format(i), end = '')
+                            dropouts.append(inputNumber(is_float=True,lower_or_eq=1))
+                        }
+                        bias=[]
+                        for i in range(layers){
+                            print('Enter use bias for layer {} (0 [False] - 1 [True]): '.format(i), end = '')
+                            bias.append(inputNumber(lower_or_eq=1)==1)
+                        }
                     }
-                    print('Enter the node type for the OUTPUT layer (recommended softmax or sigmoid): ', end = '')
-                    node_types.append(inputNumber(lower_or_eq=9))
-                    dropouts=[]
-                    for i in range(layers){
-                        print('Enter the dropout for layer {}: '.format(i), end = '')
-                        dropouts.append(inputNumber(is_float=True,lower_or_eq=1))
-                    }
-                    bias=[]
-                    for i in range(layers){
-                        print('Enter use bias for layer {} (0 [False] - 1 [True]): '.format(i), end = '')
-                        bias.append(inputNumber(lower_or_eq=1)==1)
-                    }
-                    hyperparams={'core_version':'v2','name':hyper_name,'submitted_at':submitted_at,'batch_size':batch_size,'alpha':alpha,'shuffle':shuffle,'optimizer':optimizer,'loss':loss,'label_type':label_type,'layers':layers,'layer_sizes':layer_sizes,'bias':bias,'node_types':node_types,'dropouts':dropouts}
+                    hyperparams={'core_version':'v2','name':hyper_name,'submitted_at':submitted_at,'amount_of_networks':amount_of_networks,'batch_size':batch_size,'alpha':alpha,'shuffle':shuffle,'optimizer':optimizer,'loss':loss,'label_type':label_type,'layers':layers,'layer_sizes':layer_sizes,'bias':bias,'node_types':node_types,'dropouts':dropouts}
                 }else{ # v1
                     print('Now type the hyperparameters for the Smart Neural Network...')
                     print('Enter the hyperparameters config name (unique): ', end = '')
