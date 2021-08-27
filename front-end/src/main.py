@@ -444,6 +444,10 @@ def main(argv){
                             print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
                             label_type=inputNumber(lower_or_eq=8)
                         }
+                        print('We\'ll use 5 networks for each group of feature and one final network to concatenate every other, now we\'ll define the parameters for them')
+                        network_names=['Main features','CVSS ENUM features','Description features','Reference Features','Vendor Features','Concatenation']
+                        amount_of_networks=len(network_names)
+
                         use_same_alpha=None
                         alpha=[None for _ in range(len(network_names))]
                         use_same_shuffle=None
@@ -457,10 +461,6 @@ def main(argv){
                         node_types=[None for _ in range(len(network_names))]
                         dropouts=[None for _ in range(len(network_names))]
                         bias=[None for _ in range(len(network_names))]
-
-                        print('We\'ll use 5 networks for each group of feature and one final network to concatenate every other, now we\'ll define the parameters for them')
-                        network_names=['Main features','CVSS ENUM features','Description features','Reference Features','Vendor Features','Concatenation']
-                        amount_of_networks=len(network_names)
                         for n in range(len(network_names)){
                             print('Now enter data regarding the {} network'.format(network_names[n]))
                             if use_same_alpha is None {
