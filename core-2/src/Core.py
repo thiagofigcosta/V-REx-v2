@@ -409,7 +409,7 @@ class Core(object){
 		processed_db=self.mongo.getProcessedDB()
 		amount_of_groups=5
 		data_ids=[]
-		data_features=[]
+		data_features=[[] for _ in range(amount_of_groups)]
 		data_labels=[]
 		for year in years {
 			cur_cves=self.mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
@@ -435,7 +435,9 @@ class Core(object){
 					}
 					parsed_cve_features[index].append(float(v))
 				}
-				data_features.append(parsed_cve_features)
+				for x in range(amount_of_groups){
+					data_features[x].append(parsed_cve_features[x])
+				}
 				parsed_cve_labels=[]
 				parsed_cve_labels.append(int(cur_cve['labels']['exploits_has']))
 				if len(parsed_cve_labels)==1{
