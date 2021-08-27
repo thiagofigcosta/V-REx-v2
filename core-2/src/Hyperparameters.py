@@ -97,6 +97,10 @@ class Hyperparameters(object){
 
 			self.setLastLayer(self.layer_sizes[-1],self.node_types[-1])
 		}else{
+			if type(self.shuffle) is not bool {
+				raise Exception('shuffle must be bool')
+			}
+			
 			if len(self.layers)!=self.amount_of_networks{
 				raise Exception('(layers) different from amount_of_networks')
 			}
@@ -111,9 +115,6 @@ class Hyperparameters(object){
 			}
 			if len(self.alpha)!=self.amount_of_networks{
 				raise Exception('(alpha) different from amount_of_networks')
-			}
-			if len(self.shuffle)!=self.amount_of_networks{
-				raise Exception('(shuffle) different from amount_of_networks')
 			}
 			if len(self.loss)!=self.amount_of_networks{
 				raise Exception('(loss) different from amount_of_networks')

@@ -232,11 +232,11 @@ def main(argv){
                         label_type=int(dna[3])
                         monitor_metric=int(dna[4])
                         model_checkpoint=bool(dna[5])
+                        shuffle=bool(dna[6])
 
-                        networks=int(dna[6])
-                        last_index=7
+                        networks=int(dna[7])
+                        last_index=8
                         alpha=[]
-                        shuffle=[]
                         loss=[]
                         optimizer=[]
                         layers=[]
@@ -244,25 +244,24 @@ def main(argv){
                         node_types=[]
                         dropouts=[]
                         bias=[]
-                        network_parameters=10
+                        network_parameters=9
                         layer_parameters=4
                         offset=0
                         for n in range(networks){
                             alpha.append(float(dna[(last_index+0)+network_parameters*n+offset]))
-                            shuffle.append(bool(dna[(last_index+1)+network_parameters*n+offset]))
-                            loss.append(int(dna[(last_index+2)+network_parameters*n+offset]))
-                            optimizer.append(int(dna[(last_index+3)+network_parameters*n+offset]))
-                            layers.append(int(dna[(last_index+4)+network_parameters*n+offset]))
-                            max_layers=int(dna[(last_index+5)+network_parameters*n+offset])
+                            loss.append(int(dna[(last_index+1)+network_parameters*n+offset]))
+                            optimizer.append(int(dna[(last_index+2)+network_parameters*n+offset]))
+                            layers.append(int(dna[(last_index+3)+network_parameters*n+offset]))
+                            max_layers=int(dna[(last_index+4)+network_parameters*n+offset])
                             layer_sizes.append([])
                             node_types.append([])
                             dropouts.append([])
                             bias.append([])
                             for l in range(layers[-1]){
-                                layer_sizes[-1].append(int(dna[(last_index+6)+network_parameters*n+offset]))
-                                node_types[-1].append(int(dna[(last_index+7)+network_parameters*n+offset]))
-                                dropouts[-1].append(float(dna[(last_index+8)+network_parameters*n+offset]))
-                                bias[-1].append(bool(dna[(last_index+9)+network_parameters*n+offset]))
+                                layer_sizes[-1].append(int(dna[(last_index+5)+network_parameters*n+offset]))
+                                node_types[-1].append(int(dna[(last_index+6)+network_parameters*n+offset]))
+                                dropouts[-1].append(float(dna[(last_index+7)+network_parameters*n+offset]))
+                                bias[-1].append(bool(dna[(last_index+8)+network_parameters*n+offset]))
                                 offset+=layer_parameters
                             }
                             offset+=(max_layers-layers[-1]-1)*layer_parameters
@@ -276,6 +275,7 @@ def main(argv){
                         LOGGER.info('label_type: {}'.format(label_type))
                         LOGGER.info('monitor_metric: {}'.format(monitor_metric))
                         LOGGER.info('model_checkpoint: {}'.format(model_checkpoint))
+                        LOGGER.info('shuffle: {}'.format(shuffle))
                         for n in range(networks){
                             if n!=networks-1{
                                 LOGGER.info('Network {} of {}'.format(n+1,networks))
@@ -283,7 +283,6 @@ def main(argv){
                                 LOGGER.info('Concatenation Network')
                             }
                             LOGGER.info('\talpha: {}'.format(str(alpha[n])))
-                            LOGGER.info('\tshuffle: {}'.format(str(shuffle[n])))
                             LOGGER.info('\tloss: {}'.format(str(loss[n])))
                             LOGGER.info('\toptimizer: {}'.format(str(optimizer[n])))
                             LOGGER.info('\tlayers: {}'.format(str(layers[n])))
@@ -444,6 +443,8 @@ def main(argv){
                             print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
                             label_type=inputNumber(lower_or_eq=8)
                         }
+                        print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
+                        shuffle=inputNumber(lower_or_eq=1)==1
                         print()
                         print('We\'ll use 5 networks for each group of feature and one final network to concatenate every other, now we\'ll define the parameters for them')
                         network_names=['Main features','CVSS ENUM features','Description features','Reference Features','Vendor Features','Concatenation']
@@ -451,8 +452,6 @@ def main(argv){
 
                         use_same_alpha=None
                         alpha=[None for _ in range(len(network_names))]
-                        use_same_shuffle=None
-                        shuffle=[None for _ in range(len(network_names))]
                         use_same_optimizer=None
                         optimizer=[None for _ in range(len(network_names))]
                         use_same_loss=None
@@ -473,16 +472,6 @@ def main(argv){
                                 alpha[n]=inputNumber(is_float=True,lower_or_eq=1)
                             }else{
                                 alpha[n]=alpha[0]
-                            }
-                            if use_same_shuffle is None {
-                                print('Should we use the same shuffle for every network instead of specify one for each? (0 [False] - 1 [True]):')
-                                use_same_shuffle=inputNumber(lower_or_eq=1)==1
-                            }
-                            if not use_same_shuffle or shuffle[0] is None {
-                                print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
-                                shuffle[n]=inputNumber(lower_or_eq=1)==1
-                            }else{
-                                shuffle[n]=shuffle[0]
                             }
                             if use_same_optimizer is None {
                                 print('Should we use the same optmizer for every network instead of specify one for each? (0 [False] - 1 [True]):')
@@ -517,23 +506,14 @@ def main(argv){
                             tmp_layer_sizes=[]
                             if n!=len(network_names)-1{
                                 for i in range(layers[n]){
-                                    if i==0{
-                                        print('Ignoring the first layer, its size is set on core: ', end = '')
-                                        tmp_layer_sizes.append(0) # input layer
-                                    }else{
-                                        print('Enter the layer size for layer {}: '.format(i), end = '')
-                                        tmp_layer_sizes.append(inputNumber())
-                                    }
+                                    print('Enter the layer size for layer {}: '.format(i), end = '')
+                                    tmp_layer_sizes.append(inputNumber())
                                 }
                             }else{
                                 for i in range(layers[n]-1){
-                                    if i==0{
-                                        print('Ignoring first and last layers, the size for them is set on core: ', end = '')
-                                        tmp_layer_sizes.append(0) # input layer
-                                    }else{
-                                        print('Enter the layer size for layer {}: '.format(i), end = '')
-                                        tmp_layer_sizes.append(inputNumber())
-                                    }
+                                    print('Ignoring last layer, its size is set on core...')
+                                    print('Enter the layer size for layer {}: '.format(i), end = '')
+                                    tmp_layer_sizes.append(inputNumber())
                                 }
                                 tmp_layer_sizes.append(0) # output layer
                             }
@@ -637,13 +617,9 @@ def main(argv){
                         layers=inputNumber(greater_or_eq=1)
                         layer_sizes=[]
                         for i in range(layers-1){
-                            if i==0{
-                                print('Ignoring first and last layers, the size for them is set on core: ', end = '')
-                                layer_sizes.append(0) # input layer
-                            }else{
-                                print('Enter the layer size for layer {}: '.format(i), end = '')
-                                layer_sizes.append(inputNumber())
-                            }
+                            print('Ignoring last layer, its size is set on core...')
+                            print('Enter the layer size for layer {}: '.format(i), end = '')
+                            layer_sizes.append(inputNumber())
                         }
                         layer_sizes.append(0) # output layer
                         print('Enter the nodes activation functions (0-9):')

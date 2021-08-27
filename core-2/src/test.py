@@ -561,7 +561,7 @@ def testEnhancedNN_MultiNet(){
     node_types=[[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.SOFTMAX]]
     batch_size=5
     alpha=[0.01,0.01,0.01]
-    shuffle=[True,True,True]
+    shuffle=True
     optimizer=[Optimizers.SGD,Optimizers.SGD,Optimizers.SGD]
     patience_epochs=30
     max_epochs=200
@@ -608,7 +608,6 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts_2')
     # network variable that does not need to be specified for every single net
     search_space.add(0.0001,0.1,SearchSpace.Type.FLOAT,'alpha')
-    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
     search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
     search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
     search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optimizer')
@@ -619,6 +618,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
     search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
     search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
     search_space=Genome.enrichSearchSpace(search_space,multi_net_enhanced_nn=True)
 
     Genome.CACHE_WEIGHTS=False

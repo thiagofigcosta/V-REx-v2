@@ -314,7 +314,6 @@ class Genome(object){
             dropouts=[]
 
             alpha=[]
-            shuffle=[]
             bias=[]
             loss=[]
             optimizer=[]
@@ -335,13 +334,6 @@ class Genome(object){
                     variable.name=specific_name
                 }
                 alpha.append(variable)
-                specific_name='shuffle'+'_{}'.format(n)
-                variable=search_space[specific_name]
-                if variable is None{
-                    variable=search_space['shuffle']
-                    variable.name=specific_name
-                }
-                shuffle.append(variable)
                 specific_name='bias'+'_{}'.format(n)
                 variable=search_space[specific_name]
                 if variable is None{
@@ -373,6 +365,7 @@ class Genome(object){
             patience_epochs=search_space['patience_epochs']
             max_epochs=search_space['max_epochs']
             label_type=search_space['label_type']
+            shuffle=search_space['shuffle']
             #optional
             monitor_metric=search_space['monitor_metric']
             model_checkpoint=search_space['model_checkpoint']
@@ -391,11 +384,11 @@ class Genome(object){
             enriched_search_space.add(label_type.min_value,label_type.max_value,label_type.data_type,label_type.name)
             enriched_search_space.add(monitor_metric.min_value,monitor_metric.max_value,monitor_metric.data_type,monitor_metric.name)
             enriched_search_space.add(model_checkpoint.min_value,model_checkpoint.max_value,model_checkpoint.data_type,model_checkpoint.name)
+            enriched_search_space.add(shuffle.min_value,shuffle.max_value,shuffle.data_type,shuffle.name)
 
             enriched_search_space.add(networks.min_value,networks.max_value,networks.data_type,networks.name)
             for n in range(amount_of_networks){
                 enriched_search_space.add(alpha[n].min_value,alpha[n].max_value,alpha[n].data_type,alpha[n].name)
-                enriched_search_space.add(shuffle[n].min_value,shuffle[n].max_value,shuffle[n].data_type,shuffle[n].name)
                 enriched_search_space.add(loss[n].min_value,loss[n].max_value,loss[n].data_type,loss[n].name)
                 enriched_search_space.add(optimizer[n].min_value,optimizer[n].max_value,optimizer[n].data_type,optimizer[n].name)
                 enriched_search_space.add(layers[n].min_value,layers[n].max_value,layers[n].data_type,layers[n].name)
@@ -453,11 +446,11 @@ class Genome(object){
             label_type=self.getHyperparametersEncoder(multi_net_enhanced_nn)
             monitor_metric=Metric(self.dna[4])
             model_checkpoint=bool(self.dna[5])
+            shuffle=bool(self.dna[6])
 
-            networks=int(self.dna[6])
-            last_index=7
+            networks=int(self.dna[7])
+            last_index=8
             alpha=[]
-            shuffle=[]
             loss=[]
             optimizer=[]
             layers=[]
@@ -465,25 +458,24 @@ class Genome(object){
             node_types=[]
             dropouts=[]
             bias=[]
-            network_parameters=10
+            network_parameters=9
             layer_parameters=4
             offset=0
             for n in range(networks){
                 alpha.append(float(self.dna[(last_index+0)+network_parameters*n+offset]))
-                shuffle.append(bool(self.dna[(last_index+1)+network_parameters*n+offset]))
-                loss.append(Loss(self.dna[(last_index+2)+network_parameters*n+offset]))
-                optimizer.append(Optimizers(self.dna[(last_index+3)+network_parameters*n+offset]))
-                layers.append(int(self.dna[(last_index+4)+network_parameters*n+offset]))
-                max_layers=int(self.dna[(last_index+5)+network_parameters*n+offset])
+                loss.append(Loss(self.dna[(last_index+1)+network_parameters*n+offset]))
+                optimizer.append(Optimizers(self.dna[(last_index+2)+network_parameters*n+offset]))
+                layers.append(int(self.dna[(last_index+3)+network_parameters*n+offset]))
+                max_layers=int(self.dna[(last_index+4)+network_parameters*n+offset])
                 layer_sizes.append([])
                 node_types.append([])
                 dropouts.append([])
                 bias.append([])
                 for l in range(layers[-1]){
-                    layer_sizes[-1].append(int(self.dna[(last_index+6)+network_parameters*n+offset]))
-                    node_types[-1].append(NodeType(self.dna[(last_index+7)+network_parameters*n+offset]))
-                    dropouts[-1].append(float(self.dna[(last_index+8)+network_parameters*n+offset]))
-                    bias[-1].append(bool(self.dna[(last_index+9)+network_parameters*n+offset]))
+                    layer_sizes[-1].append(int(self.dna[(last_index+5)+network_parameters*n+offset]))
+                    node_types[-1].append(NodeType(self.dna[(last_index+6)+network_parameters*n+offset]))
+                    dropouts[-1].append(float(self.dna[(last_index+7)+network_parameters*n+offset]))
+                    bias[-1].append(bool(self.dna[(last_index+8)+network_parameters*n+offset]))
                     offset+=layer_parameters
                 }
                 offset+=(max_layers-layers[-1]-1)*layer_parameters
