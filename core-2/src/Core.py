@@ -202,7 +202,8 @@ class Core(object){
 	}
 
 	def trainNeuralNetwork(self,independent_net_id,load=False,just_train=False){
-		Core.LOGGER.info('Training neural network {}...'.format(independent_net_id))
+		continue_str='*continue ' if load and not just_train else ''
+		Core.LOGGER.info('Training neural network {}{}...'.format(continue_str,independent_net_id))
 		Core.LOGGER.info('Parsing train settings...')
 		independent_net_metadata = self.fetchNeuralNetworkMetadata(independent_net_id)
 		hyper_name=independent_net_metadata[0]
@@ -264,7 +265,6 @@ class Core(object){
 			nn.buildModel(input_size=input_size)
 			Core.LOGGER.info('Created train network...OK')
 			Core.LOGGER.info('Training network...')
-			nn.trainRollingForecast(train_features,train_labels)
 			if cross_validation==CrossValidation.NONE{
 				nn.trainNoValidation(train_features,train_labels)
 			}elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
@@ -311,6 +311,7 @@ class Core(object){
 				input_size=len(train_features[0])
 			}
 			output_size=len(train_labels[0])
+			hyperparameters.setLastLayerOutputSize(output_size)
 			if Core.USE_ENHANCED_NN or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
 			}else{
@@ -344,7 +345,7 @@ class Core(object){
 			}
 		}
 		self.finishNeuralNetTrain(independent_net_id,Utils.getTodayDatetime())
-		Core.LOGGER.info('Trained neural network {}...OK'.format(independent_net_id))
+		Core.LOGGER.info('Trained neural network {}{}...OK'.format(continue_str,independent_net_id))
 	}
 
 	def predictNeuralNetwork(self,independent_net_id,result_id,eval_data){
