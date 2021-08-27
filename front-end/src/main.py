@@ -809,7 +809,7 @@ def main(argv){
                     epochs=inputNumber(greater_or_eq=1)
                     if version==2{
                         print('Enter the patience epochs (0 means no patience): ',end='')
-                        patience_epochs=epochs=inputNumber()
+                        patience_epochs=inputNumber()
                     }else{
                         patience_epochs=None
                     }

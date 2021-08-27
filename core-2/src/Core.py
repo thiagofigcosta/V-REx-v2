@@ -255,6 +255,7 @@ class Core(object){
 				input_size=len(train_features[0])
 			}
 			output_size=len(train_labels[0])
+			hyperparameters.setLastLayerOutputSize(output_size)
 			if Core.USE_ENHANCED_NN or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
 			}else{
@@ -381,6 +382,7 @@ class Core(object){
 			input_size=len(test_features[0])
 		}
 		output_size=len(test_labels[0])
+		hyperparameters.setLastLayerOutputSize(output_size)
 		if Core.USE_ENHANCED_NN or multiple_networks{
 			nn=EnhancedNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
 		}else{
