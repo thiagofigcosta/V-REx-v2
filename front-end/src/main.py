@@ -427,6 +427,7 @@ def main(argv){
                         hyper_name=input().strip()
                         submitted_at=Utils.getTodayDate('%d/%m/%Y %H:%M:%S')
                         print('Enter the batch size: ', end = '')
+                        batch_size=inputNumber()
                         print('Enter the label type ([0-1]+[3-8]):')
                         print('\t0 - INCREMENTAL')
                         print('\t1 - BINARY')
@@ -443,7 +444,6 @@ def main(argv){
                             print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
                             label_type=inputNumber(lower_or_eq=8)
                         }
-                        batch_size=inputNumber()
                         use_same_alpha=None
                         alpha=[None for _ in range(len(network_names))]
                         use_same_shuffle=None
