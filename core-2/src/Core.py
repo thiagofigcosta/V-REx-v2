@@ -82,7 +82,11 @@ class Core(object){
 		search_space,output_layer_node_type,multiple_networks=self.fetchEnvironmentDataV2(environment_name,metric_mode,label_type)
 		Core.LOGGER.info('Loaded search space...OK')
 		Core.LOGGER.info('Loading dataset...')
-		train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
+		if multiple_networks {
+			train_data_ids,train_features,train_labels=self.loadDatasetMultiNet(cve_years,train_data_limit)
+		}else{
+			train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
+		}
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
 		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
@@ -506,15 +510,15 @@ class Core(object){
 
 	def fetchEnvironmentDataV2(self,environment_name,metric,encoder){
 		genetic_db=self.mongo.getGeneticDB()
-		search_space_db=self.mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
-		if search_space_db is None {
+		env_db=self.mongo.findOneOnDBFromIndex(genetic_db,'environments','name',environment_name)
+		if env_db is None {
 			raise Exception('Unable to find environment {}'.format(environment_name))
 		}
-		search_space_db=search_space_db['search_space']
+		search_space_db=env_db['search_space']
+		multiple_networks=env_db['multiple_networks']
 		search_space=SearchSpace()
-		multiple_networks=search_space_db['multiple_networks']
 		if multiple_networks {
-			networks=search_space_db['amount_of_networks']
+			networks=env_db['amount_of_networks']
 			search_space.add(networks,networks,SearchSpace.Type.INT,'networks')
 			search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
 			search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
