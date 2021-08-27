@@ -330,9 +330,11 @@ class Core(object){
 				test_eval_res=None
 			}
 			Core.LOGGER.info('Evaluated network...OK')
-			Core.LOGGER.logDict(train_eval_res,train_metric.toKerasName())
+			Core.LOGGER.info(train_metric.toKerasName())
+			Core.LOGGER.info(str(train_eval_res))
 			if test_eval_res is not None{
-				Core.LOGGER.logDict(test_eval_res,test_metric.toKerasName())
+				Core.LOGGER.info(test_metric.toKerasName())
+				Core.LOGGER.info(str(test_eval_res))
 			}
 			Core.LOGGER.info('Writing results...')
 			self.appendStatsOnNeuralNet(independent_net_id,'train_stats',train_eval_res,train_metric.toKerasName())

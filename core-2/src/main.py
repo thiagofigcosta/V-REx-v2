@@ -24,8 +24,9 @@ def loopOnQueue(core){
                 if task=='Genetic'{
                     core.runGeneticSimulation(payload['args']['simulation_id'])
                 }elif task=='Train SNN'{
-                    core.trainNeuralNetwork(payload['args']['independent_net_id'],False,True)
-                    core.trainNeuralNetwork(payload['args']['independent_net_id'],True,False)
+                    # core.trainNeuralNetwork(payload['args']['independent_net_id'],False,True) # V1 way
+                    # core.trainNeuralNetwork(payload['args']['independent_net_id'],True,False) # V1 way
+                    core.trainNeuralNetwork(payload['args']['independent_net_id'],False,False)
                 }elif task=='Eval SNN'{
                     core.predictNeuralNetwork(payload['args']['independent_net_id'],payload['args']['result_id'],payload['args']['eval_data'])
                 }
