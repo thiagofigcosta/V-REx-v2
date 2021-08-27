@@ -514,11 +514,11 @@ class Core(object){
 		if env_db is None {
 			raise Exception('Unable to find environment {}'.format(environment_name))
 		}
+		networks=env_db['amount_of_networks']
 		search_space_db=env_db['search_space']
-		multiple_networks=env_db['multiple_networks']
+		multiple_networks=networks>1
 		search_space=SearchSpace()
 		if multiple_networks {
-			networks=env_db['amount_of_networks']
 			search_space.add(networks,networks,SearchSpace.Type.INT,'networks')
 			search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
 			search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
