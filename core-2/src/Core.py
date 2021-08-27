@@ -113,7 +113,9 @@ class Core(object){
 			}
 			nn.buildModel(input_size=input_size)
         	nn.saveModelSchemaToFile('population_nets')
-			nn.setWeights(genome.getWeights())
+			if preserve_weights {
+				nn.setWeights(genome.getWeights())
+			}
 			if cross_validation==CrossValidation.NONE{
 				nn.trainNoValidation(train_features,train_labels)
 			}elif cross_validation==CrossValidation.ROLLING_FORECASTING_ORIGIN{
@@ -126,7 +128,7 @@ class Core(object){
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
-			if preserve_weights and hyperparameters.model_checkpoint{
+			if hyperparameters.model_checkpoint{
 				nn.restoreCheckpointWeights()
 			}
 			output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
