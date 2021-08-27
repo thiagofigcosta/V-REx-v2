@@ -21,7 +21,12 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 
 	def _load_model_partial(self,path){
 		custom_objects=super()._load_model_partial(path)
-		custom_objects['loss']=self.enhancedLoss()
+		if self.hyperparameters.amount_of_networks==1{
+			loss_name=self.hyperparameters.loss.toKerasName()
+		}else{
+			loss_name=self.hyperparameters.loss[-1].toKerasName()
+		}
+		custom_objects['loss']=self.enhancedLoss(loss_name)
 		return custom_objects
 	}
 
