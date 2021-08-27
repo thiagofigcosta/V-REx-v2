@@ -87,8 +87,8 @@ class Core(object){
 		}else{
 			train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
 		}
-		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
 		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
+		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
 		search_space=Genome.enrichSearchSpace(search_space,multi_net_enhanced_nn=multiple_networks)
@@ -216,6 +216,7 @@ class Core(object){
 		train_metric=independent_net_metadata[8]
 		test_metric=independent_net_metadata[9]
 		hyperparameters=self.fetchHyperparametersDataV2(hyper_name,epochs,patience_epochs,train_metric)
+		multiple_networks=hyperparameters.amount_of_networks>1
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
 		Core.LOGGER.info('\t{}: {}'.format('hyper_name',hyper_name))
 		Core.LOGGER.info('\t{}: {}'.format('cve_years_train',cve_years_train))
@@ -227,10 +228,15 @@ class Core(object){
 		Core.LOGGER.info('\t{}: {}'.format('cross_validation',cross_validation))
 		Core.LOGGER.info('\t{}: {}'.format('train_metric',train_metric))
 		Core.LOGGER.info('\t{}: {}'.format('test_metric',test_metric))
+		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.multiline(str(hyperparameters))
 		Core.LOGGER.info('Parsed train settings...OK')
 		Core.LOGGER.info('Loading dataset...')
-		train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
+		if multiple_networks {
+			train_data_ids,train_features,train_labels=self.loadDatasetMultiNet(cve_years_train,train_data_limit)
+		}else{
+			train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
+		}
 		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,hyperparameters.label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
@@ -243,9 +249,13 @@ class Core(object){
 			Core.LOGGER.info('Loaded weights...OK')
 		}else{
 			Core.LOGGER.info('Creating train network...')
-			input_size=len(train_features[0])
+			if multiple_networks {
+				input_size=[len(train_features[i][0]) for i in range(len(train_features))]
+			}else{
+				input_size=len(train_features[0])
+			}
 			output_size=len(train_labels[0])
-			if Core.USE_ENHANCED_NN{
+			if Core.USE_ENHANCED_NN or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
@@ -266,7 +276,9 @@ class Core(object){
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
-			history=nn.history
+			if hyperparameters.model_checkpoint{
+				nn.restoreCheckpointWeights()
+			}
 			train_metrics=nn.getMetricMean(train_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
 			Core.LOGGER.info('Trained network...OK')
 			Core.LOGGER.info('Writing weights..')
@@ -281,16 +293,24 @@ class Core(object){
 		if not just_train {
 			Core.LOGGER.info('Loading dataset...')
 			if len(cve_years_test)>0{
-				test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
+				if multiple_networks {
+					test_data_ids,test_features,test_labels=self.loadDatasetMultiNet(cve_years_test,test_data_limit)
+				}else{
+					test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
+				}
 				# no balance for testing
 				test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,hyperparameters.label_type)
 				# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
 			}
 			Core.LOGGER.info('Loaded dataset...OK')
 			Core.LOGGER.info('Creating test network...')
-			input_size=len(train_features[0])
+			if multiple_networks {
+				input_size=[len(train_features[i][0]) for i in range(len(train_features))]
+			}else{
+				input_size=len(train_features[0])
+			}
 			output_size=len(train_labels[0])
-			if Core.USE_ENHANCED_NN{
+			if Core.USE_ENHANCED_NN or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
@@ -334,24 +354,34 @@ class Core(object){
 		cross_validation=independent_net_metadata[7]
 		test_metric=independent_net_metadata[9]
 		hyperparameters=self.fetchHyperparametersDataV2(hyper_name,0,0,test_metric)
+		multiple_networks=hyperparameters.amount_of_networks>1
 		cve_years_test,test_data_limit=self.parseDatasetMetadataStrRepresentation(eval_data)
 		Core.LOGGER.info('\t{}: {}'.format('hyper_name',hyper_name))
 		Core.LOGGER.info('\t{}: {}'.format('cross_validation',cross_validation))
 		Core.LOGGER.info('\t{}: {}'.format('test_metric',test_metric))
 		Core.LOGGER.info('\t{}: {}'.format('cve_years_test',cve_years_test))
 		Core.LOGGER.info('\t{}: {}'.format('test_data_limit',test_data_limit))
+		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.multiline(str(hyperparameters))
 		Core.LOGGER.info('Parsed evaluate settings...OK')
 		Core.LOGGER.info('Loading dataset...')
-		test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
+		if multiple_networks {
+			test_data_ids,test_features,test_labels=self.loadDatasetMultiNet(cve_years_test,test_data_limit)
+		}else{
+			test_data_ids,test_features,test_labels=self.loadDataset(cve_years_test,test_data_limit)
+		}
 		# no balance for testing
 		test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,hyperparameters.label_type)
 		# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
 		Core.LOGGER.info('Creating eval network...')
-		input_size=len(test_features[0])
+		if multiple_networks {
+			input_size=[len(test_features[i][0]) for i in range(len(test_features))]
+		}else{
+			input_size=len(test_features[0])
+		}
 		output_size=len(test_labels[0])
-		if Core.USE_ENHANCED_NN{
+		if Core.USE_ENHANCED_NN or multiple_networks{
 			nn=EnhancedNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
 		}else{
 			nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
@@ -596,20 +626,35 @@ class Core(object){
 		if hyperparameters is None {
 			raise Exception('Unable to find hyperparameters {}'.format(hyper_name))
 		}
-		layers=int(hyperparameters['layers'])
-		dropouts=[int(el) for el in hyperparameters['dropouts']]
-		bias=[bool(el) for el in hyperparameters['bias']]
-		layer_sizes=[int(el) for el in hyperparameters['layer_sizes']]
-		node_types=[NodeType(el) for el in hyperparameters['node_types']]
-		batch_size=int(hyperparameters['batch_size'])
-		alpha=float(hyperparameters['alpha'])
-		shuffle=bool(hyperparameters['shuffle'])
-		optimizer=Optimizers(hyperparameters['optimizer'])
-		patience_epochs=pat_epochs
+		amount_of_networks=int(hyperparameters['amount_of_networks'])
+		if amount_of_networks > 1 {
+			layers=[int(el) for el in hyperparameters['layers']]
+			dropouts=[[float(el) for el in layer ] for layer in hyperparameters['dropouts']]
+			bias=[[bool(el) for el in layer ] for layer in hyperparameters['bias']]
+			layer_sizes=[[int(el) for el in layer ] for layer in hyperparameters['layer_sizes']]
+			node_types=[[NodeType(el) for el in layer ] for layer in hyperparameters['node_types']]
+			batch_size=int(hyperparameters['batch_size'])
+			alpha=[float(el) for el in hyperparameters['alpha']]
+			shuffle=bool(hyperparameters['shuffle'])
+			optimizer=[Optimizers(el) for el in hyperparameters['optimizer']]
+			label_type=LabelEncoding(hyperparameters['label_type'])
+			loss=[Loss(el) for el in hyperparameters['loss']]
+		} else {
+			layers=int(hyperparameters['layers'])
+			dropouts=[float(el) for el in hyperparameters['dropouts']]
+			bias=[bool(el) for el in hyperparameters['bias']]
+			layer_sizes=[int(el) for el in hyperparameters['layer_sizes']]
+			node_types=[NodeType(el) for el in hyperparameters['node_types']]
+			batch_size=int(hyperparameters['batch_size'])
+			alpha=float(hyperparameters['alpha'])
+			shuffle=bool(hyperparameters['shuffle'])
+			optimizer=Optimizers(hyperparameters['optimizer'])
+			label_type=LabelEncoding(hyperparameters['label_type'])
+			loss=Loss(hyperparameters['loss'])
+		}
 		max_epochs=epochs
-		loss=Loss(hyperparameters['loss'])
+		patience_epochs=pat_epochs
 		monitor_metric=metric
-		label_type=LabelEncoding(hyperparameters['label_type'])
 		return Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric)
 	}
 
