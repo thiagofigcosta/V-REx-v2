@@ -19,14 +19,15 @@ class EnhancedNeuralNetwork(NeuralNetwork){
         super().__init__(hyperparameters,name,verbose)
     }
 
-	def _load_model_partial(self,path){
-		custom_objects=super()._load_model_partial(path)
+	def _loadModelPartial(self,path){
+		custom_objects=super()._loadModelPartial(path)
 		if self.hyperparameters.amount_of_networks==1{
 			loss_name=self.hyperparameters.loss.toKerasName()
 		}else{
 			loss_name=self.hyperparameters.loss[-1].toKerasName()
 		}
 		custom_objects['loss']=self.enhancedLoss(loss_name)
+		custom_objects['EnhancedModel']=EnhancedNeuralNetwork.EnhancedModel
 		return custom_objects
 	}
 
@@ -215,8 +216,12 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 		# 'Just':'to fix vscode coloring':'when using pytho{\}'
 
 		def __init__(self,*args, **kwargs){
-			self.print_tensors=kwargs.get('print_tensors')
-			kwargs.pop('print_tensors')
+			if 'print_tensors' in kwargs{
+				self.print_tensors=kwargs.get('print_tensors')
+				kwargs.pop('print_tensors')
+			}else{
+				self.print_tensors=False
+			}
     		super().__init__(*args, **kwargs)
 		}
 

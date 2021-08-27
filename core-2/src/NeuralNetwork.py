@@ -51,7 +51,7 @@ class NeuralNetwork(ABC){
 		keras.backend.clear_session()
 	}
 
-	def _load_model_partial(self,path){
+	def _loadModelPartial(self,path){
 		custom_objects={}
 		if not NeuralNetwork.USE_MANUAL_METRICS{
 			custom_metrics=self._metricsFactory()
@@ -77,23 +77,19 @@ class NeuralNetwork(ABC){
 		return np.array(labels)
 	}
 
-	def load_model(self,path){
-		objs=self._load_model_partial(path)
-		loaded_model=load_model(path,custom_objects=objs)
+	def loadModel(self,path,compileModel=True){
+		objs=self._loadModelPartial(path)
+		loaded_model=load_model(path,custom_objects=objs,compile=compileModel)
 		return loaded_model
 	}
 
 	def restoreCheckpointWeights(self,delete_after=True){
 		if self.checkpoint_filename is not None and Utils.checkIfPathExists(self.getModelPath(self.checkpoint_filename)){
-			loaded_model=self.load_model(self.getModelPath(self.checkpoint_filename))	
+			loaded_model=self.loadModel(self.getModelPath(self.checkpoint_filename),compileModel=False)	
 			if self.verbose {
 				Utils.LazyCore.info('Restoring model checkpoint...')
 			}
-			if self.model is None {
-				self.model=loaded_model
-			}else{
-				self.model.set_weights(loaded_model.get_weights())
-			}
+			self.model.set_weights(loaded_model.get_weights())
 			if delete_after{
 				Utils.deleteFile(self.getModelPath(self.checkpoint_filename))
 			}

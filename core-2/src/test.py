@@ -574,6 +574,7 @@ def testEnhancedNN_MultiNet(){
     enn.saveModelSchemaToFile()
     # enn.train(train[0],train[1])
     enn.trainKFolds(train[0],train[1],8)
+    enn.restoreCheckpointWeights()
     enn.setWeights(enn.getWeights())
     history=enn.history
     preds,activations=enn.predict(test[0],True,True)
