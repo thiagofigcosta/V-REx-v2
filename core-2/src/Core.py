@@ -99,7 +99,7 @@ class Core(object){
 			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks
 			preserve_weights=False # TODO fix when true, to avoid nan outputs
 			if multiple_networks {
-				input_size=[len(el) for el in train_features[0]]
+				input_size=[len(train_features[i][0]) for i in range(len(train_features))]
 			}else{
 				input_size=len(train_features[0])
 			}

@@ -551,7 +551,7 @@ def testEnhancedNN_MultiNet(){
         #   Net Concat: intput size=(NetA_output_size+NetB_output_size), output_size=3, hidden_size=4
     #
     amount_of_networks=3
-    input_size=[len(el) for el in train[0][0]]
+    input_size=[len(train[0][i][0]) for i in range(len(train[0]))]
     intermediary_size=[2,1]
     output_size=len(train[1][0])
     layers=[2,2,2]
@@ -640,7 +640,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
         train_features=train[0]
         train_labels=train[1]
         train_labels,_=Dataset.encodeDatasetLabels(train_labels,genome.getHyperparametersEncoder())
-        input_size=[len(el) for el in train_features[0]]
+        input_size=[len(train_features[i][0]) for i in range(len(train_features))]
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
         search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
@@ -692,7 +692,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
         test_features=test[0]
         test_labels=test[1]
         test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder())
-        input_size=[len(el) for el in test_features[0]]
+        input_size=[len(test_features[i][0]) for i in range(len(test_features))]
         output_size=len(test_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,enh_neural_network=True)
         enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
