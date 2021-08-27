@@ -444,6 +444,7 @@ def main(argv){
                             print('Label type 2 - NEURON_BY_NEURON_LOG_LOSS is deprecated, try another number:')
                             label_type=inputNumber(lower_or_eq=8)
                         }
+                        print()
                         print('We\'ll use 5 networks for each group of feature and one final network to concatenate every other, now we\'ll define the parameters for them')
                         network_names=['Main features','CVSS ENUM features','Description features','Reference Features','Vendor Features','Concatenation']
                         amount_of_networks=len(network_names)
@@ -488,7 +489,7 @@ def main(argv){
                                 use_same_optimizer=inputNumber(lower_or_eq=1)==1
                             }
                             if not use_same_optimizer or optimizer[0] is None {
-                                print('Enter the optimizer (0-2): ', end = '')
+                                print('Enter the optimizer (0-2): ')
                                 print('\t0 - SGD')
                                 print('\t1 - Adam')
                                 print('\t2 - RMSProp')
@@ -571,7 +572,7 @@ def main(argv){
                                     print('Enter the dropout for layer {}: '.format(i), end = '')
                                     tmp_dropouts.append(inputNumber(is_float=True,lower_or_eq=1))
                                 }else{
-                                    tmp_dropouts[i]=tmp_dropouts[0]
+                                    tmp_dropouts.append(tmp_dropouts[0])
                                 }
                             }
                             dropouts[n]=tmp_dropouts
@@ -583,7 +584,7 @@ def main(argv){
                                     print('Enter use bias for layer {} (0 [False] - 1 [True]): '.format(i), end = '')
                                     tmp_bias.append(inputNumber(lower_or_eq=1)==1)
                                 }else{
-                                    tmp_bias[i]=tmp_bias[0]
+                                    tmp_bias.append(tmp_bias[0])
                                 }
                             }
                             bias[n]=tmp_bias
@@ -604,7 +605,7 @@ def main(argv){
                         alpha=inputNumber(is_float=True,lower_or_eq=1)
                         print('Enter shuffle train data (0 [False] - 1 [True]): ', end = '')
                         shuffle=inputNumber(lower_or_eq=1)==1
-                        print('Enter the optimizer (0-2): ', end = '')
+                        print('Enter the optimizer (0-2): ')
                         print('\t0 - SGD')
                         print('\t1 - Adam')
                         print('\t2 - RMSProp')
@@ -1506,7 +1507,7 @@ def main(argv){
     }else{
         print()
         ITERATIVE=True
-        value = input("Keeping Front end alive on Iterative Mode...\nEnter a command (e.g. -h):")
+        value = input("Keeping Front end alive on Iterative Mode...\nEnter a command (e.g. -h): ")
         args=value.split(' ')
         args[0]=args[0].strip()
         if len(args[0])==1{
