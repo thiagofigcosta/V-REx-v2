@@ -624,7 +624,6 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
     features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
     labels,label_map=Dataset.enumfyDatasetLabels(labels)
-    features,labels=Dataset.balanceDataset(features,labels)
     # labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
     features,scale=Dataset.normalizeDatasetFeatures(features)
     features,labels=Dataset.shuffleDataset(features,labels)
@@ -632,6 +631,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     groups=[[0,2],[2,-1]]
     train[0]=Dataset.divideFeaturesIntoMultipleGroups(train[0],groups)
     test[0]=Dataset.divideFeaturesIntoMultipleGroups(test[0],groups)
+    train=Dataset.balanceDataset(train[0],train[1])
 
     def train_callback(genome){
         nonlocal train

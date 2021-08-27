@@ -274,7 +274,7 @@ class Dataset(object){
         features_out=[]
         labels_out=[]
         value=None
-        for i in range(len(features)){
+        for i in range(len(labels)){
             if labels[i]==only{
                 features_out.append(features[i])
                 labels_out.append(labels[i])
@@ -296,7 +296,7 @@ class Dataset(object){
             }
         }
         # abscent_value=None
-        for i in range(len(features)){
+        for i in range(len(labels)){
             if labels[i]!=only{
                 if abscent_value is None{
                     abscent_value=labels[i]
@@ -310,31 +310,71 @@ class Dataset(object){
 
     @staticmethod
     def balanceDataset(features,labels){
-        features_pos=[]
+        grouped_features=False
+        if type(features[0]) is list {
+            grouped_features=True
+            features_pos=[[] for _ in range(len(features))]
+            features_neg=[[] for _ in range(len(features))]
+        }else{
+            grouped_features=False
+            features_pos=[]
+            features_neg=[]
+        }
         labels_pos=[]
-        features_neg=[]
         labels_neg=[]
-        for i in range(len(features)){
+        for i in range(len(labels)){
             if (type(labels[i]) is int and labels[i]==0) or (type(labels[i]) is list and int(labels[i][0])==0){
-                features_neg.append(features[i])
+                if grouped_features {
+                    for f,feature in enumerate(features){
+                        features_neg[f].append(feature[i])
+                    }
+                }else{
+                    features_neg.append(features[i])
+                }
                 labels_neg.append(labels[i])
             }else{
-                features_pos.append(features[i])
+                if grouped_features {
+                    for f,feature in enumerate(features){
+                        features_pos[f].append(feature[i])
+                    }
+                }else{
+                    features_pos.append(features[i])
+                }
                 labels_pos.append(labels[i])
             }
         }
         if (len(labels_pos)>len(labels_neg)){
-            features_pos=features_pos[:len(labels_neg)]
-            labels_pos=labels_pos[:len(labels_neg)]
-            features_pos+=features_neg
-            labels_pos+=labels_neg
-            return Dataset.shuffleDataset(features_pos,labels_pos)
+            if grouped_features {
+                for f,feature in enumerate(features_pos){
+                    features_pos[f]=feature[:len(labels_neg)]
+                    features_pos[f]+=features_neg[f]
+                }
+                labels_pos=labels_pos[:len(labels_neg)]
+                labels_pos+=labels_neg
+                return Dataset.shuffleFeatureGroupedDataset(features_pos,labels_pos)
+            }else{
+                features_pos=features_pos[:len(labels_neg)]
+                labels_pos=labels_pos[:len(labels_neg)]
+                features_pos+=features_neg
+                labels_pos+=labels_neg
+                return Dataset.shuffleDataset(features_pos,labels_pos)
+            }
         } elif (len(labels_pos)<len(labels_neg)){
-            features_neg=features_neg[:len(labels_pos)]
-            labels_neg=labels_neg[:len(labels_pos)]
-            features_neg+=features_pos
-            labels_neg+=labels_pos
-            return Dataset.shuffleDataset(features_neg,labels_neg)
+            if grouped_features {
+                for f,feature in enumerate(features_neg){
+                    features_neg[f]=feature[:len(labels_pos)]
+                    features_neg[f]+=features_pos[f]
+                }
+                labels_neg=labels_neg[:len(labels_pos)]
+                labels_neg+=labels_pos
+                return Dataset.shuffleFeatureGroupedDataset(features_neg,labels_neg)
+            }else{
+                features_neg=features_neg[:len(labels_pos)]
+                labels_neg=labels_neg[:len(labels_pos)]
+                features_neg+=features_pos
+                labels_neg+=labels_pos
+                return Dataset.shuffleDataset(features_neg,labels_neg)
+            }
         }else{
             return features,labels
         }

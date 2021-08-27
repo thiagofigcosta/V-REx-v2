@@ -38,7 +38,7 @@ class Core(object){
 	def runGeneticSimulation(self,simulation_id){
 		Core.LOGGER.info('Running genetic simulation {}...'.format(simulation_id))
 		Core.LOGGER.info('Loading simulation...')
-		genetic_metadata = self.fetchGeneticSimulationData(simulation_id)
+		genetic_metadata=self.fetchGeneticSimulationData(simulation_id)
 		environment_name=genetic_metadata[0]
 		cve_years=genetic_metadata[1]
 		train_data_limit=genetic_metadata[2]
@@ -79,30 +79,36 @@ class Core(object){
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
 		Core.LOGGER.info('Loaded simulation...OK')
 		Core.LOGGER.info('Loading search space...')
-		search_space,output_layer_node_type=self.fetchEnvironmentDataV2(environment_name,metric_mode,label_type)
+		search_space,output_layer_node_type,multiple_networks=self.fetchEnvironmentDataV2(environment_name,metric_mode,label_type)
 		Core.LOGGER.info('Loaded search space...OK')
 		Core.LOGGER.info('Loading dataset...')
 		train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
-		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
+		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
-		search_space=Genome.enrichSearchSpace(search_space)
+		search_space=Genome.enrichSearchSpace(search_space,enh_neural_network=multiple_networks)
 		Core.LOGGER.info('\t{}: {}'.format('output_layer_node_type',output_layer_node_type))
+		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.multiline(str(search_space))
 		def train_callback(genome){
-			nonlocal train_features,train_labels,cross_validation,output_layer_node_type
+			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks
 			preserve_weights=False # TODO fix when true, to avoid nan outputs
-			input_size=len(train_features[0])
+			if multiple_networks {
+				input_size=[len(el) for el in train_features[0]]
+			}else{
+				input_size=len(train_features[0])
+			}
 			output_size=len(train_labels[0])
-			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type)
+			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,enh_neural_network=multiple_networks)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
-			if Core.EnhancedNeuralNetwork{
+			if Core.EnhancedNeuralNetwork or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
 			}
 			nn.buildModel(input_size=input_size)
+        	nn.saveModelSchemaToFile('population_nets')
 			nn.setWeights(genome.getWeights())
 			if cross_validation==CrossValidation.NONE{
 				nn.trainNoValidation(train_features,train_labels)
@@ -506,23 +512,46 @@ class Core(object){
 		}
 		search_space_db=search_space_db['search_space']
 		search_space=SearchSpace()
-		search_space.add(search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT,'layers')
-		search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
-		search_space.add(search_space_db['alpha']['min'],search_space_db['alpha']['max'],SearchSpace.Type.FLOAT,'alpha')
-		search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
-		search_space.add(search_space_db['patience_epochs']['min'],search_space_db['patience_epochs']['max'],SearchSpace.Type.INT,'patience_epochs')
-		search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
-		search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
-		search_space.add(encoder,encoder,SearchSpace.Type.INT,'label_type')
-		search_space.add(Optimizers(search_space_db['optimizer']['min']),Optimizers(search_space_db['optimizer']['max']),SearchSpace.Type.INT,'optimizer')
-		search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
-		search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
-		search_space.add(search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT,'layer_sizes')
-		search_space.add(NodeType(search_space_db['activation_functions']['min']),NodeType(search_space_db['activation_functions']['max']),SearchSpace.Type.INT,'node_types')
-		search_space.add(search_space_db['dropouts']['min'],search_space_db['dropouts']['max'],SearchSpace.Type.FLOAT,'dropouts')
-		search_space.add(search_space_db['bias']['min'] not in (0,False),search_space_db['bias']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'bias')
+		multiple_networks=search_space_db['multiple_networks']
+		if multiple_networks {
+			networks=search_space_db['amount_of_networks']
+			search_space.add(networks,networks,SearchSpace.Type.INT,'networks')
+			search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
+			search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
+			search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
+			search_space.add(search_space_db['patience_epochs']['min'],search_space_db['patience_epochs']['max'],SearchSpace.Type.INT,'patience_epochs')
+			search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
+			search_space.add(encoder,encoder,SearchSpace.Type.INT,'label_type')
+			search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
+			for n in range(networks){
+				search_space.add(search_space_db['amount_of_layers']['min'][n],search_space_db['amount_of_layers']['max'][n],SearchSpace.Type.INT,'layers'+'_{}'.format(n))
+				search_space.add(search_space_db['layer_sizes']['min'][n],search_space_db['layer_sizes']['max'][n],SearchSpace.Type.INT,'layer_sizes'+'_{}'.format(n))
+				search_space.add(NodeType(search_space_db['activation_functions']['min'][n]),NodeType(search_space_db['activation_functions']['max'][n]),SearchSpace.Type.INT,'node_types'+'_{}'.format(n))
+				search_space.add(search_space_db['dropouts']['min'][n],search_space_db['dropouts']['max'][n],SearchSpace.Type.FLOAT,'dropouts'+'_{}'.format(n))
+				search_space.add(search_space_db['alpha']['min'][n],search_space_db['alpha']['max'][n],SearchSpace.Type.FLOAT,'alpha'+'_{}'.format(n))
+				search_space.add(search_space_db['bias']['min'][n] not in (0,False),search_space_db['bias']['max'][n] not in (0,False),SearchSpace.Type.BOOLEAN,'bias'+'_{}'.format(n))
+				search_space.add(Loss(search_space_db['loss']['min'][n]),Loss(search_space_db['loss']['max'][n]),SearchSpace.Type.INT,'loss'+'_{}'.format(n))
+				search_space.add(Optimizers(search_space_db['optimizer']['min'][n]),Optimizers(search_space_db['optimizer']['max'][n]),SearchSpace.Type.INT,'optimizer'+'_{}'.format(n))
+			}
+		}else{
+			search_space.add(search_space_db['amount_of_layers']['min'],search_space_db['amount_of_layers']['max'],SearchSpace.Type.INT,'layers')
+			search_space.add(search_space_db['batch_size']['min'],search_space_db['batch_size']['max'],SearchSpace.Type.INT,'batch_size')
+			search_space.add(search_space_db['alpha']['min'],search_space_db['alpha']['max'],SearchSpace.Type.FLOAT,'alpha')
+			search_space.add(False,False,SearchSpace.Type.BOOLEAN,'shuffle') # always false
+			search_space.add(search_space_db['patience_epochs']['min'],search_space_db['patience_epochs']['max'],SearchSpace.Type.INT,'patience_epochs')
+			search_space.add(search_space_db['epochs']['min'],search_space_db['epochs']['max'],SearchSpace.Type.INT,'max_epochs')
+			search_space.add(Loss(search_space_db['loss']['min']),Loss(search_space_db['loss']['max']),SearchSpace.Type.INT,'loss')
+			search_space.add(encoder,encoder,SearchSpace.Type.INT,'label_type')
+			search_space.add(Optimizers(search_space_db['optimizer']['min']),Optimizers(search_space_db['optimizer']['max']),SearchSpace.Type.INT,'optimizer')
+			search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
+			search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint') # always true
+			search_space.add(search_space_db['layer_sizes']['min'],search_space_db['layer_sizes']['max'],SearchSpace.Type.INT,'layer_sizes')
+			search_space.add(NodeType(search_space_db['activation_functions']['min']),NodeType(search_space_db['activation_functions']['max']),SearchSpace.Type.INT,'node_types')
+			search_space.add(search_space_db['dropouts']['min'],search_space_db['dropouts']['max'],SearchSpace.Type.FLOAT,'dropouts')
+			search_space.add(search_space_db['bias']['min'] not in (0,False),search_space_db['bias']['max'] not in (0,False),SearchSpace.Type.BOOLEAN,'bias')
+		}
 		output_layer_node_type=NodeType(search_space_db['output_layer_node_type'])
-		return search_space,output_layer_node_type
+		return search_space,output_layer_node_type,multiple_networks
 	}
 
 	def fetchNeuralNetworkMetadata(self,independent_net_id){

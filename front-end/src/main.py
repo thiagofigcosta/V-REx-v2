@@ -120,7 +120,7 @@ def main(argv){
                     }
                     LOGGER.info('Total features on dataset: {}'.format(total))
                     LOGGER.info('')
-                    LOGGER.info('Groupped features count:')
+                    LOGGER.info('Grouped features count:')
                     LOGGER.info('\tCVSS/ENUM features: {}'.format(cvss_enum))
                     LOGGER.info('\tDescription features: {}'.format(description))
                     LOGGER.info('\tReference features: {}'.format(reference))
@@ -802,7 +802,11 @@ def main(argv){
                                 print('\t7 - Elu')
                                 print('\t8 - Exponential')
                                 print('\t9 - Linear')
-                                print('Enter the activation functions for all nodes except output layer: min: ')
+                                if n!=len(network_names)-1 {
+                                    print('Enter the activation functions for all nodes: min: ')
+                                }else{
+                                    print('Enter the activation functions for all nodes except output layer: min: ')
+                                }
                                 activation_min[n]=inputNumber(lower_or_eq=9)
                                 print('Max: ')
                                 activation_max[n]=inputNumber(lower_or_eq=9,greater_or_eq=activation_min[n])
