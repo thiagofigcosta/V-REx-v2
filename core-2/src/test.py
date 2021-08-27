@@ -574,6 +574,7 @@ def testEnhancedNN_MultiNet(){
     enn.saveModelSchemaToFile()
     # enn.train(train[0],train[1])
     enn.trainKFolds(train[0],train[1],8)
+    enn.setWeights(enn.getWeights())
     history=enn.history
     preds,activations=enn.predict(test[0],True,True)
     print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))

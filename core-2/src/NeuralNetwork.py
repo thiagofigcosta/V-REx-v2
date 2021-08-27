@@ -615,18 +615,34 @@ class NeuralNetwork(ABC){
 
 	def getWeights(self){
 		weights=self.model.get_weights()
+		amount_of_networks=self.hyperparameters.amount_of_networks
 		amount_of_layers=self.hyperparameters.layers
 		boosted_weights={}
 		idx=0
-		for i in range(amount_of_layers){
-			boosted_weights['L_{}'.format(i)]=weights[idx]
-			idx+=1
-			bias=None
-			if self.hyperparameters.bias[i]{
-				bias=weights[idx]
+		if amount_of_networks == 1 {
+			for i in range(amount_of_layers){
+				boosted_weights['L_{}'.format(i)]=weights[idx]
 				idx+=1
+				bias=None
+				if self.hyperparameters.bias[i]{
+					bias=weights[idx]
+					idx+=1
+				}
+				boosted_weights['B_{}'.format(i)]=bias
 			}
-			boosted_weights['B_{}'.format(i)]=bias
+		}else{
+			for j in range(amount_of_networks){
+				for i in range(amount_of_layers[j]){
+					boosted_weights['L_{}-{}'.format(j,i)]=weights[idx]
+					idx+=1
+					bias=None
+					if self.hyperparameters.bias[j][i]{
+						bias=weights[idx]
+						idx+=1
+					}
+					boosted_weights['B_{}-{}'.format(j,i)]=bias
+				}
+			}
 		}
 		if (idx!=len(weights)){
 			Utils.LazyCore.warn('Casted {} weights of {}, check the getWeights function'.format(idx,len(weights)))
@@ -638,23 +654,45 @@ class NeuralNetwork(ABC){
 		if boosted_weights is None{
 			return
 		}
+		amount_of_networks=self.hyperparameters.amount_of_networks
 		amount_of_layers=self.hyperparameters.layers
 		cur_weights=self.getWeights()
 		boosted_weights=self.mergeWeights(cur_weights,boosted_weights)
 		weights=[]
-		for i in range(amount_of_layers){
-			name='L_{}'.format(i)
-			if name in boosted_weights{
-				weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
-			}else{
-				weights.append(cur_weights[name])
-			}
-			if self.hyperparameters.bias[i]{
-				name='B_{}'.format(i)
+		if amount_of_networks==1{
+			for i in range(amount_of_layers){
+				name='L_{}'.format(i)
 				if name in boosted_weights{
 					weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
 				}else{
 					weights.append(cur_weights[name])
+				}
+				if self.hyperparameters.bias[i]{
+					name='B_{}'.format(i)
+					if name in boosted_weights{
+						weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
+					}else{
+						weights.append(cur_weights[name])
+					}
+				}
+			}
+		}else{
+			for j in range(amount_of_networks){
+				for i in range(amount_of_layers[j]){
+					name='L_{}-{}'.format(j,i)
+					if name in boosted_weights{
+						weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
+					}else{
+						weights.append(cur_weights[name])
+					}
+					if self.hyperparameters.bias[j][i]{
+						name='B_{}-{}'.format(j,i)
+						if name in boosted_weights{
+							weights.append(self.shrinkWeights(boosted_weights[name],cur_weights[name]))
+						}else{
+							weights.append(cur_weights[name])
+						}
+					}
 				}
 			}
 		}
