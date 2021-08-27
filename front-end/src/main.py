@@ -175,7 +175,7 @@ def main(argv){
                         if '.' in gene {
                             dna[s]=float(gene)
                         }elif any(c.isalpha() for c in gene){
-                            dna[s]=bool(gene)
+                            dna[s]=gene.lower() in ('true', '1', 't', 'y', 'yes', 'sim', 'verdade')
                         }else{
                             dna[s]=int(gene)
                         }
