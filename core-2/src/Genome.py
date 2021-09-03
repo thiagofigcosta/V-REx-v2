@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from SearchSpace import SearchSpace
-from Enums import Metric,NodeType,Loss,LabelEncoding,Optimizers
+from Enums import Metric,NodeType,Loss,LabelEncoding,Optimizers,NeuralNetworkType
 from Hyperparameters import Hyperparameters
 from Utils import Utils
 
@@ -410,6 +410,7 @@ class Genome(object){
     }
 
     def toHyperparameters(self,output_size,output_layer_type,multi_net_enhanced_nn=False){
+        nn_type=NeuralNetworkType.ENHANCED if multi_net_enhanced_nn else NeuralNetworkType.STANDARD
         if not multi_net_enhanced_nn{
             batch_size=int(self.dna[0])
             alpha=float(self.dna[1])
@@ -436,7 +437,7 @@ class Genome(object){
                 dropouts.append(float(self.dna[(first_layer_dependent+2)+amount_of_dependent*l]))
                 bias.append(bool(self.dna[(first_layer_dependent+3)+amount_of_dependent*l]))
             }
-            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric)
+            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric,amount_of_networks=1,nn_type=nn_type)
             hyperparameters.setLastLayer(output_size,output_layer_type)
             return hyperparameters
         }else{
@@ -480,7 +481,7 @@ class Genome(object){
                 }
                 offset+=(max_layers-layers[-1]-1)*layer_parameters
             }
-            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric, amount_of_networks=networks)
+            hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=model_checkpoint, monitor_metric=monitor_metric, amount_of_networks=networks,nn_type=nn_type)
             hyperparameters.setLastLayer(output_size,output_layer_type)
             return hyperparameters
         }

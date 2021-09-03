@@ -191,8 +191,8 @@ class EnhancedNeuralNetwork(NeuralNetwork){
 
 	def enhancedLoss(self,loss_name){
 		USE_ALL_INSTEAD_OF_ANY=True
-		LOSS_NEGATIVE_LABEL_WEIGHT=.4
-		LOSS_POSITIVE_LABEL_WEIGHT=.9
+		LOSS_NEGATIVE_LABEL_WEIGHT=0.3
+		LOSS_POSITIVE_LABEL_WEIGHT=1.0
 
 
 		def loss(y_true, y_pred){

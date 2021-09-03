@@ -55,6 +55,13 @@ class GeneticAlgorithmType(Enum){
     STANDARD = 1
 }
 
+
+class NeuralNetworkType(Enum){
+    # 'Just':'to fix vscode coloring':'when using pytho{\}'
+    ENHANCED = 0
+    STANDARD = 1
+}
+
 class NodeType(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     RELU = 0

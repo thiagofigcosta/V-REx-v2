@@ -1,11 +1,11 @@
 #!/bin/python
 
-from Enums import Metric,NodeType,Optimizers,LabelEncoding,Loss
+from Enums import Metric,NodeType,Optimizers,LabelEncoding,Loss,NeuralNetworkType
 
 class Hyperparameters(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
-    def __init__(self, batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS,amount_of_networks=1){
+    def __init__(self, batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss, model_checkpoint=True, monitor_metric=Metric.RAW_LOSS,amount_of_networks=1,nn_type=NeuralNetworkType.STANDARD){
         self.batch_size=batch_size
 		self.alpha=alpha
 		self.shuffle=shuffle
@@ -22,6 +22,7 @@ class Hyperparameters(object){
 		self.loss=loss
 		self.monitor_metric=monitor_metric
 		self.amount_of_networks=amount_of_networks
+		self.nn_type=nn_type
 
 		if type(self.amount_of_networks) is not int {
 			raise Exception('amount_of_networks must be integer')
@@ -157,6 +158,7 @@ class Hyperparameters(object){
 
 	def __str__(self){
 		str_out='Hyperparameters: {\n'
+		str_out+='\t{}: {}'.format('nn_type',self.nn_type)
 		str_out+='\t{}: {}'.format('amount_of_networks',self.amount_of_networks)
 		str_out+='\t{}: {}'.format('batch_size',self.batch_size)
 		str_out+='\t{}: {}'.format('alpha',self.alpha)

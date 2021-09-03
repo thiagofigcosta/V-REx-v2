@@ -105,13 +105,17 @@ def main(argv){
                     vendor=0
                     other=0
                     for k,_ in cve['features'].items(){
-                        total+=1
+                        if not ('reference_' in k and 'exploit' in k) {
+                            total+=1
+                        }
                         if 'cvss_' in k and '_ENUM_' in k {
                             cvss_enum+=1
                         }elif 'description_' in k {
                             description+=1
                         }elif 'reference_' in k {
-                            reference+=1
+                            if 'exploit' not in {
+                                reference+=1
+                            }
                         }elif 'vendor_' in k {
                             vendor+=1
                         }else{
@@ -421,6 +425,7 @@ def main(argv){
                     print('Use multiple networks (0 [False] - 1 [True]):')
                     multiple_networks=inputNumber(lower_or_eq=1)==1
                     if multiple_networks{
+                        neural_type=0
                         print('Now type the hyperparameters for the Neural Networks...')
                         print('Enter the hyperparameters config name (unique): ', end = '')
                         hyper_name=input().strip()
@@ -574,6 +579,8 @@ def main(argv){
                             }
                         }
                     }else{
+                        print('Enter the neural network to use (0 - Enhanced | 1 - Standard): ')
+                        neural_type=inputNumber(lower_or_eq=1)
                         amount_of_networks=1
                         print('Now type the hyperparameters for the Neural Network...')
                         print('Enter the hyperparameters config name (unique): ', end = '')
@@ -651,7 +658,7 @@ def main(argv){
                             bias.append(inputNumber(lower_or_eq=1)==1)
                         }
                     }
-                    hyperparams={'core_version':'v2','name':hyper_name,'submitted_at':submitted_at,'amount_of_networks':amount_of_networks,'batch_size':batch_size,'alpha':alpha,'shuffle':shuffle,'optimizer':optimizer,'loss':loss,'label_type':label_type,'layers':layers,'layer_sizes':layer_sizes,'bias':bias,'node_types':node_types,'dropouts':dropouts}
+                    hyperparams={'core_version':'v2','name':hyper_name,'submitted_at':submitted_at,'neural_type':neural_type,'amount_of_networks':amount_of_networks,'batch_size':batch_size,'alpha':alpha,'shuffle':shuffle,'optimizer':optimizer,'loss':loss,'label_type':label_type,'layers':layers,'layer_sizes':layer_sizes,'bias':bias,'node_types':node_types,'dropouts':dropouts}
                 }else{ # v1
                     print('Now type the hyperparameters for the Smart Neural Network...')
                     print('Enter the hyperparameters config name (unique): ', end = '')
@@ -885,6 +892,12 @@ def main(argv){
                     pop_start_size=inputNumber()
                     print('Enter the amount of generations: ')
                     max_gens=inputNumber()
+                    if 	'core_version' in env and env['core_version']=='v2'{
+                        print('Enter the neural network to use (0 - Enhanced | 1 - Standard): ')
+                        neural_type=inputNumber(lower_or_eq=1)
+                    }else{
+                        neural_type=1
+                    }
                     print('Enter the algorithm to use (0 - Enhanced | 1 - Standard): ')
                     algorithm=inputNumber(lower_or_eq=1)
                     if algorithm==0{
@@ -951,7 +964,7 @@ def main(argv){
                     train_data+=':{}'.format(inputNumber())
                     best={'output':None,'at_gen':None}
                     results=[]
-                    simulation_data={'name':simulation_name,'env_name':env_name,'submitted_at':submitted_at,'started_by':started_by,'started_at':started_at,'finished_at':finished_at,'hall_of_fame_id':hall_of_fame_id,'population_id':population_id,'pop_start_size':pop_start_size,'max_gens':max_gens,'algorithm':algorithm,'max_age':max_age,'max_children':max_children,'mutation_rate':mutation_rate,'recycle_rate':recycle_rate,'sex_rate':sex_rate,'max_notables':max_notables,'cross_validation':cross_validation,'label_type':label_type,'metric':metric,'train_data':train_data,'best':best,'results':results}
+                    simulation_data={'name':simulation_name,'env_name':env_name,'submitted_at':submitted_at,'started_by':started_by,'started_at':started_at,'finished_at':finished_at,'hall_of_fame_id':hall_of_fame_id,'population_id':population_id,'pop_start_size':pop_start_size,'max_gens':max_gens,'neural_type':neural_type,'algorithm':algorithm,'max_age':max_age,'max_children':max_children,'mutation_rate':mutation_rate,'recycle_rate':recycle_rate,'sex_rate':sex_rate,'max_notables':max_notables,'cross_validation':cross_validation,'label_type':label_type,'metric':metric,'train_data':train_data,'best':best,'results':results}
                     LOGGER.info('Writting simulation config on genetic_db...')
                     simulation_id=mongo.quickInsertOneIgnoringLockAndRetrieveId(mongo.getDB('genetic_db'),simulation_data,'simulations')
                     if (simulation_id==None){

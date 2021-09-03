@@ -12,7 +12,7 @@ from PopulationManager import PopulationManager
 from StandardGeneticAlgorithm import StandardGeneticAlgorithm
 from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 from Hyperparameters import Hyperparameters
-from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss,Optimizers
+from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss,Optimizers,NeuralNetworkType
 from Genome import Genome
 from Dataset import Dataset
 
@@ -27,7 +27,6 @@ class Core(object){
 	ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
 	FIXED_VALIDATION_PERCENT=.2
 	THRESHOLD=0.5
-	USE_ENHANCED_NN=True
 
 	def __init__(self, mongo, logger){
 		Core.LOGGER=logger
@@ -56,6 +55,7 @@ class Core(object){
 		metric_mode=genetic_metadata[14]
 		algorithm=genetic_metadata[15] 
 		label_type=genetic_metadata[16] 
+		nn_type=genetic_metadata[17] 
 		search_maximum=metric_mode!=Metric.RAW_LOSS
 		Core.LOGGER.info('Genetic metadata')
 		Core.LOGGER.info('\t{}: {}'.format('environment_name',environment_name))
@@ -75,6 +75,7 @@ class Core(object){
 		Core.LOGGER.info('\t{}: {}'.format('metric_mode',metric_mode))
 		Core.LOGGER.info('\t{}: {}'.format('algorithm',algorithm))
 		Core.LOGGER.info('\t{}: {}'.format('label_type',label_type))
+		Core.LOGGER.info('\t{}: {}'.format('nn_type',nn_type))
 		Core.LOGGER.info('\t{}: {}'.format('search_maximum',search_maximum))
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
 		Core.LOGGER.info('Loaded simulation...OK')
@@ -96,7 +97,7 @@ class Core(object){
 		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.multiline(str(search_space))
 		def train_callback(genome){
-			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks
+			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks,nn_type
 			preserve_weights=False # TODO fix when true, to avoid nan outputs
 			if multiple_networks {
 				input_size=[len(train_features[i][0]) for i in range(len(train_features))]
@@ -106,7 +107,7 @@ class Core(object){
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,multi_net_enhanced_nn=multiple_networks)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
-			if Core.USE_ENHANCED_NN or multiple_networks{
+			if nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
@@ -257,7 +258,7 @@ class Core(object){
 			}
 			output_size=len(train_labels[0])
 			hyperparameters.setLastLayerOutputSize(output_size)
-			if Core.USE_ENHANCED_NN or multiple_networks{
+			if hyperparameters.nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_train_{}'.format(independent_net_id),verbose=True)
@@ -312,7 +313,7 @@ class Core(object){
 			}
 			output_size=len(train_labels[0])
 			hyperparameters.setLastLayerOutputSize(output_size)
-			if Core.USE_ENHANCED_NN or multiple_networks{
+			if hyperparameters.nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
 			}else{
 				nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
@@ -386,7 +387,7 @@ class Core(object){
 		}
 		output_size=len(test_labels[0])
 		hyperparameters.setLastLayerOutputSize(output_size)
-		if Core.USE_ENHANCED_NN or multiple_networks{
+		if hyperparameters.nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
 			nn=EnhancedNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
 		}else{
 			nn=StandardNeuralNetwork(hyperparameters,name='core_eval_{}'.format(independent_net_id),verbose=True)
@@ -424,7 +425,9 @@ class Core(object){
 				data_ids.append(cur_cve['cve'])
 				parsed_cve_features=[]
 				for k,v in sorted(cur_cve['features'].items()){
-					parsed_cve_features.append(float(v))
+					if not ('reference_' in k and 'exploit' in k){
+						parsed_cve_features.append(float(v))
+					}
 				}
 				data_features.append(parsed_cve_features)
 				parsed_cve_labels=[]
@@ -464,13 +467,19 @@ class Core(object){
 					}elif 'description_' in k {
 						index=2
 					}elif 'reference_' in k {
-						index=3
+						if 'exploit' not in k{
+							index=3
+						}else{
+							index=None
+						}
 					}elif 'vendor_' in k {
 						index=4
 					}else{
 						index=0
 					}
-					parsed_cve_features[index].append(float(v))
+					if index is not None{
+						parsed_cve_features[index].append(float(v))
+					}
 				}
 				for x in range(amount_of_groups){
 					data_features[x].append(parsed_cve_features[x])
@@ -526,7 +535,12 @@ class Core(object){
 		metric_mode=Metric(simu_data['metric'])
 		algorithm=GeneticAlgorithmType(simu_data['algorithm'])
 		label_type=LabelEncoding(simu_data['label_type'])
-		return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_type
+		if 'neural_type' in simu_data{
+			enhanced_neural_network=NeuralNetworkType(simu_data['neural_type'])
+		}else{
+			enhanced_neural_network=NeuralNetworkType.STANDARD
+		}
+		return environment_name, cve_years, train_data_limit, hall_of_fame_id, population_id, population_start_size, max_gens, max_age, max_children, mutation_rate, recycle_rate, sex_rate, max_notables, cross_validation, metric_mode, algorithm, label_type, enhanced_neural_network
 	}
 
 	def fetchEnvironmentDataV1(self,environment_name){
@@ -657,10 +671,11 @@ class Core(object){
 			label_type=LabelEncoding(hyperparameters['label_type'])
 			loss=Loss(hyperparameters['loss'])
 		}
+		nn_type=NeuralNetworkType(hyperparameters['neural_type'])
 		max_epochs=epochs
 		patience_epochs=pat_epochs
 		monitor_metric=metric
-		return Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric,amount_of_networks=amount_of_networks)
+		return Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric,amount_of_networks=amount_of_networks,nn_type=nn_type)
 	}
 
 	# Disclaim, I'm to lazy to fix Pytho{\} dicts or to make a real Pytho{\} "compiler" with lexemes and stuff

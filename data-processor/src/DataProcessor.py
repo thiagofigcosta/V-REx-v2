@@ -1455,7 +1455,13 @@ class DataProcessor(object){
             if 'References_class' not in cve{
                 cve['References_class']=FeatureGenerator.ABSENT_FIELD_FOR_ENUM
             }
-            featured_cve=dict(featured_cve,**FeatureGenerator.buildFeaturesFromEnum('Reference_type',FeatureGenerator.compressListOfLists(cve['References_class'],unique=True),fields_and_values['References_class']))
+            references_to_be_appended=FeatureGenerator.buildFeaturesFromEnum('Reference_type',FeatureGenerator.compressListOfLists(cve['References_class'],unique=True),fields_and_values['References_class'])
+            for k in list(references_to_be_appended.keys()){
+                if 'reference_' in k.lower() and 'exploit' in k.lower(){
+                    del references_to_be_appended[k]
+                }
+            }
+            featured_cve=dict(featured_cve,**references_to_be_appended)
 
             if 'vendors' not in cve{
                 cve['vendors']=FeatureGenerator.ABSENT_FIELD_FOR_ENUM

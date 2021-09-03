@@ -118,7 +118,7 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
                 recycled,individuals=self.recycleBadIndividuals(individuals)
             }else{
                 recycled=False
-                max_allowed_population=self.max_population*EnhancedGeneticAlgorithm.CUTOFF_POPULATION_LIMIT
+                max_allowed_population=self.getMaxAllowedPopulation()
                 to_cut_off=int(len(individuals)-max_allowed_population)
                 if to_cut_off > 0{
                     if self.rank_type==GeneticRankType.RELATIVE{
@@ -288,9 +288,16 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     }
 
     def calcBirthRate(self,amount_of_children=0){
-        birth_rate=1-(self.current_population_size/self.max_population)*0.22
-        amount_of_children=math.ceil(amount_of_children*birth_rate)
-        return birth_rate, amount_of_children
+        max_pop=self.getMaxAllowedPopulation()
+        growth_rate=2.2
+        birth_rate=growth_rate*((max_pop-self.current_population_size)/max_pop) # Logistic Population Growth: I = rN ( K - N / K)
+        new_amount_of_children=math.ceil(amount_of_children*birth_rate)
+        # print('birth_rate:',birth_rate,' amount_of_children:',amount_of_children,' new_amount_of_children:',new_amount_of_children)
+        return birth_rate, new_amount_of_children
+    }
+
+    def getMaxAllowedPopulation(self){
+        return self.max_population*EnhancedGeneticAlgorithm.CUTOFF_POPULATION_LIMIT
     }
 
 }
