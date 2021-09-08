@@ -12,7 +12,6 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     
     WILL_OF_D_PERCENT=0.07
     RECYCLE_THRESHOLD_PERCENT=0.03
-    CUTOFF_POPULATION_LIMIT=1.3
 
     def __init__(self, looking_highest_fitness, max_children, max_age, mutation_rate, sex_rate, recycle_rate, rank_type=GeneticRankType.INCREMENTAL){
         super().__init__(looking_highest_fitness)
@@ -297,7 +296,7 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     }
 
     def getMaxAllowedPopulation(self){
-        return self.max_population*EnhancedGeneticAlgorithm.CUTOFF_POPULATION_LIMIT
+        return self.max_population
     }
 
 }

@@ -175,7 +175,7 @@ def testEnhGenetic(){
     Utils.printDict(enh_elite.best,'Elite')
 }
 
-def testStdVsEnhGenetic(){
+def testStdVsEnhGenetic(mutation_rate=0.1){
     def eggHolder(genome){
         # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
         x=genome.dna[0]
@@ -194,16 +194,15 @@ def testStdVsEnhGenetic(){
 
     verbose=False
     print('Standard vs Enhanced - EggHolder:')
-    tests=300
+    tests=100
     limits=SearchSpace()
     limits.add(-512,512,SearchSpace.Type.FLOAT,name='x')
     limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
     population_start_size_enh=300
-    population_start_size_std=780
+    population_start_size_std=600
     max_gens=100
     max_age=10
     max_children=4
-    mutation_rate=0.1
     recycle_rate=0.13
     sex_rate=0.7
     search_maximum=False
@@ -213,11 +212,12 @@ def testStdVsEnhGenetic(){
         print('Test {} of {}'.format(x+1,tests))
         std_elite=HallOfFame(max_notables, search_maximum)
         std_ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
-        std_population=PopulationManager(std_ga,limits,eggHolder,population_start_size_std)
+        std_population=PopulationManager(std_ga,limits,eggHolder,population_start_size_std,print_deltas=True)
         std_population.hall_of_fame=std_elite
-        std_population.naturalSelection(max_gens)
+        run_time=std_population.naturalSelection(max_gens)
         std_result=std_elite.best
         results['standard'].append(std_result)
+        results['standard'][-1]['run_time']=run_time
         if Utils.LazyCore.freeMemManually(){
             del std_elite
             del std_population
@@ -225,37 +225,43 @@ def testStdVsEnhGenetic(){
 
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
-        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh)
+        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,print_deltas=True)
         enh_population.hall_of_fame=enh_elite
-        enh_population.naturalSelection(max_gens)
+        run_time=enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
         results['enhanced'].append(enh_result)
+        results['enhanced'][-1]['run_time']=run_time
         if Utils.LazyCore.freeMemManually(){
             del enh_elite
             del enh_population
         }
     }
-    std_mean=[0.0,0.0]
+    std_mean=[0.0,0.0,0.0]
     for std_result in results['standard']{
         std_mean[0]+=std_result['generation']
         std_mean[1]+=std_result['output']
+        std_mean[2]+=std_result['run_time']
         print('Standard Best ({}): {}'.format(std_result['generation'],std_result['output']))
     }
     std_mean[0]/=tests
     std_mean[1]/=tests
+    std_mean[2]/=tests
     print()
-    enh_mean=[0,0]
+    enh_mean=[0.0,0.0,0.0]
     for enh_result in results['enhanced']{
         enh_mean[0]+=enh_result['generation']
         enh_mean[1]+=enh_result['output']
+        enh_mean[2]+=enh_result['run_time']
         print('Enhanced Best ({}): {}'.format(enh_result['generation'],enh_result['output']))
     }
     enh_mean[0]/=tests
     enh_mean[1]/=tests
+    enh_mean[2]/=tests
     print()
     Utils.printDict(results,'Results')
     print()
-    print('Standard Mean ({}): {} | Enhanced Mean ({}): {}'.format(std_mean[0],std_mean[1],enh_mean[0],enh_mean[1]))
+    mean_result_str_egg_holder='Standard Mean:\n\tgeneration: {}\n\toutput: {}\n\trun_time: {}\nEnhanced Mean:\n\tgeneration: {}\n\toutput: {}\n\trun_time: {}'.format(std_mean[0],std_mean[1],std_mean[2],enh_mean[0],enh_mean[1],enh_mean[2])
+    print(mean_result_str_egg_holder)
 
     print()
     print()
@@ -269,11 +275,12 @@ def testStdVsEnhGenetic(){
         print('Test {} of {}'.format(x+1,tests))
         std_elite=HallOfFame(max_notables, search_maximum)
         std_ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
-        std_population=PopulationManager(std_ga,limits,easom,population_start_size_std)
+        std_population=PopulationManager(std_ga,limits,easom,population_start_size_std,print_deltas=True)
         std_population.hall_of_fame=std_elite
-        std_population.naturalSelection(max_gens)
+        run_time=std_population.naturalSelection(max_gens)
         std_result=std_elite.best
         results['standard'].append(std_result)
+        results['standard'][-1]['run_time']=run_time
         if Utils.LazyCore.freeMemManually(){
             del std_elite
             del std_population
@@ -281,39 +288,46 @@ def testStdVsEnhGenetic(){
 
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
-        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh)
+        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,print_deltas=True)
         enh_population.hall_of_fame=enh_elite
-        enh_population.naturalSelection(max_gens)
+        run_time=enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
         results['enhanced'].append(enh_result)
+        results['enhanced'][-1]['run_time']=run_time
         if Utils.LazyCore.freeMemManually(){
             del enh_elite
             del enh_population
         }
     }
-    std_mean=[0.0,0.0]
+    std_mean=[0.0,0.0,0.0]
     for std_result in results['standard']{
         std_mean[0]+=std_result['generation']
         std_mean[1]+=std_result['output']
+        std_mean[2]+=std_result['run_time']
         print('Standard Best ({}): {}'.format(std_result['generation'],std_result['output']))
     }
     std_mean[0]/=tests
     std_mean[1]/=tests
+    std_mean[2]/=tests
     print()
-    enh_mean=[0,0]
+    enh_mean=[0.0,0.0,0.0]
     for enh_result in results['enhanced']{
         enh_mean[0]+=enh_result['generation']
         enh_mean[1]+=enh_result['output']
+        enh_mean[2]+=enh_result['run_time']
         print('Enhanced Best ({}): {}'.format(enh_result['generation'],enh_result['output']))
     }
     enh_mean[0]/=tests
     enh_mean[1]/=tests
+    enh_mean[2]/=tests
     print()
     Utils.printDict(results,'Results')
     print()
-    print('Standard Mean ({}): {} | Enhanced Mean ({}): {}'.format(std_mean[0],std_mean[1],enh_mean[0],enh_mean[1]))
+    mean_result_str_easom='Standard Mean:\n\tgeneration: {}\n\toutput: {}\n\trun_time: {}\nEnhanced Mean:\n\tgeneration: {}\n\toutput: {}\n\trun_time: {}'.format(std_mean[0],std_mean[1],std_mean[2],enh_mean[0],enh_mean[1],enh_mean[2])
+    print(mean_result_str_easom)
 
     Core.FREE_MEMORY_MANUALLY=True
+    return mean_result_str_egg_holder,mean_result_str_easom
 }
 
 
@@ -774,9 +788,41 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     test_callback(enh_elite.getBestGenome())
 }
 
+
+def runGenExperimentsOnMath(){
+    results=[]
+    mutation_rates=(0.1,0.2)
+    for mutation_rate in mutation_rates{
+        print('Mutation rate of: {}'.format(mutation_rate))
+        results.append(testStdVsEnhGenetic(mutation_rate))
+        print()
+        print()
+        print()
+    }
+    print()
+    print()
+    print()
+    print()
+    print('Summary:')
+    for r,result in enumerate(results){
+        print('Mutation rate {}:'.format(mutation_rates[r]))
+        print('\tEggHolder (-959.6407):')
+        for line in result[0].split('\n'){
+            print('\t\t'+line)
+        }
+        print()
+        print('\tEasom (1):')
+        for line in result[1].split('\n'){
+            print('\t\t'+line)
+        }
+        print()
+        print()
+    }
+}
+
 # testStdGenetic()
 # testEnhGenetic()
-testStdVsEnhGenetic()
+# testStdVsEnhGenetic()
 # testNNIntLabel()
 # testNNBinLabel_KFolds()
 # testGeneticallyTunedNN()
@@ -784,3 +830,4 @@ testStdVsEnhGenetic()
 # testEnhancedNN_SingleNet()
 # testEnhancedNN_MultiNet()
 # testGeneticallyTunedEnhancedNN_MultiNet()
+runGenExperimentsOnMath()
