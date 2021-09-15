@@ -113,7 +113,7 @@ def main(argv){
                         }elif 'description_' in k {
                             description+=1
                         }elif 'reference_' in k {
-                            if 'exploit' not in {
+                            if 'exploit' not in k{
                                 reference+=1
                             }
                         }elif 'vendor_' in k {
