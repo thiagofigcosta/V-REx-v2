@@ -288,7 +288,7 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
 
     def calcBirthRate(self,amount_of_children=0){
         max_pop=self.getMaxAllowedPopulation()
-        growth_rate=2.2
+        growth_rate=1
         birth_rate=growth_rate*((max_pop-self.current_population_size)/max_pop) # Logistic Population Growth: I = rN ( K - N / K)
         new_amount_of_children=math.ceil(amount_of_children*birth_rate)
         # print('birth_rate:',birth_rate,' amount_of_children:',amount_of_children,' new_amount_of_children:',new_amount_of_children)
