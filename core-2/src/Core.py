@@ -77,6 +77,7 @@ class Core(object){
 		Core.LOGGER.info('\t{}: {}'.format('label_type',label_type))
 		Core.LOGGER.info('\t{}: {}'.format('nn_type',nn_type))
 		Core.LOGGER.info('\t{}: {}'.format('search_maximum',search_maximum))
+		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
 		Core.LOGGER.info('Loaded simulation...OK')
 		Core.LOGGER.info('Loading search space...')
@@ -88,7 +89,7 @@ class Core(object){
 		}else{
 			train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
 		}
-		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
+		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels,multiple_networks)
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
@@ -239,7 +240,7 @@ class Core(object){
 		}else{
 			train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
 		}
-		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels)
+		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels,multiple_networks)
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,hyperparameters.label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
