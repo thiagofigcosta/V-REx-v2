@@ -77,11 +77,11 @@ class Core(object){
 		Core.LOGGER.info('\t{}: {}'.format('label_type',label_type))
 		Core.LOGGER.info('\t{}: {}'.format('nn_type',nn_type))
 		Core.LOGGER.info('\t{}: {}'.format('search_maximum',search_maximum))
-		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Genome.CACHE_WEIGHTS=Core.CACHE_WEIGHTS
 		Core.LOGGER.info('Loaded simulation...OK')
 		Core.LOGGER.info('Loading search space...')
 		search_space,output_layer_node_type,multiple_networks=self.fetchEnvironmentDataV2(environment_name,metric_mode,label_type)
+		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.info('Loaded search space...OK')
 		Core.LOGGER.info('Loading dataset...')
 		if multiple_networks {

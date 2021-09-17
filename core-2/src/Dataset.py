@@ -311,7 +311,7 @@ class Dataset(object){
     @staticmethod
     def balanceDataset(features,labels,grouped_features=None){
         if grouped_features is None{
-            if type(features[0]) is list {
+            if type(features[0][0]) is list {
                 grouped_features=True
             }else{
                 grouped_features=False
