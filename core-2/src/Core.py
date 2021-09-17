@@ -23,6 +23,7 @@ class Core(object){
 	FREE_MEMORY_MANUALLY=True
 	CACHE_WEIGHTS=True
 	STORE_GEN_POP_ONLY_ON_LAST=False
+	WRITE_POPULATION_WEIGHTS=False
 	K_FOLDS=10
 	ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
 	FIXED_VALIDATION_PERCENT=.2
@@ -711,7 +712,7 @@ class Core(object){
 	def appendIndividualToPopulation(self,population_id,individual,now_str){
 		# Pytho{\}: Start regular Python
 		query_fetch={'_id':self.mongo.getObjectId(population_id)}
-		query_update={'$push':{'neural_genomes':self.genomeToDict(individual)},'$set':{'updated_at':now_str}}
+		query_update={'$push':{'neural_genomes':self.genomeToDict(individual,Core.WRITE_POPULATION_WEIGHTS)},'$set':{'updated_at':now_str}}
 		# Pytho{\}: End regular Python
 		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'populations',query_fetch,query_update,verbose=False,ignore_lock=False)
 	}
@@ -836,7 +837,7 @@ class Core(object){
 		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
 	}
 
-	def genomeToDict(self,individual){
+	def genomeToDict(self,individual,write_weights=True){
 		genome={}
 		genome['id']=individual.id
 		genome['output']=individual.output
@@ -847,7 +848,7 @@ class Core(object){
 		}
 		genome['mt_dna']=individual.mt_dna
 		genome['dna']='[ '+' '.join([str(i) for i in individual.dna])+' ]'
-		if individual.is_neural{
+		if individual.is_neural and write_weights{
 			genome['weights']=individual.getWeights(raw=True)
 		}
 		return genome
