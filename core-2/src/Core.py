@@ -194,8 +194,15 @@ class Core(object){
 		Core.LOGGER.info('Finished natural selection...OK')
 		Core.LOGGER.info('Best output {:.5f} at gen {}, with genome {}'.format(elite.best['output'],elite.best['generation'],elite.best['genome']))
 		self.clearHallOfFameIndividuals(hall_of_fame_id,Utils.getTodayDatetime())
+		accept_weights_on_hall=True
 		for individual in elite.notables {
-			self.appendIndividualToHallOfFame(hall_of_fame_id,individual,Utils.getTodayDatetime())
+			try {
+				self.appendIndividualToHallOfFame(hall_of_fame_id,individual,Utils.getTodayDatetime(),write_weights=accept_weights_on_hall)
+			}except Exception as e{
+				Core.LOGGER.exception(e)
+				self.appendIndividualToHallOfFame(hall_of_fame_id,individual,Utils.getTodayDatetime(),write_weights=False)
+				accept_weights_on_hall=False
+			}
 		}
 		self.finishGeneticSimulation(simulation_id,Utils.getTodayDatetime())
 		Core.LOGGER.info('Runned genetic simulation {}...OK'.format(simulation_id))
@@ -753,10 +760,10 @@ class Core(object){
 		# Pytho{\}: End regular Python
 	}
 
-	def appendIndividualToHallOfFame(self,hall_of_fame_id,taylor_swift,now_str){
+	def appendIndividualToHallOfFame(self,hall_of_fame_id,taylor_swift,now_str,write_weights=True){
 		# Pytho{\}: Start regular Python
 		query_fetch={'_id':self.mongo.getObjectId(hall_of_fame_id)}
-		query_update={'$set':{'updated_at':now_str},'$push':{'neural_genomes':self.genomeToDict(taylor_swift)}}
+		query_update={'$set':{'updated_at':now_str},'$push':{'neural_genomes':self.genomeToDict(taylor_swift,write_weights=write_weights)}}
 		# Pytho{\}: End regular Python
 		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'hall_of_fame',query_fetch,query_update,verbose=False,ignore_lock=False)
 	}

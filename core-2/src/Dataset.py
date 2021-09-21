@@ -262,6 +262,22 @@ class Dataset(object){
             C=stats['precision']+stats['recall']
             if C!=0{
                 stats['f1_score']=2*(stats['precision']*stats['recall'])/(C)
+                if stats['f1_score'] > 1 {
+                    print('ERROR - F1 Score higher than 1')
+                    print('size',size)
+                    print('total',total)
+                    print('hits',hits)
+                    print('true_negative',true_negative)
+                    print('true_positive',true_positive)
+                    print('false_negative',false_negative)
+                    print('false_positive',false_positive)
+                    print('wrong',wrong)
+                    print('pos_count',pos_count)
+                    print('A',A)
+                    print('B',B)
+                    print('C',C)
+                    print('stats',stats)
+                }
             }else{
                 stats['f1_score']=0
             }

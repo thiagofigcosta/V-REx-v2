@@ -23,7 +23,7 @@ class NeuralNetwork(ABC){
 	MULTIPROCESSING=False
 	MANUAL_METRICS_NAMES=['accuracy','precision','recall','f1_score']
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
-	USE_MANUAL_METRICS=False # manual metrics are slower
+	USE_MANUAL_METRICS=True # manual metrics are slower, but regular metrics returns strange values
 	CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
 	USE_LEAKY_RELU=True
@@ -491,7 +491,7 @@ class NeuralNetwork(ABC){
 		epochs_wo_improvement=0	
 		for e in range(self.hyperparameters.max_epochs){
 			start_val=int(fixed_train_pos+e*window_size)
-			while start_val >= len(labels){
+			while start_val+window_size >= len(labels){
 				start_val-=window_size
 			}
 			labels_epoch=labels[0:start_val]
@@ -699,7 +699,8 @@ class NeuralNetwork(ABC){
 		if Validation{
 			metric_name='val_'+metric_name
 		}
-		return Utils.mean(self.history[metric_name])
+		mean=Utils.mean(self.history[metric_name])
+		return mean
 	}
 
 	def mergeWeights(self,weights_old,weights_new=[None]){
