@@ -68,7 +68,7 @@ docker-compose up -d
 ```
 or
 ```
-docker-compose up -d --scale core-1=0 --scale data-crawler=0 --scale data-processor=0
+docker-compose up -d --scale portainer=0 --scale data-crawler=0 --scale data-processor=0
 ```
 or in background with replicas
 ```
