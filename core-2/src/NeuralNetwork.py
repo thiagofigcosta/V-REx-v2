@@ -23,7 +23,7 @@ class NeuralNetwork(ABC){
 	MULTIPROCESSING=False
 	MANUAL_METRICS_NAMES=['accuracy','precision','recall','f1_score']
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
-	USE_MANUAL_METRICS=False # manual metrics are slower, but regular metrics returns strange values
+	USE_MANUAL_METRICS=False # manual metrics are slower
 	MANUAL_METRICS_ONLY_ON_VALIDATION=True # makes manual metrics faster when enabled
 	CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
