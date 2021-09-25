@@ -707,7 +707,7 @@ class NeuralNetwork(ABC){
 		if limited_to_one and mean > 1 {
 			Utils.LazyCore.warn('mean: '+str(mean))
 			Utils.LazyCore.warn('metric_name: '+metric_name)
-			Utils.printDict(history,'history')
+			Utils.printDict(self.history,'history')
 		}
 		return mean
 	}
