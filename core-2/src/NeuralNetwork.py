@@ -23,8 +23,8 @@ class NeuralNetwork(ABC){
 	MULTIPROCESSING=False
 	MANUAL_METRICS_NAMES=['accuracy','precision','recall','f1_score']
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
-	USE_MANUAL_METRICS=True # manual metrics are slower, but regular metrics returns strange values
-	MANUAL_METRICS_ONLY_ON_VALIDATION=True 
+	USE_MANUAL_METRICS=False # manual metrics are slower, but regular metrics returns strange values
+	MANUAL_METRICS_ONLY_ON_VALIDATION=True # makes manual metrics faster when enabled
 	CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
 	USE_LEAKY_RELU=True
@@ -38,7 +38,7 @@ class NeuralNetwork(ABC){
 		self.callbacks=None
 		self.basename='model'
 		self.checkpoint_filename=None
-		self.history=[]
+		self.history={}
 		self.metrics={}
 		Utils.createFolder(NeuralNetwork.MODELS_PATH)
 		Utils.createFolder(NeuralNetwork.SAVED_PLOTS_PATH)
@@ -342,18 +342,21 @@ class NeuralNetwork(ABC){
 			if val_labels is not None{
 				all_metrics+=['val_'+el for el in all_metrics]
 			}
-			self.history=dict.fromkeys(all_metrics,[])
+			self.history={}
+			for metric in all_metrics{
+				self.history[metric]=[]
+			}
 		}
 		epoch_metrics=[Utils.mean(metric) for metric in epoch_metrics]
 		epoch_metrics=self.fillMetricsNames(epoch_metrics)
 		for k,v in epoch_metrics.items(){
-			v=float(v[0])
-			epoch_metrics[k]=v
-			self.history[k].append(v)
+			if len(v)>0{
+				v=float(v[0])
+				epoch_metrics[k]=v
+				self.history[k].append(v)
+			}
 		}
 		if val_labels is not None{
-			val_features=val_features
-			val_labels=val_labels
 			val_metrics=self.fillMetricsNames(self.model.test_on_batch(
 				self.formatFeatures(val_features),self.formatLabels(val_labels), reset_metrics=True))
 			for k,v in val_metrics.items(){
@@ -367,9 +370,9 @@ class NeuralNetwork(ABC){
 				classes=self.predict(val_features,get_classes=True,get_confidence=False)
 				manual_stats=Dataset.statisticalAnalysis(classes,val_labels)
 				for k,v in manual_stats.items(){
-					k='val_'+k
 					if k in self.history{
-						self.history[k].append(v)
+						val_metrics[k]=v
+						self.history['val_'+k].append(v)
 					}
 				}
 			}
@@ -565,7 +568,10 @@ class NeuralNetwork(ABC){
 				output[metric]=[]
 			}
 			if i<len(metrics){
-				output[metric].append(metrics[i])
+				metric_val=metrics[i]
+				if metric_val is not None{
+					output[metric].append(metric_val)
+				}
 			}
 		}
 		return output
@@ -710,6 +716,13 @@ class NeuralNetwork(ABC){
 			Utils.printDict(self.history,'history')
 		}
 		return mean
+	}
+
+	def getMetric(self,metric_name,validation=False){
+		if validation{
+			metric_name='val_'+metric_name
+		}
+		return self.history[metric_name]
 	}
 
 	def mergeWeights(self,weights_old,weights_new=[None]){

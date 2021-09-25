@@ -438,7 +438,7 @@ def testNNBinLabel_KFolds(){
 }
 
 def testGeneticallyTunedNN(){
-    metric=Metric.F1
+    metric=Metric.ACCURACY
     search_space=SearchSpace()
     search_space.add(1,4,SearchSpace.Type.INT,'layers')
     search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
@@ -488,7 +488,7 @@ def testGeneticallyTunedNN(){
         }
         output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
         if output!=output{ # Not a Number, ignore this genome
-            Core.LOGGER.warn('Not a number metric mean')
+            Core.LOGGER.warn('Not a number metric ('+str(hyperparameters.monitor_metric.toKerasName())+') mean of '+str(nn.getMetric(hyperparameters.monitor_metric.toKerasName(),True)))
             output=float('-inf') if search_maximum else float('inf')
         }
         if preserve_weights {

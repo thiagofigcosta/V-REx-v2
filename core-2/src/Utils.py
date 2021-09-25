@@ -671,19 +671,24 @@ class Utils(){
 
     @staticmethod
     def mean(list_of_values){
-       total=0.0
-       count=0
-       for el in list_of_values{
-           if el==el{ # avoid NaN
+        total=0.0
+        count=0
+        elements_includin_nan=0
+        for el in list_of_values{
+            elements_includin_nan+=1
+            if el==el{ # avoid NaN
                 total+=el
                 count+=1
-           }
-       }
-       if count>0{
-           return total/float(count)
-       }else{
-           return float('NaN')
-       }
+            }
+        }
+        if elements_includin_nan == 0 {
+            return None
+        }
+        if count>0{
+            return total/float(count)
+        }else{
+            return float('NaN')
+        }
     }
 
     class LazyCore(){

@@ -21,7 +21,7 @@ class Core(object){
 
 	LOGGER=Logger.DEFAULT()
 	FREE_MEMORY_MANUALLY=True
-	CACHE_WEIGHTS=True
+	CACHE_WEIGHTS=False
 	STORE_GEN_POP_ONLY_ON_LAST=False
 	WRITE_POPULATION_WEIGHTS=False
 	K_FOLDS=10
@@ -136,7 +136,7 @@ class Core(object){
 			}
 			output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
 			if output!=output{ # Not a Number, ignore this genome
-				Core.LOGGER.warn('Not a number metric mean')
+				Core.LOGGER.warn('Not a number metric ('+str(hyperparameters.monitor_metric.toKerasName())+') mean of '+str(nn.getMetric(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)))
 				output=float('-inf') if search_maximum else float('inf')
 			}
 			if preserve_weights {
