@@ -24,6 +24,7 @@ class NeuralNetwork(ABC){
 	MANUAL_METRICS_NAMES=['accuracy','precision','recall','f1_score']
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
 	USE_MANUAL_METRICS=True # manual metrics are slower, but regular metrics returns strange values
+	MANUAL_METRICS_ONLY_ON_VALIDATION=True 
 	CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
 	USE_LEAKY_RELU=True
@@ -326,9 +327,10 @@ class NeuralNetwork(ABC){
 			for m,metric in enumerate(batch_metrics){
 				epoch_metrics[m].append(metric)
 			}
-			if NeuralNetwork.USE_MANUAL_METRICS{
+			if NeuralNetwork.USE_MANUAL_METRICS and not NeuralNetwork.MANUAL_METRICS_ONLY_ON_VALIDATION{
 				classes=self.predict(features_batch,get_classes=True,get_confidence=False)
-				for k,v in Dataset.statisticalAnalysis(classes,labels_batch).items(){
+				manual_stats=Dataset.statisticalAnalysis(classes,labels_batch)
+				for k,v in manual_stats.items(){
 					if k in epoch_metrics{
 						epoch_metrics[k].append(v)
 					}
@@ -363,7 +365,8 @@ class NeuralNetwork(ABC){
 			}
 			if NeuralNetwork.USE_MANUAL_METRICS{
 				classes=self.predict(val_features,get_classes=True,get_confidence=False)
-				for k,v in Dataset.statisticalAnalysis(classes,val_labels).items(){
+				manual_stats=Dataset.statisticalAnalysis(classes,val_labels)
+				for k,v in manual_stats.items(){
 					k='val_'+k
 					if k in self.history{
 						self.history[k].append(v)
@@ -695,11 +698,17 @@ class NeuralNetwork(ABC){
 		self.model.set_weights(weights)
 	}
 
-	def getMetricMean(self,metric_name,Validation=False){
-		if Validation{
+	def getMetricMean(self,metric_name,validation=False){
+		limited_to_one=metric_name in ('f1_score','recall','accuracy','precision')
+		if validation{
 			metric_name='val_'+metric_name
 		}
 		mean=Utils.mean(self.history[metric_name])
+		if limited_to_one and mean > 1 {
+			Utils.LazyCore.warn('mean: '+str(mean))
+			Utils.LazyCore.warn('metric_name: '+metric_name)
+			Utils.printDict(history,'history')
+		}
 		return mean
 	}
 
