@@ -58,7 +58,7 @@ class PopulationManager(object){
         self.print_deltas=None
         self.hall_of_fame=None
         self.after_gen_callback=None
-        if ray.is_initialized(){
+        if PopulationManager.RAY_ON and ray.is_initialized(){
             ray.shutdown()
         }
     }
