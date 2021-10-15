@@ -8,6 +8,7 @@ from StandardGeneticAlgorithm import StandardGeneticAlgorithm
 from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 import ray
 import multiprocessing
+import psutil
 
 
 class PopulationManager(object){
@@ -16,8 +17,9 @@ class PopulationManager(object){
     PRINT_REL_FREQUENCY=10
     MT_DNA_VALIDITY=15
     SIMULTANEOUS_EVALUATIONS=1 # parallelism, 0 = infinite
-    NO_PROGRESS_WHEN_PARALLEL=True
+    PROGRESS_WHEN_PARALLEL=True
     RAY_ON=False
+    CPU_AFFINITY=True
     
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None){
         self.genetic_algorithm=genetic_algorithm
@@ -42,6 +44,10 @@ class PopulationManager(object){
                 }else{
                     ray.init(num_cpus = PopulationManager.SIMULTANEOUS_EVALUATIONS)
                 }
+            }
+        }else{
+            if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
+                PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()
             }
         }
     }
@@ -81,7 +87,17 @@ class PopulationManager(object){
     }
 
     @staticmethod
-    def _evaluateIndividualMulti(individuals,g,out){
+    def _evaluateIndividualMulti(individuals,g,out,cpu_id=None){
+        if cpu_id is not None and PopulationManager.CPU_AFFINITY{
+            try{
+                proc=psutil.Process()
+                # print('Affinity before:',proc.cpu_affinity())
+                proc.cpu_affinity([cpu_id])
+                # print('Affinity after:',proc.cpu_affinity())
+            }except{
+                pass
+            }
+        }
         for individual in individuals{
             out.append(PopulationManager._evaluateIndividual(individual,g))
         }
@@ -106,7 +122,7 @@ class PopulationManager(object){
             outputs=[]
             if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
                 if PopulationManager.RAY_ON{
-                    if verbose and not PopulationManager.NO_PROGRESS_WHEN_PARALLEL{
+                    if verbose and PopulationManager.PROGRESS_WHEN_PARALLEL{
                         current_run=0
                         last_print=0
                         parallel_tasks=[PopulationManager._evaluateIndividualRay.remote(individual,g) for individual in self.population]
@@ -134,9 +150,6 @@ class PopulationManager(object){
                         outputs=ray.get([PopulationManager._evaluateIndividualRay.remote(individual,g) for individual in self.population])
                     }
                 }else{
-                    if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
-                        PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()-1
-                    }
                     t_id=0
                     parallel_tasks=[]
                     ret_vals=[]
@@ -150,7 +163,7 @@ class PopulationManager(object){
                     }
                     for t_id in range(PopulationManager.SIMULTANEOUS_EVALUATIONS){
                         out=manager.list()
-                        p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,out,))
+                        p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,out,t_id,))
                         parallel_tasks.append(p)
                         ret_vals.append(out)
                         p.start()
@@ -162,7 +175,7 @@ class PopulationManager(object){
                         if verbose{
                             t_complete+=len(parallel_args[t_id])
                             percent=t_complete/float(len(self.population))*100.0
-                            Utils.LazyCore.info('\t\tprogress: {:2.2f}% *non-accurate'.format(percent))
+                            Utils.LazyCore.info('\t\tprogress: {:2.2f}% *log time is not accurate'.format(percent))
                             t_id+=1
                         }
                     }
