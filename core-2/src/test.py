@@ -793,6 +793,21 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     test_callback(enh_elite.getBestGenome())
 }
 
+def testParallelEnhGenetic(){
+    bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=0
+    testEnhGenetic()
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
+}
+
+
+def testParallelGeneticallyTunedNN(){
+    bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=0
+    testGeneticallyTunedNN()
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
+}
+
 
 def runGenExperimentsOnMath(){
     results=[]
@@ -835,4 +850,6 @@ def runGenExperimentsOnMath(){
 # testEnhancedNN_SingleNet()
 # testEnhancedNN_MultiNet()
 # testGeneticallyTunedEnhancedNN_MultiNet()
+# testParallelEnhGenetic()
+# testParallelGeneticallyTunedNN()
 runGenExperimentsOnMath()

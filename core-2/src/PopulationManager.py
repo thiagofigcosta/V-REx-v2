@@ -6,6 +6,8 @@ from Genome import Genome
 from Utils import Utils
 from StandardGeneticAlgorithm import StandardGeneticAlgorithm
 from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
+import ray
+import multiprocessing
 
 
 class PopulationManager(object){
@@ -13,6 +15,9 @@ class PopulationManager(object){
 
     PRINT_REL_FREQUENCY=10
     MT_DNA_VALIDITY=15
+    SIMULTANEOUS_EVALUATIONS=1 # parallelism, 0 = infinite
+    NO_PROGRESS_WHEN_PARALLEL=True
+    RAY_ON=False
     
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None){
         self.genetic_algorithm=genetic_algorithm
@@ -30,6 +35,15 @@ class PopulationManager(object){
         self.hall_of_fame=None
         self.after_gen_callback=after_gen_callback
         self.last_run_population_sizes=[]
+        if PopulationManager.RAY_ON{
+            if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 and not ray.is_initialized(){
+                if PopulationManager.SIMULTANEOUS_EVALUATIONS == 0 {
+                    ray.init()
+                }else{
+                    ray.init(num_cpus = PopulationManager.SIMULTANEOUS_EVALUATIONS)
+                }
+            }
+        }
     }
 
     def __del__(self){
@@ -44,11 +58,43 @@ class PopulationManager(object){
         self.print_deltas=None
         self.hall_of_fame=None
         self.after_gen_callback=None
+        if ray.is_initialized(){
+            ray.shutdown()
+        }
+    }
+    @staticmethod
+    @ray.remote
+    def _evaluateIndividualRay(individual,g){
+        return PopulationManager._evaluateIndividual(individual,g)
+    }
+
+    @staticmethod
+    def _evaluateIndividual(individual,g,ret_val=None){
+        individual.evaluate()
+        individual.gen=g
+        if ret_val is None{
+            return individual.output
+        }else{
+            ret_val.value=individual.output
+            return
+        }
+    }
+
+    @staticmethod
+    def _evaluateIndividualMulti(individuals,g,out){
+        for individual in individuals{
+            out.append(PopulationManager._evaluateIndividual(individual,g))
+        }
     }
 
     def naturalSelection(self, gens, verbose=False, verbose_generations=None){
         mean_delta=0.0
         self.last_run_population_sizes=[]
+        if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
+            if verbose{
+                Utils.LazyCore.info('Using multiprocessing({})!'.format(PopulationManager.SIMULTANEOUS_EVALUATIONS))
+            }
+        }
         for g in range(1,gens+1){
             t1=time.time()
             if self.genetic_algorithm.looking_highest_fitness{
@@ -59,27 +105,91 @@ class PopulationManager(object){
             if verbose{
                 Utils.LazyCore.info('\tEvaluating individuals...')
             }
-            last_print=1
-            for p,individual in enumerate(self.population){
-                individual.evaluate()
-                individual.gen=g
-                output=individual.output
-                if self.genetic_algorithm.looking_highest_fitness{
-                    if output>best_out {
-                        best_out=output
+            outputs=[]
+            if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
+                if PopulationManager.RAY_ON{
+                    if verbose and not PopulationManager.NO_PROGRESS_WHEN_PARALLEL{
+                        current_run=0
+                        last_print=0
+                        parallel_tasks=[PopulationManager._evaluateIndividualRay.remote(individual,g) for individual in self.population]
+                        while len(parallel_tasks){
+                            max_returns=max(int(len(self.population)/PopulationManager.PRINT_REL_FREQUENCY),1)
+                            num_returns=max_returns if len(parallel_tasks) >= max_returns else len(parallel_tasks)
+                            ready,not_ready=ray.wait(parallel_tasks,num_returns=num_returns)
+                            if verbose {
+                                current_run+=len(ready)
+                                percent=current_run/float(len(self.population))*100.0
+                                if percent>=(last_print+1)*PopulationManager.PRINT_REL_FREQUENCY {
+                                    last_print=int(int(percent)/PopulationManager.PRINT_REL_FREQUENCY)
+                                    Utils.LazyCore.info('\t\tprogress: {:2.2f}%'.format(percent))
+                                }
+                            }
+                            if len(ready)>0{
+                                outputs+=ray.get(ready)
+                            }
+                            parallel_tasks=not_ready
+                        }
+                    }else{
+                        if verbose{
+                            Utils.LazyCore.info('\t\tProgress track is disabled due to parallelism!')
+                        }
+                        outputs=ray.get([PopulationManager._evaluateIndividualRay.remote(individual,g) for individual in self.population])
                     }
                 }else{
-                    if output<best_out{
-                        best_out=output
+                    if verbose{
+                        Utils.LazyCore.info('\t\tProgress track is disabled due to parallelism!')
+                    }
+                    if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
+                        PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()-1
+                    }
+                    t_id=0
+                    parallel_tasks=[]
+                    ret_vals=[]
+                    manager=multiprocessing.Manager()
+                    parallel_args=[[] for _ in range(PopulationManager.SIMULTANEOUS_EVALUATIONS)]
+                    for individual in self.population{
+                        parallel_args[t_id].append(individual)
+                        if len(parallel_args[t_id])>=int(len(self.population)/PopulationManager.SIMULTANEOUS_EVALUATIONS) and t_id+1<PopulationManager.SIMULTANEOUS_EVALUATIONS{
+                            t_id+=1
+                        }
+                    }
+                    for t_id in range(PopulationManager.SIMULTANEOUS_EVALUATIONS){
+                        out=manager.list()
+                        p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,out,))
+                        parallel_tasks.append(p)
+                        ret_vals.append(out)
+                        p.start()
+                    }
+                    for task in parallel_tasks{
+                        task.join()
+                    }
+                    for ret_val in ret_vals{
+                        outputs+=ret_val
                     }
                 }
-                if verbose{
-                    percent=(p+1)/float(len(self.population))*100.0
-                    if  percent>=last_print*PopulationManager.PRINT_REL_FREQUENCY {
-                        last_print+=1
-                        Utils.LazyCore.info('\t\tprogress: {:2.2f}%'.format(percent))
+                for pop_id,output in enumerate(outputs){
+                    self.population[pop_id].output=output
+                    self.population[pop_id].gen=g
+                }
+            }else{
+                last_print=1
+                for p,individual in enumerate(self.population){
+                    individual.evaluate()
+                    individual.gen=g
+                    outputs.append(individual.output)
+                    if verbose{
+                        percent=(p+1)/float(len(self.population))*100.0
+                        if  percent>=last_print*PopulationManager.PRINT_REL_FREQUENCY {
+                            last_print+=1
+                            Utils.LazyCore.info('\t\tprogress: {:2.2f}%'.format(percent))
+                        }
                     }
                 }
+            }
+            if self.genetic_algorithm.looking_highest_fitness{
+                best_out=max(outputs)
+            }else{
+                best_out=min(outputs)
             }
             if verbose{
                 Utils.LazyCore.info('\tEvaluated individuals...OK')

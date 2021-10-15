@@ -400,7 +400,20 @@ class NeuralNetwork(ABC){
 						if self.verbose{
 							Utils.LazyCore.info('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
 						}
-						self.model.save(self.getModelPath(self.checkpoint_filename))
+						max_tries=3
+						cur_try=0
+						done=False
+						while cur_try<max_tries and done==False{
+							try{ # need for parallelism
+								self.model.save(self.getModelPath(self.checkpoint_filename))
+								done=True
+							}except{
+								cur_try+=1
+							}
+						}
+						if not done{
+							Utils.LazyCore.warn('Failed to save checkpoint on epoch {} for {}'.format(e,self.name))
+						}
 					}
 				}
 			}else{
