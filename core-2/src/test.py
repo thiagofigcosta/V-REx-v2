@@ -193,6 +193,7 @@ def testStdVsEnhGenetic(mutation_rate=0.1){
     Core.FREE_MEMORY_MANUALLY=False
 
     verbose=False
+    print_deltas=False
     print('Standard vs Enhanced - EggHolder:')
     tests=100
     limits=SearchSpace()
@@ -211,7 +212,7 @@ def testStdVsEnhGenetic(mutation_rate=0.1){
         print('Test {} of {}'.format(x+1,tests))
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
-        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,print_deltas=True)
+        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,print_deltas=print_deltas)
         enh_population.hall_of_fame=enh_elite
         run_time=enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
@@ -227,7 +228,7 @@ def testStdVsEnhGenetic(mutation_rate=0.1){
 
         std_elite=HallOfFame(max_notables, search_maximum)
         std_ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
-        std_population=PopulationManager(std_ga,limits,eggHolder,population_start_size_std,print_deltas=True)
+        std_population=PopulationManager(std_ga,limits,eggHolder,population_start_size_std,print_deltas=print_deltas)
         std_population.hall_of_fame=std_elite
         run_time=std_population.naturalSelection(max_gens)
         std_result=std_elite.best
@@ -277,7 +278,7 @@ def testStdVsEnhGenetic(mutation_rate=0.1){
         print('Test {} of {}'.format(x+1,tests))
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
-        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,print_deltas=True)
+        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,print_deltas=print_deltas)
         enh_population.hall_of_fame=enh_elite
         run_time=enh_population.naturalSelection(max_gens)
         enh_result=enh_elite.best
@@ -293,7 +294,7 @@ def testStdVsEnhGenetic(mutation_rate=0.1){
 
         std_elite=HallOfFame(max_notables, search_maximum)
         std_ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
-        std_population=PopulationManager(std_ga,limits,easom,population_start_size_std,print_deltas=True)
+        std_population=PopulationManager(std_ga,limits,easom,population_start_size_std,print_deltas=print_deltas)
         std_population.hall_of_fame=std_elite
         run_time=std_population.naturalSelection(max_gens)
         std_result=std_elite.best
