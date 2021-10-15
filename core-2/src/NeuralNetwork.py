@@ -403,15 +403,19 @@ class NeuralNetwork(ABC){
 						max_tries=3
 						cur_try=0
 						done=False
+						error_e=None
 						while cur_try<max_tries and done==False{
 							try{ # need for parallelism
+								Utils.deleteFile(self.getModelPath(self.checkpoint_filename),True)
 								self.model.save(self.getModelPath(self.checkpoint_filename))
 								done=True
-							}except{
+							}except Exception as exception_e{
 								cur_try+=1
+								error_e=exception_e
 							}
 						}
 						if not done{
+							Utils.LazyCore.exception(error_e)
 							Utils.LazyCore.warn('Failed to save checkpoint on epoch {} for {}'.format(e,self.name))
 						}
 					}

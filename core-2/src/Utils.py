@@ -117,10 +117,10 @@ class Utils(){
     }
 
     @staticmethod
-    def deleteFile(path){
+    def deleteFile(path,quiet=False){
         if os.path.exists(path){
             os.remove(path)
-        }else{
+        }elif not quiet{
             Utils.LOGGER.warn('The file {} does not exist.'.format(path))
         }
     }
