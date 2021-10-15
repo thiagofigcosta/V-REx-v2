@@ -134,9 +134,6 @@ class PopulationManager(object){
                         outputs=ray.get([PopulationManager._evaluateIndividualRay.remote(individual,g) for individual in self.population])
                     }
                 }else{
-                    if verbose{
-                        Utils.LazyCore.info('\t\tProgress track is disabled due to parallelism!')
-                    }
                     if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
                         PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()-1
                     }
@@ -158,8 +155,16 @@ class PopulationManager(object){
                         ret_vals.append(out)
                         p.start()
                     }
+                    t_id=0
+                    t_complete=0
                     for task in parallel_tasks{
                         task.join()
+                        if verbose{
+                            t_complete+=len(parallel_args[t_id])
+                            percent=t_complete/float(len(self.population))*100.0
+                            Utils.LazyCore.info('\t\tprogress: {:2.2f}% *non-accurate'.format(percent))
+                            t_id+=1
+                        }
                     }
                     for ret_val in ret_vals{
                         outputs+=ret_val
