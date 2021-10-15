@@ -91,9 +91,7 @@ class PopulationManager(object){
         mean_delta=0.0
         self.last_run_population_sizes=[]
         if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
-            if verbose{
-                Utils.LazyCore.info('Using multiprocessing({})!'.format(PopulationManager.SIMULTANEOUS_EVALUATIONS))
-            }
+            Utils.LazyCore.info('Using multiprocessing({})!'.format(PopulationManager.SIMULTANEOUS_EVALUATIONS))
         }
         for g in range(1,gens+1){
             t1=time.time()
