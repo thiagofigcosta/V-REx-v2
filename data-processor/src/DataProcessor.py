@@ -2839,6 +2839,7 @@ class DataProcessor(object){
         }
         features_to_be_removed=[]
         features_to_be_filled_with_zero=[]
+        labels_to_be_filled_with_zero=[]
         for k,v in field_values_compressed.items() {
             if len(v)<=1{
                 features_to_be_removed.append(k)
@@ -2846,6 +2847,8 @@ class DataProcessor(object){
             if field_precesence[k]!=total_entries{
                 if threshold_presence*total_entries>field_precesence[k]{
                     features_to_be_removed.append(k)
+                }elif 'exploits_' in k{
+                    labels_to_be_filled_with_zero.append(k)
                 }else{
                     features_to_be_filled_with_zero.append(k)
                 }
@@ -2879,6 +2882,9 @@ class DataProcessor(object){
             data=data['data']
             for el in features_to_be_filled_with_zero {
                 features[el]=0
+            }
+            for el in labels_to_be_filled_with_zero {
+                labels[el]=0
             }
             for k,v in data.items(){
                 if not Utils.binarySearch(features_to_be_removed,k){
