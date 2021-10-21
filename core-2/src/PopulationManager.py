@@ -23,6 +23,7 @@ class PopulationManager(object){
     
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None){
         self.genetic_algorithm=genetic_algorithm
+        search_space=search_space.copy() # prevent changes
         self.space=self.genetic_algorithm.enrichSpace(search_space)
         has_age=False
         if type(self.genetic_algorithm) is EnhancedGeneticAlgorithm{

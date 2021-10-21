@@ -109,8 +109,25 @@ class SearchSpace(object){
        return str_out
     }
 
-    def add(self,min_value,max_value,data_type,name=''){
-        self.search_space.append(SearchSpace.Dimension(data_type,min_value,max_value,name))
+    def add(self,min_value,max_value,data_type,name='',unique=False){
+        if not unique or name==''{
+            new_index=len(self.search_space)
+            self.search_space.append(SearchSpace.Dimension(data_type,min_value,max_value,name))
+            return new_index
+        }else{
+            equal_idx=None
+            for i,dimension in enumerate(self.search_space) {
+                if dimension.name!='' and dimension.name==name{
+                    equal_idx=i
+                    break
+                }
+            }
+            if equal_idx is None{
+                return self.add(min_value,max_value,data_type,name,unique=False)
+            }else{
+                return equal_idx
+            }
+        }
     }
 
     def get(self,i){
