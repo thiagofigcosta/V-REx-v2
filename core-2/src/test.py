@@ -938,7 +938,7 @@ def testParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
         search_maximum=False
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate,rank_type=rank_type,resetMtDnaPercentage=resetMtDnaPercentage,willOfDPercentage=willOfDPercentage,recycleRateThreshold=recycleRateThreshold)
-        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=False)
+        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=False,force_sequential=True)
         enh_population.hall_of_fame=enh_elite
         enh_population.naturalSelection(max_gens,False,False)
         part_1_value=enh_elite.best['output']/-959.6407*100.0
@@ -952,7 +952,7 @@ def testParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
         search_maximum=True
         enh_elite=HallOfFame(max_notables, search_maximum)
         en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate,rank_type=rank_type,resetMtDnaPercentage=resetMtDnaPercentage,willOfDPercentage=willOfDPercentage,recycleRateThreshold=recycleRateThreshold)
-        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,neural_genome=False,print_deltas=False)
+        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,neural_genome=False,print_deltas=False,force_sequential=True)
         enh_population.hall_of_fame=enh_elite
         enh_population.naturalSelection(max_gens,False,False)
         part_2_value=enh_elite.best['output']/1*100.0

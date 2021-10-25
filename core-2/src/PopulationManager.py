@@ -20,7 +20,7 @@ class PopulationManager(object){
     RAY_ON=False
     CPU_AFFINITY=True
     
-    def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None){
+    def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None,force_sequential=False){
         self.genetic_algorithm=genetic_algorithm
         search_space=search_space.copy() # prevent changes
         self.space=self.genetic_algorithm.enrichSpace(search_space)
@@ -37,17 +37,20 @@ class PopulationManager(object){
         self.hall_of_fame=None
         self.after_gen_callback=after_gen_callback
         self.last_run_population_sizes=[]
-        if PopulationManager.RAY_ON{
-            if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 and not ray.is_initialized(){
-                if PopulationManager.SIMULTANEOUS_EVALUATIONS == 0 {
-                    ray.init()
-                }else{
-                    ray.init(num_cpus = PopulationManager.SIMULTANEOUS_EVALUATIONS)
+        self.force_sequential=force_sequential
+        if not self.force_sequential{
+            if PopulationManager.RAY_ON{
+                if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 and not ray.is_initialized(){
+                    if PopulationManager.SIMULTANEOUS_EVALUATIONS == 0 {
+                        ray.init()
+                    }else{
+                        ray.init(num_cpus = PopulationManager.SIMULTANEOUS_EVALUATIONS)
+                    }
                 }
-            }
-        }else{
-            if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
-                PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()
+            }else{
+                if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
+                    PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()
+                }
             }
         }
     }
@@ -107,7 +110,7 @@ class PopulationManager(object){
         mean_delta=0.0
         self.last_run_population_sizes=[]
         self.last_run_stats=[]
-        if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
+        if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 and not self.force_sequential {
             Utils.LazyCore.info('Using multiprocessing({})!'.format(PopulationManager.SIMULTANEOUS_EVALUATIONS))
         }
         for g in range(1,gens+1){
@@ -122,7 +125,7 @@ class PopulationManager(object){
                 Utils.LazyCore.info('\tEvaluating individuals...')
             }
             outputs=[]
-            if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
+            if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 and not self.force_sequential {
                 if PopulationManager.RAY_ON{
                     if verbose and PopulationManager.PROGRESS_WHEN_PARALLEL{
                         current_run=0
