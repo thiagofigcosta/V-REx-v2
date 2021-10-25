@@ -10,7 +10,7 @@ from Utils import Utils
 class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
-    DEFAULT_RESET_MT_DNA_PERCENTAGE=10
+    DEFAULT_RESET_MT_DNA_PERCENTAGE=35.89759047777904
     DEFAULT_WILL_OF_D_PERCENT=0.07
     DEFAULT_RECYCLE_THRESHOLD_PERCENT=0.05
 

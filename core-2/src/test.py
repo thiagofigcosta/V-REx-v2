@@ -904,7 +904,7 @@ def testParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
             return -(-math.cos(x)*math.cos(y)*math.exp(-(math.pow(x-math.pi,2)+math.pow(y-math.pi,2))))
         }
 
-        TUNE_ONE_INSTEAD_OF_ALL=True
+        TUNE_ONE_INSTEAD_OF_ALL=False
 
         if TUNE_ONE_INSTEAD_OF_ALL {
             resetMtDnaPercentage=float(genome.dna[0])

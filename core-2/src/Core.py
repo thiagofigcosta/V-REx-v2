@@ -428,7 +428,7 @@ class Core(object){
 		data_ids=[]
 		data_features=[]
 		data_labels=[]
-		for year in years {
+		for y,year in enumerate(years) {
 			cur_cves=self.mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
 			if cur_cves is None {
 				raise Exception('Unable to find cves from {}:{}'.format(year,limit))
@@ -454,6 +454,7 @@ class Core(object){
 					break
 				}
 			}
+			Core.LOGGER.info('\t{}: {:.2f}%'.format('Load progress',float((y+1)/len(years)*100.0)))
 		}
 		return data_ids,data_features,data_labels
 	}
@@ -464,7 +465,7 @@ class Core(object){
 		data_ids=[]
 		data_features=[[] for _ in range(amount_of_groups)]
 		data_labels=[]
-		for year in years {
+		for y,year in enumerate(years) {
 			cur_cves=self.mongo.findAllOnDB(processed_db,'dataset',query={'cve':{'$regex':'CVE-{}-.*'.format(year)}}).sort('cve',1)
 			if cur_cves is None {
 				raise Exception('Unable to find cves from {}:{}'.format(year,limit))
@@ -508,6 +509,7 @@ class Core(object){
 					break
 				}
 			}
+			Core.LOGGER.info('\t{}: {:.2f}%'.format('Load progress',float((y+1)/len(years)*100.0)))
 		}
 		return data_ids,data_features,data_labels
 	}
