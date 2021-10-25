@@ -28,7 +28,7 @@ class Core(object){
 	ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
 	FIXED_VALIDATION_PERCENT=.2
 	THRESHOLD=0.5
-	PARALLELISM=0 # 1=off, 0=infinite, else the amount of cores
+	PARALLELISM=12 # 1=off, 0=infinite, else the amount of cores
 
 	def __init__(self, mongo, logger){
 		Core.LOGGER=logger

@@ -15,7 +15,6 @@ class PopulationManager(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
 
     PRINT_REL_FREQUENCY=10
-    MT_DNA_VALIDITY=15
     SIMULTANEOUS_EVALUATIONS=1 # parallelism, 0 = infinite
     PROGRESS_WHEN_PARALLEL=True
     RAY_ON=False
@@ -107,11 +106,13 @@ class PopulationManager(object){
     def naturalSelection(self, gens, verbose=False, verbose_generations=None){
         mean_delta=0.0
         self.last_run_population_sizes=[]
+        self.last_run_stats=[]
         if PopulationManager.SIMULTANEOUS_EVALUATIONS!=1 {
             Utils.LazyCore.info('Using multiprocessing({})!'.format(PopulationManager.SIMULTANEOUS_EVALUATIONS))
         }
         for g in range(1,gens+1){
             t1=time.time()
+            self.genetic_algorithm.startGen()
             if self.genetic_algorithm.looking_highest_fitness{
                 best_out=float('-inf')
             }else{
@@ -239,11 +240,6 @@ class PopulationManager(object){
                     Utils.LazyCore.info('\tMutating{} individuals...'.format(enhanced_str))
                 }
                 self.population=self.genetic_algorithm.mutate(self.population)
-                if g%PopulationManager.MT_DNA_VALIDITY==0{
-                    for individual in self.population{
-                        individual.resetMtDna()
-                    }
-                }
                 if verbose{
                     enhanced_str=' and aged'
                     if type(self.genetic_algorithm) is not EnhancedGeneticAlgorithm{
@@ -254,10 +250,12 @@ class PopulationManager(object){
             }else{
                 self.population.sort()
             }
+            self.genetic_algorithm.finishGen(self.population,verbose=verbose)
             t2=time.time()
             delta=t2-t1
             mean_delta+=delta
             self.last_run_population_sizes.append(len(self.population))
+            self.last_run_stats.append(self.genetic_algorithm.stats)
             if self.after_gen_callback is not None {
                 args_list=[len(self.population),g,best_out,delta,self.population,self.hall_of_fame]
                 self.after_gen_callback(args_list)

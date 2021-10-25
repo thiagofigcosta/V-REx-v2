@@ -7,9 +7,10 @@ from Logger import Logger
 from Core import Core
 from Dataset import Dataset
 from Genome import Genome
-from Enums import LabelEncoding,NodeType,Loss,Metric,Optimizers
+from Enums import LabelEncoding,NodeType,Loss,Metric,Optimizers,GeneticRankType
 from Hyperparameters import Hyperparameters
 from HallOfFame import HallOfFame
+from GeneticAlgorithm import GeneticAlgorithm
 from StandardNeuralNetwork import StandardNeuralNetwork
 from EnhancedNeuralNetwork import EnhancedNeuralNetwork
 from StandardGeneticAlgorithm import StandardGeneticAlgorithm
@@ -72,7 +73,6 @@ def testStdGenetic(){
     limits=SearchSpace()
     limits.add(-100,100,SearchSpace.Type.FLOAT,name='x')
     limits.add(-100,100,SearchSpace.Type.FLOAT,name='y')
-    population_size=100
     max_gens=100
     mutation_rate=0.1
     sex_rate=0.7
@@ -153,7 +153,6 @@ def testEnhGenetic(){
     limits=SearchSpace()
     limits.add(-100,100,SearchSpace.Type.FLOAT,name='x')
     limits.add(-100,100,SearchSpace.Type.FLOAT,name='y')
-    population_size=100
     max_gens=100
     max_age=5
     max_children=4
@@ -809,6 +808,199 @@ def testParallelGeneticallyTunedNN(){
     PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
 }
 
+def testEnhGeneticStats(){
+    def eggHolder(genome){
+        # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
+        x=genome.dna[0]
+        y=genome.dna[1]
+        return -(y+47)*math.sin(math.sqrt(abs(y+(x/2)+47)))-x*math.sin(math.sqrt(abs(x-(y+47))))
+    }
+
+    def easom(genome){
+        # https://www.sfu.ca/~ssurjano/easom.html TIME MINUS ONE // maximum -> x1=x2=pi -> y(x1,x2)=1
+        x=genome.dna[0]
+        y=genome.dna[1]
+        return -(-math.cos(x)*math.cos(y)*math.exp(-(math.pow(x-math.pi,2)+math.pow(y-math.pi,2))))
+    }
+
+    PopulationManager.PRINT_REL_FREQUENCY=0
+
+    verbose_natural_selection=False
+    verbose_population_details=False
+    print('Minimization')
+    limits=SearchSpace()
+    limits.add(-512,512,SearchSpace.Type.FLOAT,name='x')
+    limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
+    population_start_size_enh=300
+    max_gens=100
+    max_age=5
+    max_children=4
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    search_maximum=False
+    max_notables=5
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+    
+    for g,stats in enumerate(enh_population.last_run_stats){
+        print('Generation {}:'.format(g+1))
+        Utils.printDict(stats,name=None,tabs=1)
+    }
+
+    
+    print('Expected: (x: 512, y: 404.2319) = -959.6407')
+    Utils.printDict(enh_elite.best,'Elite')
+    del enh_elite
+    del enh_population
+
+    print()
+    print('Maximization')
+    limits=SearchSpace()
+    limits.add(-100,100,SearchSpace.Type.FLOAT,name='x')
+    limits.add(-100,100,SearchSpace.Type.FLOAT,name='y')
+    max_gens=100
+    max_age=5
+    max_children=4
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    search_maximum=True
+    max_notables=5
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,neural_genome=False,print_deltas=verbose_population_details)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+    for g,stats in enumerate(enh_population.last_run_stats){
+        print('Generation {}:'.format(g+1))
+        Utils.printDict(stats,name=None,tabs=1)
+    }
+
+    print('Expected: (x: 3.141592, y: 3.141592) = 1')
+    Utils.printDict(enh_elite.best,'Elite')
+    del enh_elite
+    del enh_population
+}
+
+def testParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
+    bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=12
+
+    def enhGenetic(genome){
+        def eggHolder(genome){
+            # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
+            x=genome.dna[0]
+            y=genome.dna[1]
+            return -(y+47)*math.sin(math.sqrt(abs(y+(x/2)+47)))-x*math.sin(math.sqrt(abs(x-(y+47))))
+        }
+        def easom(genome){
+            # https://www.sfu.ca/~ssurjano/easom.html TIME MINUS ONE // maximum -> x1=x2=pi -> y(x1,x2)=1
+            x=genome.dna[0]
+            y=genome.dna[1]
+            return -(-math.cos(x)*math.cos(y)*math.exp(-(math.pow(x-math.pi,2)+math.pow(y-math.pi,2))))
+        }
+
+        TUNE_ONE_INSTEAD_OF_ALL=True
+
+        if TUNE_ONE_INSTEAD_OF_ALL {
+            resetMtDnaPercentage=float(genome.dna[0])
+            max_age=5
+            max_children=4
+            mutation_rate=0.1
+            recycle_rate=0.13
+            sex_rate=0.7
+            willOfDPercentage=0.07
+            recycleRateThreshold=0.05
+            rank_type=GeneticRankType(2)
+        }else{
+            resetMtDnaPercentage=float(genome.dna[0])
+            max_age=int(genome.dna[1])
+            max_children=int(genome.dna[2])
+            mutation_rate=float(genome.dna[3])
+            recycle_rate=float(genome.dna[4])
+            sex_rate=float(genome.dna[5])
+            willOfDPercentage=float(genome.dna[6])
+            recycleRateThreshold=float(genome.dna[7])
+            rank_type=GeneticRankType(int(genome.dna[8]))
+        }
+
+        max_gens=80
+        population_start_size_enh=200
+        max_notables=1
+
+        limits=SearchSpace()
+        limits.add(-512,512,SearchSpace.Type.FLOAT,name='x')
+        limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
+        search_maximum=False
+        enh_elite=HallOfFame(max_notables, search_maximum)
+        en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate,rank_type=rank_type,resetMtDnaPercentage=resetMtDnaPercentage,willOfDPercentage=willOfDPercentage,recycleRateThreshold=recycleRateThreshold)
+        enh_population=PopulationManager(en_ga,limits,eggHolder,population_start_size_enh,neural_genome=False,print_deltas=False)
+        enh_population.hall_of_fame=enh_elite
+        enh_population.naturalSelection(max_gens,False,False)
+        part_1_value=enh_elite.best['output']/-959.6407*100.0
+        part_1_speed=(max_gens-enh_elite.best['generation'])/max_gens*100.0
+        del enh_elite
+        del enh_population
+
+        limits=SearchSpace()
+        limits.add(-100,100,SearchSpace.Type.FLOAT,name='x')
+        limits.add(-100,100,SearchSpace.Type.FLOAT,name='y')
+        search_maximum=True
+        enh_elite=HallOfFame(max_notables, search_maximum)
+        en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate,rank_type=rank_type,resetMtDnaPercentage=resetMtDnaPercentage,willOfDPercentage=willOfDPercentage,recycleRateThreshold=recycleRateThreshold)
+        enh_population=PopulationManager(en_ga,limits,easom,population_start_size_enh,neural_genome=False,print_deltas=False)
+        enh_population.hall_of_fame=enh_elite
+        enh_population.naturalSelection(max_gens,False,False)
+        part_2_value=enh_elite.best['output']/1*100.0
+        part_2_speed=(max_gens-enh_elite.best['generation'])/max_gens*100.0
+        del enh_elite
+        del enh_population
+
+        return (part_1_value*5+part_2_value*5+part_1_speed+part_2_speed)/12.0
+    }
+
+    def after_gen_callback(args_list){
+        pop_size=args_list[0]
+        g=args_list[1]
+        best_out=args_list[2]
+        timestamp_s=args_list[3]
+        population=args_list[4]
+        hall_of_fame=args_list[5]
+        print('Best at gen {} is {} - {}'.format(g,best_out,str(hall_of_fame.notables[0])))
+    }
+
+    verbose=True
+    limits=SearchSpace()
+    limits.add(1,50,SearchSpace.Type.FLOAT,name='reset_mt_dna')
+    limits.add(2,10,SearchSpace.Type.INT,name='age')
+    limits.add(2,6,SearchSpace.Type.INT,name='children')
+    limits.add(0.05,0.35,SearchSpace.Type.FLOAT,name='mutation')
+    limits.add(0.05,0.35,SearchSpace.Type.FLOAT,name='recycle')
+    limits.add(0.5,0.9,SearchSpace.Type.FLOAT,name='sex')
+    limits.add(0.01,0.2,SearchSpace.Type.FLOAT,name='D')
+    limits.add(0.01,0.2,SearchSpace.Type.FLOAT,name='trash')
+    limits.add(0,2,SearchSpace.Type.INT,name='rank')
+    population_size=100
+    max_gens=50
+    mutation_rate=0.2
+    sex_rate=0.6
+    search_maximum=True
+    max_notables=5
+    elite_min=HallOfFame(max_notables, search_maximum)
+    ga=StandardGeneticAlgorithm(search_maximum,mutation_rate, sex_rate)
+    population=PopulationManager(ga,limits,enhGenetic,population_size,neural_genome=False,print_deltas=verbose,after_gen_callback=after_gen_callback)
+    population.hall_of_fame=elite_min
+    population.naturalSelection(max_gens,verbose)
+    for individual in elite_min.notables{
+        print(str(individual))
+    }
+    Utils.printDict(elite_min.best,'Elite')
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
+}
 
 def runGenExperimentsOnMath(){
     results=[]
@@ -853,4 +1045,6 @@ def runGenExperimentsOnMath(){
 # testGeneticallyTunedEnhancedNN_MultiNet()
 # testParallelEnhGenetic()
 # testParallelGeneticallyTunedNN()
-runGenExperimentsOnMath()
+# testEnhGeneticStats()
+testParallelGeneticallyTuneGeneticEnhancedAlgorithm()
+# runGenExperimentsOnMath()

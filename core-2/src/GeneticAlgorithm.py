@@ -7,9 +7,10 @@ from Utils import Utils
 
 class GeneticAlgorithm(ABC){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
-    
+
     def __init__(self,looking_highest_fitness){
         self.looking_highest_fitness=looking_highest_fitness
+        self.stats={}
     }
 
     @abstractmethod
@@ -44,6 +45,14 @@ class GeneticAlgorithm(ABC){
 
     @abstractmethod
     def randomize(self){
+        pass
+    }
+
+    def startGen(self,individuals=None,**kwargs){
+        pass
+    }
+
+    def finishGen(self,individuals=None,**kwargs){
         pass
     }
 

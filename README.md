@@ -144,6 +144,16 @@ sudo su
 free -mh && sync && echo 3 > /proc/sys/vm/drop_caches && free -mh
 ```
 
+## Cleanup RAM memory cache if needed
+```
+top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
+```
+or
+```
+awk '{u=$2+$4; t=$2+$4+$5; if (NR==1){u1=u; t1=t;} else print ($2+$4-u1) * 100 / (t-t1) "%"; }' \
+<(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)
+```
+
 ## Web Interfaces:
 >- Mongo-Express: http://localhost:8081/
 >- Portainer: http://localhost:9000/

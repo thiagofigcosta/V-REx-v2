@@ -105,7 +105,7 @@ class GeneticRankType(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     RELATIVE = 0
     ABSOLUTE = 1
-    INCREMENTAL = 1
+    INCREMENTAL = 2
 }
 
 

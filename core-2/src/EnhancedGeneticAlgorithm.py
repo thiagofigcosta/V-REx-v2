@@ -10,10 +10,11 @@ from Utils import Utils
 class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
-    WILL_OF_D_PERCENT=0.07
-    RECYCLE_THRESHOLD_PERCENT=0.05
+    DEFAULT_RESET_MT_DNA_PERCENTAGE=10
+    DEFAULT_WILL_OF_D_PERCENT=0.07
+    DEFAULT_RECYCLE_THRESHOLD_PERCENT=0.05
 
-    def __init__(self, looking_highest_fitness, max_children, max_age, mutation_rate, sex_rate, recycle_rate, rank_type=GeneticRankType.INCREMENTAL){
+    def __init__(self, looking_highest_fitness, max_children, max_age, mutation_rate, sex_rate, recycle_rate, rank_type=GeneticRankType.INCREMENTAL, resetMtDnaPercentage=DEFAULT_RESET_MT_DNA_PERCENTAGE,willOfDPercentage=DEFAULT_WILL_OF_D_PERCENT,recycleRateThreshold=DEFAULT_RECYCLE_THRESHOLD_PERCENT){
         super().__init__(looking_highest_fitness)
         self.max_population=None
         self.index_max_age=None
@@ -25,6 +26,9 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
         self.recycle_rate=recycle_rate
         self.rank_type=rank_type
         self.current_population_size=0
+        self.resetMtDnaPercentage=resetMtDnaPercentage
+        self.willOfDPercentage=willOfDPercentage
+        self.recycleRateThreshold=recycleRateThreshold
     }
 
     def select(self, individuals){
@@ -50,7 +54,16 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
                 for individual in individuals {
                     current_roulette+=individual.fitness+offset
                     if current_roulette>=roulette_number {
-                        if ( len(potential_parents)<1 or not self.isRelative(potential_parents[0],individual)){
+                        first_selected=len(potential_parents)<1
+                        relatives=False
+                        if not first_selected {
+                            relatives=self.isRelative(potential_parents[0],individual)
+                            self.stats['total_attempts']+=1
+                            if relatives{
+                                self.stats['relatives_attempts']+=1
+                            }
+                        }
+                        if ( first_selected or not relatives){
                             potential_parents.append(individual)
                             break
                         }elif backup_individual is None{
@@ -193,7 +206,7 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
         for i,individual in enumerate(individuals){
             individual.age+=1
             if self.getLifeLeft(individual)<0 {
-                if (individual.fitness<=(1-EnhancedGeneticAlgorithm.WILL_OF_D_PERCENT)*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>=EnhancedGeneticAlgorithm.WILL_OF_D_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
+                if (individual.fitness<=(1-self.willOfDPercentage)*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>=self.willOfDPercentage and self.rank_type==GeneticRankType.RELATIVE){
                     if Utils.LazyCore.freeMemManually(){
                         del individual # dead
                     }
@@ -263,11 +276,11 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
         }
         for i in custom_range {
             individual=individuals[i]
-            if (individual.fitness<EnhancedGeneticAlgorithm.RECYCLE_THRESHOLD_PERCENT*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>EnhancedGeneticAlgorithm.RECYCLE_THRESHOLD_PERCENT and self.rank_type==GeneticRankType.RELATIVE){
+            if (individual.fitness<self.recycleRateThreshold*self.current_population_size and self.rank_type!=GeneticRankType.RELATIVE) or (individual.fitness/100>self.recycleRateThreshold and self.rank_type==GeneticRankType.RELATIVE){
                 if Utils.LazyCore.freeMemManually(){
                     del individual
                 }
-                idx_of_amazing_individual=int(EnhancedGeneticAlgorithm.WILL_OF_D_PERCENT*len(individuals)*Utils.random())
+                idx_of_amazing_individual=int(self.willOfDPercentage*len(individuals)*Utils.random())
                 if self.rank_type!=GeneticRankType.RELATIVE{
                     idx_of_amazing_individual=(len(individuals)-1)-idx_of_amazing_individual
                 }
@@ -295,6 +308,39 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
 
     def getMaxAllowedPopulation(self){
         return self.max_population
+    }
+
+    def startGen(self,individuals=None,**kwargs){
+        self.stats={}
+        self.stats['relatives_attempts']=0
+        self.stats['total_attempts']=0
+        self.stats['mt_dnas_count']=0
+        self.stats['individuals']=0
+    }
+
+    def finishGen(self,individuals=None,**kwargs){
+        if individuals is not None{
+            verbose=kwargs.get('verbose')
+            mt_dnas={}
+            for individual in individuals{
+                mt_dna=individual.mt_dna
+                if mt_dna not in mt_dnas{
+                    mt_dnas[mt_dna]=0
+                }
+                mt_dnas[mt_dna]+=1
+            }
+            self.stats['mt_dnas_count']=len(mt_dnas)
+            self.stats['individuals']=len(individuals)
+            self.stats['non_relative_chance']=self.stats['mt_dnas_count']/float(self.stats['individuals'])*100
+            if (self.stats['non_relative_chance']<self.resetMtDnaPercentage){
+                if verbose{
+                    Utils.LazyCore.info('\tReseting mtDNA...')
+                }
+                for individual in individuals{
+                    individual.resetMtDna()
+                }
+            }
+        }
     }
 
 }
