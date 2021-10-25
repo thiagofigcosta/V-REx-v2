@@ -10,9 +10,9 @@ from Utils import Utils
 class EnhancedGeneticAlgorithm(GeneticAlgorithm){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
-    DEFAULT_RESET_MT_DNA_PERCENTAGE=35.89759047777904
-    DEFAULT_WILL_OF_D_PERCENT=0.07
-    DEFAULT_RECYCLE_THRESHOLD_PERCENT=0.05
+    DEFAULT_RESET_MT_DNA_PERCENTAGE=35.89759047777904 # 10 
+    DEFAULT_WILL_OF_D_PERCENT=0.11134565126126  # 0.07 
+    DEFAULT_RECYCLE_THRESHOLD_PERCENT=0.19034005265624 # 0.05
 
     def __init__(self, looking_highest_fitness, max_children, max_age, mutation_rate, sex_rate, recycle_rate, rank_type=GeneticRankType.INCREMENTAL, resetMtDnaPercentage=DEFAULT_RESET_MT_DNA_PERCENTAGE,willOfDPercentage=DEFAULT_WILL_OF_D_PERCENT,recycleRateThreshold=DEFAULT_RECYCLE_THRESHOLD_PERCENT){
         super().__init__(looking_highest_fitness)

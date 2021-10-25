@@ -174,7 +174,7 @@ def testEnhGenetic(){
     Utils.printDict(enh_elite.best,'Elite')
 }
 
-def testStdVsEnhGenetic(mutation_rate=0.1){
+def testStdVsEnhGenetic(mutation_rate=0.1,max_age=6,max_children=5,recycle_rate=0.13,sex_rate=0.7){
     def eggHolder(genome){
         # https://www.sfu.ca/~ssurjano/egg.html // minimum -> x1=512 | x2=404.2319 -> y(x1,x2)=-959.6407
         x=genome.dna[0]
@@ -200,10 +200,6 @@ def testStdVsEnhGenetic(mutation_rate=0.1){
     limits.add(-512,512,SearchSpace.Type.FLOAT,name='y')
     population_start_size_enh=300
     max_gens=100
-    max_age=6
-    max_children=5
-    recycle_rate=0.13
-    sex_rate=0.7
     search_maximum=False
     max_notables=5
     results={'standard':[],'enhanced':[]}
@@ -886,7 +882,7 @@ def testEnhGeneticStats(){
     del enh_population
 }
 
-def testParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
+def runParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
     bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
     PopulationManager.SIMULTANEOUS_EVALUATIONS=12
 
@@ -1007,7 +1003,7 @@ def runGenExperimentsOnMath(){
     mutation_rates=(0.1,0.2)
     for mutation_rate in mutation_rates{
         print('Mutation rate of: {}'.format(mutation_rate))
-        results.append(testStdVsEnhGenetic(mutation_rate))
+        results.append(testStdVsEnhGenetic(mutation_rate,max_age=5,max_children=4,recycle_rate=0.2,sex_rate=0.8))
         print()
         print()
         print()
@@ -1033,6 +1029,13 @@ def runGenExperimentsOnMath(){
     }
 }
 
+def runParallelGeneticallyGenExperimentsOnMath(){
+    bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=12
+    runGenExperimentsOnMath()
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
+}
+
 # testStdGenetic()
 # testEnhGenetic()
 # testStdVsEnhGenetic()
@@ -1046,5 +1049,6 @@ def runGenExperimentsOnMath(){
 # testParallelEnhGenetic()
 # testParallelGeneticallyTunedNN()
 # testEnhGeneticStats()
-testParallelGeneticallyTuneGeneticEnhancedAlgorithm()
+# runParallelGeneticallyTuneGeneticEnhancedAlgorithm()
 # runGenExperimentsOnMath()
+runParallelGeneticallyGenExperimentsOnMath()
