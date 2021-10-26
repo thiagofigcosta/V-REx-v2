@@ -197,7 +197,7 @@ class EnhancedGeneticAlgorithm(GeneticAlgorithm){
 
     def enrichSpace(self, space){
         self.index_max_age=space.add(self.max_age/2,self.max_age*abs(self.randomize()),SearchSpace.Type.INT,name='Max age',unique=True)
-        self.index_max_children=space.add(1,self.max_children*abs(self.randomize()),SearchSpace.Type.INT,name='Max children',unique=True)
+        self.index_max_children=space.add(2,self.max_children*abs(self.randomize()),SearchSpace.Type.INT,name='Max children',unique=True)
         return space
     }
 
