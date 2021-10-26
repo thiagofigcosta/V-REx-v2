@@ -73,7 +73,11 @@ class StandardNeuralNetwork(NeuralNetwork){
 			callbacks.append(early_stopping)
 		}
 		if self.hyperparameters.model_checkpoint{
-			checkpoint_filename=self.basename+'_cp.h5'
+			if self.name==''{
+				checkpoint_filename=self.basename+'_cp.h5'
+			}else{
+				checkpoint_filename=self.basename+'_'+self.name+'_cp.h5'
+			}
 			self.checkpoint_filename=checkpoint_filename
 			checkpoint_filepath=self.getModelPath(self.checkpoint_filename)
 			checkpoint=ModelCheckpoint(checkpoint_filepath, monitor='val_'+self.hyperparameters.monitor_metric.toKerasName(), verbose=1 if self.verbose else 0, save_best_only=True, mode='auto')
