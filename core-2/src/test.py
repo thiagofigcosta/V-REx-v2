@@ -1003,7 +1003,7 @@ def runGenExperimentsOnMath(){
     mutation_rates=(0.1,0.2)
     for mutation_rate in mutation_rates{
         print('Mutation rate of: {}'.format(mutation_rate))
-        results.append(testStdVsEnhGenetic(mutation_rate,max_age=5,max_children=4,recycle_rate=0.2,sex_rate=0.8))
+        results.append(testStdVsEnhGenetic(mutation_rate,max_age=5,max_children=4,recycle_rate=0.33,sex_rate=0.83))
         print()
         print()
         print()
@@ -1029,12 +1029,6 @@ def runGenExperimentsOnMath(){
     }
 }
 
-def runParallelGeneticallyGenExperimentsOnMath(){
-    bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
-    PopulationManager.SIMULTANEOUS_EVALUATIONS=12
-    runGenExperimentsOnMath()
-    PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
-}
 
 # testStdGenetic()
 # testEnhGenetic()
@@ -1050,5 +1044,4 @@ def runParallelGeneticallyGenExperimentsOnMath(){
 # testParallelGeneticallyTunedNN()
 # testEnhGeneticStats()
 # runParallelGeneticallyTuneGeneticEnhancedAlgorithm()
-# runGenExperimentsOnMath()
-runParallelGeneticallyGenExperimentsOnMath()
+runGenExperimentsOnMath()
