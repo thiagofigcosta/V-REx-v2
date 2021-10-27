@@ -113,10 +113,14 @@ class Core(object){
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,multi_net_enhanced_nn=multiple_networks)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+			complement_for_nn_id=''
+			if Core.PARALLELISM != 1 { # need for parallelism ???
+				complement_for_nn_id=str(Utils.randomInt(0,666666))
+			}
 			if nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
-				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}{}'.format(genome.id,complement_for_nn_id),verbose=False)
 			}else{
-				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}{}'.format(genome.id,complement_for_nn_id),verbose=False)
 			}
 			nn.buildModel(input_size=input_size)
         	nn.saveModelSchemaToFile('population_nets')
@@ -136,7 +140,23 @@ class Core(object){
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
 			if hyperparameters.model_checkpoint{
-				nn.restoreCheckpointWeights()
+				max_tries=2
+				cur_try=0
+				done=False
+				error_e=None
+				while cur_try<max_tries and done==False{
+					try{ # need for parallelism ???
+						nn.restoreCheckpointWeights()
+						done=True
+					}except Exception as exception_e{
+						cur_try+=1
+						error_e=exception_e
+					}
+				}
+				if not done{
+					Core.LOGGER.exception(error_e)
+					Core.LOGGER.warn('Failed to restore checkpoint for {}'.format(nn.name))
+				}
 			}
 			output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
 			if output!=output{ # Not a Number, ignore this genome
