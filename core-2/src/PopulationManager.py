@@ -18,7 +18,7 @@ class PopulationManager(object){
     SIMULTANEOUS_EVALUATIONS=1 # parallelism, 0 = infinite
     PROGRESS_WHEN_PARALLEL=True
     RAY_ON=False
-    CPU_AFFINITY=True
+    CPU_AFFINITY=False
     
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None,force_sequential=False){
         self.genetic_algorithm=genetic_algorithm
@@ -51,6 +51,7 @@ class PopulationManager(object){
                 if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
                     PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()
                 }
+                self.multiprocessing_manager=multiprocessing.Manager()
             }
         }
     }
@@ -158,7 +159,6 @@ class PopulationManager(object){
                     t_id=0
                     parallel_tasks=[]
                     ret_vals=[]
-                    manager=multiprocessing.Manager()
                     parallel_args=[[] for _ in range(PopulationManager.SIMULTANEOUS_EVALUATIONS)]
                     for individual in self.population{
                         parallel_args[t_id].append(individual)
@@ -167,10 +167,10 @@ class PopulationManager(object){
                         }
                     }
                     for t_id in range(PopulationManager.SIMULTANEOUS_EVALUATIONS){
-                        out=manager.list()
-                        p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,out,t_id,))
+                        ret_val=self.multiprocessing_manager.list()
+                        p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,ret_val,t_id,))
                         parallel_tasks.append(p)
-                        ret_vals.append(out)
+                        ret_vals.append(ret_val)
                         p.start()
                     }
                     t_id=0
