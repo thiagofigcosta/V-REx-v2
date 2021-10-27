@@ -1,13 +1,16 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 
+import os
 import time
 from Genome import Genome
 from Utils import Utils
 from StandardGeneticAlgorithm import StandardGeneticAlgorithm
 from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
+from functools import partial
 import ray
 import multiprocessing
+import pathos.pools as pp
 import psutil
 
 
@@ -16,9 +19,10 @@ class PopulationManager(object){
 
     PRINT_REL_FREQUENCY=10
     SIMULTANEOUS_EVALUATIONS=1 # parallelism, 0 = infinite
-    PROGRESS_WHEN_PARALLEL=True
-    RAY_ON=False
-    CPU_AFFINITY=False
+    PROGRESS_WHEN_PARALLEL=True # only for ray and multiprocessing
+    RAY_ON=False # uses ray instead of multiprocessing or pathos
+    CPU_AFFINITY=False # assign each process for a single cpu when using multiprocessing
+    USE_POOL=True # use pathos when ray is not on
     
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None,force_sequential=False){
         self.genetic_algorithm=genetic_algorithm
@@ -49,9 +53,14 @@ class PopulationManager(object){
                 }
             }else{
                 if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
-                    PopulationManager.SIMULTANEOUS_EVALUATIONS=multiprocessing.cpu_count()
+                    PopulationManager.SIMULTANEOUS_EVALUATIONS=os.cpu_count() # same as multiprocessing.cpu_count()
                 }
-                self.multiprocessing_manager=multiprocessing.Manager()
+                if PopulationManager.USE_POOL {
+                    self.multiprocessing_pool=pp.ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS) # pathos uses dill as serializer which is way better than pickle
+                    # self.multiprocessing_pool=multiprocessing.Pool(processes=PopulationManager.SIMULTANEOUS_EVALUATIONS) # raises can't pickle exception
+                }else{
+                    self.multiprocessing_manager=multiprocessing.Manager()
+                }
             }
         }
     }
@@ -68,10 +77,19 @@ class PopulationManager(object){
         self.print_deltas=None
         self.hall_of_fame=None
         self.after_gen_callback=None
-        if PopulationManager.RAY_ON and ray.is_initialized(){
-            ray.shutdown()
+        if not self.force_sequential{
+            if PopulationManager.RAY_ON{
+                if ray.is_initialized() {
+                    ray.shutdown()
+                }
+            }elif PopulationManager.USE_POOL{
+                self.multiprocessing_pool.close()
+                self.multiprocessing_pool.join() 
+                self.multiprocessing_pool.clear()
+            }
         }
     }
+
     @staticmethod
     @ray.remote
     def _evaluateIndividualRay(individual,g){
@@ -156,36 +174,45 @@ class PopulationManager(object){
                         outputs=ray.get([PopulationManager._evaluateIndividualRay.remote(individual,g) for individual in self.population])
                     }
                 }else{
-                    t_id=0
-                    parallel_tasks=[]
-                    ret_vals=[]
-                    parallel_args=[[] for _ in range(PopulationManager.SIMULTANEOUS_EVALUATIONS)]
-                    for individual in self.population{
-                        parallel_args[t_id].append(individual)
-                        if len(parallel_args[t_id])>=int(len(self.population)/PopulationManager.SIMULTANEOUS_EVALUATIONS) and t_id+1<PopulationManager.SIMULTANEOUS_EVALUATIONS{
-                            t_id+=1
-                        }
-                    }
-                    for t_id in range(PopulationManager.SIMULTANEOUS_EVALUATIONS){
-                        ret_val=self.multiprocessing_manager.list()
-                        p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,ret_val,t_id,))
-                        parallel_tasks.append(p)
-                        ret_vals.append(ret_val)
-                        p.start()
-                    }
-                    t_id=0
-                    t_complete=0
-                    for task in parallel_tasks{
-                        task.join()
+                    if PopulationManager.USE_POOL {
                         if verbose{
-                            t_complete+=len(parallel_args[t_id])
-                            percent=t_complete/float(len(self.population))*100.0
-                            Utils.LazyCore.info('\t\tprogress: {:2.2f}% *log time is not accurate'.format(percent))
-                            t_id+=1
+                            Utils.LazyCore.info('\t\tProgress track is disabled due to parallelism!')
                         }
-                    }
-                    for ret_val in ret_vals{
-                        outputs+=ret_val
+                        _evaluateIndividualPartial=partial(PopulationManager._evaluateIndividual, g=g)
+                        outputs=self.multiprocessing_pool.map(_evaluateIndividualPartial, self.population)
+                    }else{
+                        t_id=0
+                        parallel_tasks=[]
+                        ret_vals=[]
+                        parallel_args=[[] for _ in range(PopulationManager.SIMULTANEOUS_EVALUATIONS)]
+                        for individual in self.population{
+                            parallel_args[t_id].append(individual)
+                            if len(parallel_args[t_id])>=int(len(self.population)/PopulationManager.SIMULTANEOUS_EVALUATIONS) and t_id+1<PopulationManager.SIMULTANEOUS_EVALUATIONS{
+                                t_id+=1
+                            }
+                        }
+                        for t_id in range(PopulationManager.SIMULTANEOUS_EVALUATIONS){
+                            ret_val=self.multiprocessing_manager.list()
+                            p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,ret_val,t_id,))
+                            parallel_tasks.append(p)
+                            ret_vals.append(ret_val)
+                            p.start()
+                        }
+                        t_id=0
+                        t_complete=0
+                        for task in parallel_tasks{
+                            task.join()
+                            task.terminate() # do I need this?
+                            if verbose{
+                                t_complete+=len(parallel_args[t_id])
+                                percent=t_complete/float(len(self.population))*100.0
+                                Utils.LazyCore.info('\t\tprogress: {:2.2f}% *log time is not accurate'.format(percent))
+                                t_id+=1
+                            }
+                        }
+                        for ret_val in ret_vals{
+                            outputs+=ret_val
+                        }
                     }
                 }
                 for pop_id,output in enumerate(outputs){
