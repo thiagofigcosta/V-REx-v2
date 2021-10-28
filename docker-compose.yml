@@ -15,7 +15,7 @@ services:
             replicas: 1
             resources:
                 limits:
-                    cpus: '16'
+                    cpus: '14'
                     memory: 60G
                 reservations:
                     memory: 10G
