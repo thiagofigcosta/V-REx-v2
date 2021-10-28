@@ -116,7 +116,7 @@ class NeuralNetwork(ABC){
 	def saveModelSchemaToFile(self,folder=''){
 		base=self.getPlotsPath(folder)
 		Utils.createFolderIfNotExists(base)
-		filename='model_{}.png'.format(self.name)
+		filename='{}_{}.png'.format(self.basename,self.name)
 		filepath=Utils.joinPath(base,filename)
 		if self.verbose{
 			Utils.LazyCore.info('Saving model diagram to file: {}'.format(filepath))
@@ -385,43 +385,45 @@ class NeuralNetwork(ABC){
 		}
 		if val_labels is not None and epochs_wo_improvement is not None{
 			if best_val is not None{
-				if best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]{
+				save_checkpoint=False
+				if best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]{ # TODO be careful for when the monitor metric best value is the biggest one
 					if self.verbose{
-						Utils.LazyCore.info('val_{} did not improve from {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+						Utils.LazyCore.info('val_{} did not improve from {:.5f}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
 					}
 					epochs_wo_improvement+=1
 				}else{
 					epochs_wo_improvement=0
-					best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 					if self.verbose{
-						Utils.LazyCore.info('val_{} improved to {}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+						Utils.LazyCore.info('val_{} improved from {:.5f} to {:.5f}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val,val_metrics[self.hyperparameters.monitor_metric.toKerasName()]))
 					}
-					if self.hyperparameters.model_checkpoint{
-						if self.verbose{
-							Utils.LazyCore.info('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
-						}
-						max_tries=3
-						cur_try=0
-						done=False
-						error_e=None
-						while cur_try<max_tries and done==False{
-							try{ # need for parallelism
-								Utils.deleteFile(self.getModelPath(self.checkpoint_filename),True)
-								self.model.save(self.getModelPath(self.checkpoint_filename))
-								done=True
-							}except Exception as exception_e{
-								cur_try+=1
-								error_e=exception_e
-							}
-						}
-						if not done{
-							Utils.LazyCore.exception(error_e)
-							Utils.LazyCore.warn('Failed to save checkpoint on epoch {} for {}'.format(e,self.name))
-						}
-					}
+					best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
+					save_checkpoint=True
 				}
 			}else{
 				best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
+				save_checkpoint=True
+			}
+			if self.hyperparameters.model_checkpoint and save_checkpoint{
+				if self.verbose{
+					Utils.LazyCore.info('saving checkpoint on {}, epoch {}'.format(self.checkpoint_filename,e+1))
+				}
+				max_tries=3
+				cur_try=0
+				done=False
+				error_e=None
+				while cur_try<max_tries and done==False{
+					try{ # need for parallelism
+						Utils.deleteFile(self.getModelPath(self.checkpoint_filename),True)
+						self.model.save(self.getModelPath(self.checkpoint_filename))
+						done=True
+					}except Exception as exception_e{
+						cur_try+=1
+						error_e=exception_e
+					}
+				}
+				if not done{
+					Utils.LazyCore.warn('Failed to save checkpoint on epoch {} for {}. Exception: {}.'.format(e,self.name,error_e))
+				}
 			}
 			if self.verbose{
 				Utils.LazyCore.info()
