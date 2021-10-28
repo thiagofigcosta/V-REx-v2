@@ -114,9 +114,9 @@ class Core(object){
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,multi_net_enhanced_nn=multiple_networks)
 			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
 			if nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
-				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.uid),verbose=False)
 			}else{
-				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.id),verbose=False)
+				nn=StandardNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.uid),verbose=False)
 			}
 			nn.buildModel(input_size=input_size)
         	nn.saveModelSchemaToFile('population_nets')
@@ -136,21 +136,10 @@ class Core(object){
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
 			if hyperparameters.model_checkpoint{
-				max_tries=2
-				cur_try=0
-				done=False
-				error_e=None
-				while cur_try<max_tries and done==False{
-					try{ # need for parallelism ???
-						nn.restoreCheckpointWeights()
-						done=True
-					}except Exception as exception_e{
-						cur_try+=1
-						error_e=exception_e
-					}
-				}
-				if not done{
-					Core.LOGGER.warn('Failed to restore checkpoint for {}. Exception: {}.'.format(nn.name,error_e))
+				try{
+					nn.restoreCheckpointWeights()
+				}except Exception as {
+					Core.LOGGER.warn('Failed to restore checkpoint for {}. Exception: {}.'.format(nn.name,exception_e))
 				}
 			}
 			output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),cross_validation!=CrossValidation.NONE)
@@ -868,6 +857,7 @@ class Core(object){
 	def genomeToDict(self,individual,write_weights=True){
 		genome={}
 		genome['id']=individual.id
+		genome['uid']=individual.uid
 		genome['output']=individual.output
 		genome['fitness']=individual.fitness
 		genome['gen']=individual.gen

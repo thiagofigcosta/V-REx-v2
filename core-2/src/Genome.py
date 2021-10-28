@@ -40,7 +40,8 @@ class Genome(object){
         }else{
             self.age=None
         }
-        self.id=Utils.randomUUID()
+        self.id=Utils.randomUUID() # to allow traceability, can have duplicates because on std genetic the individual can be selected multiple times and on the enhanced the generations are not monogamic, so the same individual can have several pairs
+        self.uid=Utils.randomUUID() # created to be really unique
         self.resetMtDna()
         if self.is_neural {
             self._weights=None
@@ -66,8 +67,7 @@ class Genome(object){
 
     def makeChild(self, dna){
         mother=self
-        child=mother.copy()
-        child.id=Utils.randomUUID()
+        child=mother.copy(new_id=True)
         child.dna=dna+[] # deep copy
         child.fitness=0
         child.output=0
@@ -217,12 +217,12 @@ class Genome(object){
     }
 
     def genCacheFilename(self){
-        filename='{}-{}.weights_cache'.format(self.id,Utils.randomUUID())
+        filename='{}-{}.weights_cache'.format(self.uid,Utils.randomUUID())
         Utils.createFolderIfNotExists(Genome.CACHE_FOLDER)
         return Utils.joinPath(Genome.CACHE_FOLDER,filename)
     }
 
-    def copy(self){
+    def copy(self,new_id=False){
         that=Genome([], self.eval_callback, is_neural=self.is_neural)
         that.limits=self.limits.copy()
         that.dna=self.dna+[] # deep copy
@@ -230,7 +230,9 @@ class Genome(object){
         that.fitness=self.fitness
         that.output=self.output
         that.age=self.age
-        that.id=self.id
+        if not new_id{
+            that.id=self.id
+        }
         that.gen=self.gen
         if self.is_neural {
             that._weights=self._weights # string copy
