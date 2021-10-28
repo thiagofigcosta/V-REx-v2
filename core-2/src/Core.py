@@ -138,7 +138,7 @@ class Core(object){
 			if hyperparameters.model_checkpoint{
 				try{
 					nn.restoreCheckpointWeights()
-				}except Exception as {
+				}except Exception as exception_e{
 					Core.LOGGER.warn('Failed to restore checkpoint for {}. Exception: {}.'.format(nn.name,exception_e))
 				}
 			}
