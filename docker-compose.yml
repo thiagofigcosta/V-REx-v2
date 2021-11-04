@@ -11,12 +11,14 @@ services:
             - mongo
         networks:
             - mongo-network
+        environment:
+          VREX_PARALLELISM: "8"
         deploy:
             replicas: 1
             resources:
                 limits:
-                    cpus: '14'
-                    memory: 60G
+                    cpus: '15'
+                    memory: 222G
                 reservations:
                     memory: 10G
 

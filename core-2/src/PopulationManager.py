@@ -55,10 +55,7 @@ class PopulationManager(object){
                 if PopulationManager.SIMULTANEOUS_EVALUATIONS==0 {
                     PopulationManager.SIMULTANEOUS_EVALUATIONS=os.cpu_count() # same as multiprocessing.cpu_count()
                 }
-                if PopulationManager.USE_POOL {
-                    self.multiprocessing_pool=pp.ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS) # pathos uses dill as serializer which is way better than pickle
-                    # self.multiprocessing_pool=multiprocessing.Pool(processes=PopulationManager.SIMULTANEOUS_EVALUATIONS) # raises can't pickle exception
-                }else{
+                if not PopulationManager.USE_POOL {
                     self.multiprocessing_manager=multiprocessing.Manager()
                 }
             }
@@ -82,10 +79,6 @@ class PopulationManager(object){
                 if ray.is_initialized() {
                     ray.shutdown()
                 }
-            }elif PopulationManager.USE_POOL{
-                self.multiprocessing_pool.close()
-                self.multiprocessing_pool.join() 
-                self.multiprocessing_pool.clear()
             }
         }
     }
@@ -178,8 +171,13 @@ class PopulationManager(object){
                         if verbose{
                             Utils.LazyCore.info('\t\tProgress track is disabled due to parallelism!')
                         }
+                        self.multiprocessing_pool=pp.ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS) # pathos uses dill as serializer which is way better than pickle
+                        # self.multiprocessing_pool=multiprocessing.Pool(processes=PopulationManager.SIMULTANEOUS_EVALUATIONS) # raises can't pickle exception
                         _evaluateIndividualPartial=partial(PopulationManager._evaluateIndividual, g=g)
                         outputs=self.multiprocessing_pool.map(_evaluateIndividualPartial, self.population)
+                        self.multiprocessing_pool.close()
+                        self.multiprocessing_pool.join() 
+                        self.multiprocessing_pool.clear()
                     }else{
                         t_id=0
                         parallel_tasks=[]

@@ -138,13 +138,13 @@ docker run core:v2.0.0
 sudo rm -rf docker_volumes
 ```
 
-## Cleanup RAM memory cache if needed
+## Cleanup RAM memory cache if needed (to free RAM for huge page allocation)
 ```
 sudo su
 free -mh && sync && echo 3 > /proc/sys/vm/drop_caches && free -mh
 ```
 
-## Cleanup RAM memory cache if needed
+## Follow CPU usage
 ```
 top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
 ```
@@ -152,6 +152,11 @@ or
 ```
 awk '{u=$2+$4; t=$2+$4+$5; if (NR==1){u1=u; t1=t;} else print ($2+$4-u1) * 100 / (t-t1) "%"; }' \
 <(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)
+```
+
+## Check VSZ usage
+```
+{ ps -aux | head -n 1 ; ps -aux | grep -E "S|Rl" | grep -v -E "keep-alive" | grep -E "python3 .tmp_pythoN" ;} | awk 'NR>1 {$5=int($5/1024)"M";}{ print;}'
 ```
 
 ## Web Interfaces:

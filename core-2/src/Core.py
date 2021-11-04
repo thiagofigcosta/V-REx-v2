@@ -1,5 +1,6 @@
 #!/bin/python
 
+import os
 from Utils import Utils
 from Logger import Logger
 from MongoDB import MongoDB
@@ -26,15 +27,18 @@ class Core(object){
 	WRITE_POPULATION_WEIGHTS=False
 	K_FOLDS=10
 	ROLLING_FORECASTING_ORIGIN_MIN_PERCENTAGE=.5
-	FIXED_VALIDATION_PERCENT=.2
+	FIXED_VALIDATION_PERCENT=.15
 	THRESHOLD=0.5
 	PARALLELISM=0 # 1=off, 0=infinite, else the amount of cores
+	USE_SHARED_MEMORY=True
+	AMOUNT_OF_NETWORKS_WHEN_MULTINET=6
 
 	def __init__(self, mongo, logger){
 		Core.LOGGER=logger
 		self.mongo=mongo
 		if self.mongo is not None{
 			NeuralNetwork.CLASSES_THRESHOLD=Core.THRESHOLD
+			Core.PARALLELISM=int(os.getenv('VREX_PARALLELISM',default=str(Core.PARALLELISM)))
 			PopulationManager.SIMULTANEOUS_EVALUATIONS=Core.PARALLELISM
 		}
 	}
@@ -102,6 +106,12 @@ class Core(object){
 		Core.LOGGER.info('\t{}: {}'.format('output_layer_node_type',output_layer_node_type))
 		Core.LOGGER.info('\t{}: {}'.format('multiple_networks',multiple_networks))
 		Core.LOGGER.multiline(str(search_space))
+		if Core.PARALLELISM != 1 and Core.USE_SHARED_MEMORY{
+			Core.LOGGER.info('Moving dataset to shared memory...')
+			train_features=NeuralNetwork.createSharedNumpyArray(train_features)
+			train_labels=NeuralNetwork.createSharedNumpyArray(train_labels)
+			Core.LOGGER.info('Moved dataset to shared memory...OK')
+		}
 		def train_callback(genome){
 			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks,nn_type
 			preserve_weights=False # TODO fix when true, to avoid nan outputs
@@ -465,7 +475,7 @@ class Core(object){
 
 	def loadDatasetMultiNet(self,years,limit){
 		processed_db=self.mongo.getProcessedDB()
-		amount_of_groups=5
+		amount_of_groups=Core.AMOUNT_OF_NETWORKS_WHEN_MULTINET-1
 		data_ids=[]
 		data_features=[[] for _ in range(amount_of_groups)]
 		data_labels=[]

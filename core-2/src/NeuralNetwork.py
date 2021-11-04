@@ -14,6 +14,7 @@ from Utils import Utils
 from Dataset import Dataset
 from Enums import NodeType
 from abc import ABC, abstractmethod
+from pathos.helpers import mp as pmp
 
 class NeuralNetwork(ABC){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -63,8 +64,72 @@ class NeuralNetwork(ABC){
 		return custom_objects
 	}
 
-	def formatFeatures(self,features){
-		if self.hyperparameters.amount_of_networks==1{
+	@staticmethod
+    def createSharedNumpyArray(array){
+        # 'c': ctypes.c_char,  'u': ctypes.c_wchar,
+        # 'b': ctypes.c_byte,  'B': ctypes.c_ubyte,
+        # 'h': ctypes.c_short, 'H': ctypes.c_ushort,
+        # 'i': ctypes.c_int,   'I': ctypes.c_uint,
+        # 'l': ctypes.c_long,  'L': ctypes.c_ulong,
+        # 'f': ctypes.c_float, 'd': ctypes.c_double
+        if type(array) is not np.ndarray{
+			array=NeuralNetwork.FormatData(array)
+		}
+		if type(array) is np.ndarray{
+        	shape=array.shape
+		}else{ # multi net
+			shape=(len(array),)+array[0].shape
+		}
+        dimensions=len(shape)
+        first_el=array
+        total_size=1
+        for i in range(dimensions){
+            total_size*=shape[i]
+            first_el=first_el[0]
+        }
+        dtype='f'
+        if type(first_el) in (int,np.int,np.int32,np.int64){
+            dtype='i'
+        }
+        shared_array=pmp.RawArray(dtype, total_size)
+        np_shared_array=np.frombuffer(shared_array,dtype=dtype,count=total_size).reshape(shape)
+        np.copyto(np_shared_array, array)
+        # RawArray is not thread safe, to write on it we need to do as following:
+        # arr_lock = pmp.Lock()
+        # with arr_lock {
+        #     np_shared_array[0]=2
+        # }
+        return np_shared_array
+    }
+
+	@staticmethod
+	def FormatData(data){
+		dims=0
+		first_el=data
+		while type(first_el) in (list,np.ndarray){
+			dims+=1
+			first_el=first_el[0]
+		}
+
+		if type(data) is np.ndarray or (dims>2 and type(data[0]) is np.ndarray){
+			return data
+		}
+		if dims==2{ # labels or single network layer
+			return np.array(data)
+		}
+		f=[]
+		for feature in data{
+			f.append(np.array(feature))
+		}
+		return f
+	}
+
+	@staticmethod
+	def FormatFeatures(features,amount_of_networks){
+		if type(features) is np.ndarray or (amount_of_networks>1 and type(features[0]) is np.ndarray){
+			return features
+		}
+		if amount_of_networks==1{
 			return np.array(features)
 		}
 		f=[]
@@ -74,8 +139,24 @@ class NeuralNetwork(ABC){
 		return f
 	}
 
-	def formatLabels(self,labels){
+	@staticmethod
+	def FormatLabels(labels){
+		if type(labels) is np.ndarray{
+			return labels
+		}
 		return np.array(labels)
+	}
+
+	def formatFeatures(self,features){
+		return NeuralNetwork.FormatFeatures(features,self.hyperparameters.amount_of_networks)
+	}
+
+	def formatLabels(self,labels){
+		return NeuralNetwork.FormatLabels(labels)
+	}
+
+	def formatData(self,data){
+		return NeuralNetwork.FormatData(data)
 	}
 
 	def loadModel(self,path,compileModel=True){
@@ -269,8 +350,8 @@ class NeuralNetwork(ABC){
 			verbose=2
 		}
 		self.history=self.model.fit(
-			x=self.formatFeatures(features),
-			y=self.formatLabels(labels),
+			x=self.formatData(features),
+			y=self.formatData(labels),
 			batch_size=self.hyperparameters.batch_size,
 			epochs=self.hyperparameters.max_epochs,
 			verbose=verbose,
@@ -317,8 +398,8 @@ class NeuralNetwork(ABC){
 				}
 			}
 			batch_metrics=self.model.train_on_batch(
-				self.formatFeatures(features_batch),
-				self.formatLabels(labels_batch),
+				self.formatData(features_batch),
+				self.formatData(labels_batch),
 				reset_metrics=True
 			)
 			if epoch_metrics is None{
@@ -358,7 +439,7 @@ class NeuralNetwork(ABC){
 		}
 		if val_labels is not None{
 			val_metrics=self.fillMetricsNames(self.model.test_on_batch(
-				self.formatFeatures(val_features),self.formatLabels(val_labels), reset_metrics=True))
+				self.formatData(val_features),self.formatData(val_labels), reset_metrics=True))
 			for k,v in val_metrics.items(){
 				if len(v)>0{
 					v=float(v[0])
@@ -454,13 +535,23 @@ class NeuralNetwork(ABC){
 				labels_epoch=labels[0:val_fold*fold_size]
 				val_labels=labels[val_fold*fold_size:(val_fold+1)*fold_size]
 				if (val_fold!=(folds-1)){
-					labels_epoch+=labels[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+					to_join=labels[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+					if type(labels_epoch) is list {
+						labels_epoch+=to_join
+					}else{
+						labels_epoch=np.concatenate((labels_epoch,to_join))
+					}
 				}
 				if self.hyperparameters.amount_of_networks==1{
 					features_epoch=features[0:val_fold*fold_size]
 					val_features=features[val_fold*fold_size:(val_fold+1)*fold_size]
 					if (val_fold!=(folds-1)){
-						features_epoch+=features[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+						to_join=features[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+						if type(features_epoch) is list {
+							features_epoch+=to_join
+						}else{
+							features_epoch=np.concatenate((features_epoch,to_join))
+						}
 					}
 				}else{
 					features_epoch=[]
@@ -469,7 +560,12 @@ class NeuralNetwork(ABC){
 						features_epoch.append(feature[0:val_fold*fold_size])
 						val_features.append(feature[val_fold*fold_size:(val_fold+1)*fold_size])
 						if (val_fold!=(folds-1)){
-							features_epoch[-1]+=feature[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+							to_join=feature[(val_fold+1)*fold_size:(folds-val_fold-1)*fold_size]
+							if type(features_epoch[-1]) is list {
+								features_epoch[-1]+=to_join
+							}else{
+								features_epoch[-1]=np.concatenate((features_epoch[-1],to_join))
+							}
 						}
 					}
 				}
@@ -540,7 +636,7 @@ class NeuralNetwork(ABC){
 	}
 
 	def predict(self,features,get_classes=True,get_confidence=False){
-		pred_res=self.model.predict(self.formatFeatures(features))
+		pred_res=self.model.predict(self.formatData(features))
 		classes=[]
 		confidence=[]
 		if get_classes or get_confidence {
@@ -598,8 +694,8 @@ class NeuralNetwork(ABC){
 
 	def eval(self,features,labels){
 		metrics=self.model.evaluate(
-			x=self.formatFeatures(features),
-			y=self.formatLabels(labels),
+			x=self.formatData(features),
+			y=self.formatData(labels),
 			verbose=0,
 			workers=1,
 			use_multiprocessing=NeuralNetwork.MULTIPROCESSING

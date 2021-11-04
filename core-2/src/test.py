@@ -10,6 +10,7 @@ from Genome import Genome
 from Enums import LabelEncoding,NodeType,Loss,Metric,Optimizers,GeneticRankType
 from Hyperparameters import Hyperparameters
 from HallOfFame import HallOfFame
+from NeuralNetwork import NeuralNetwork
 from GeneticAlgorithm import GeneticAlgorithm
 from StandardNeuralNetwork import StandardNeuralNetwork
 from EnhancedNeuralNetwork import EnhancedNeuralNetwork
@@ -998,6 +999,184 @@ def runParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
     PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
 }
 
+def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
+    bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=1
+
+    metric=Metric.ACCURACY
+    search_space=SearchSpace()
+    search_space.add(1,2,SearchSpace.Type.INT,'layers')
+    search_space.add(5,15,SearchSpace.Type.INT,'batch_size')
+    search_space.add(0.0001,0.1,SearchSpace.Type.FLOAT,'alpha')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'shuffle')
+    search_space.add(5,10,SearchSpace.Type.INT,'patience_epochs')
+    search_space.add(20,40,SearchSpace.Type.INT,'max_epochs')
+    search_space.add(Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,SearchSpace.Type.INT,'loss')
+    search_space.add(LabelEncoding.SPARSE,LabelEncoding.SPARSE,SearchSpace.Type.INT,'label_type')
+    search_space.add(Utils.getEnumBorder(Optimizers,False),Utils.getEnumBorder(Optimizers,True),SearchSpace.Type.INT,'optimizer')
+    search_space.add(metric,metric,SearchSpace.Type.INT,'monitor_metric')
+    search_space.add(True,True,SearchSpace.Type.BOOLEAN,'model_checkpoint')
+    search_space.add(2,8,SearchSpace.Type.INT,'layer_sizes')
+    search_space.add(Utils.getEnumBorder(NodeType,False),NodeType.TANH,SearchSpace.Type.INT,'node_types')
+    search_space.add(0,0.995,SearchSpace.Type.FLOAT,'dropouts')
+    search_space.add(False,True,SearchSpace.Type.BOOLEAN,'bias')
+    search_space=Genome.enrichSearchSpace(search_space)
+
+    Genome.CACHE_WEIGHTS=False
+
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    features,labels=Dataset.balanceDataset(features,labels)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+
+    train,test=Dataset.splitDataset(features,labels,.7)
+    train_features=train[0]
+    train_labels=train[1]
+    train_labels,_=Dataset.encodeDatasetLabels(train_labels,LabelEncoding(search_space['label_type'].min_value)) # must be outside callback to be serialized
+
+    train_features=NeuralNetwork.FormatData(train_features) # to np array
+    train_labels=NeuralNetwork.FormatData(train_labels) # to np array
+
+    train_features,train_labels=Dataset.shuffleDataset(train_features,train_labels) # shuffle again to test
+
+    train_features=NeuralNetwork.createSharedNumpyArray(train_features) # put array in shared memory
+    train_labels=NeuralNetwork.createSharedNumpyArray(train_labels) # put array in shared memory
+
+    print('train_features',train_features.shape)
+    print('train_labels',train_labels.shape)
+
+    def train_callback(genome){
+        nonlocal train_features,train_labels
+        kfolds=5
+        preserve_weights=False # TODO fix when true, to avoid nan outputs
+        input_size=len(train_features[0])
+        output_size=len(train_labels[0])
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
+        search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+        nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
+        nn.buildModel(input_size=input_size)
+        nn.setWeights(genome.getWeights())
+        nn.trainKFolds(train_features,train_labels,kfolds)
+        nn.trainRollingForecast(train_features,train_labels) # just to test numpy arrays
+        if preserve_weights and hyperparameters.model_checkpoint{
+            nn.restoreCheckpointWeights()
+        }
+        output=nn.getMetricMean(hyperparameters.monitor_metric.toKerasName(),True)
+        if output!=output{ # Not a Number, ignore this genome
+            Core.LOGGER.warn('Not a number metric ('+str(hyperparameters.monitor_metric.toKerasName())+') mean of '+str(nn.getMetric(hyperparameters.monitor_metric.toKerasName(),True)))
+            output=float('-inf') if search_maximum else float('inf')
+        }
+        if preserve_weights {
+            genome.setWeights(nn.mergeWeights(genome.getWeights()))
+        }
+        del nn
+        return output
+    }
+
+    verbose_natural_selection=True
+    verbose_population_details=True
+    population_start_size_enh=5
+    max_gens=3
+    max_age=5
+    max_children=2
+    mutation_rate=0.1
+    recycle_rate=0.13
+    sex_rate=0.7
+    max_notables=3
+    search_maximum=metric!=Metric.RAW_LOSS
+    enh_elite=HallOfFame(max_notables, search_maximum)
+    en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
+    enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
+    enh_population.hall_of_fame=enh_elite
+    enh_population.naturalSelection(max_gens,verbose_natural_selection,verbose_population_details)
+    
+    for individual in enh_elite.notables{
+        print(str(individual))
+    }
+    Utils.printDict(enh_elite.best,'Elite')
+    print('Evaluating best')
+
+    def test_callback(genome){
+        nonlocal test
+        test_features=test[0]
+        test_labels=test[1]
+        test_labels,label_map_2=Dataset.encodeDatasetLabels(test_labels,genome.getHyperparametersEncoder(False))
+        input_size=len(test_features[0])
+        output_size=len(test_labels[0])
+        hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
+        nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
+        nn.buildModel(input_size=input_size)
+        nn.saveModelSchemaToFile()
+        nn.setWeights(genome.getWeights())
+        print('Best genome encoded weights:',genome.getWeights(raw=True))
+        preds,activations=nn.predict(test_features,True,True)
+        del nn
+        Dataset.compareAndPrintLabels(preds,activations,test_labels,show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
+        Utils.printDict(Dataset.statisticalAnalysis(preds,test_labels),'Statistical Analysis')
+    }
+
+    test_callback(enh_elite.getBestGenome())
+
+
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
+}
+
+def testEnhancedNN_MultiNet_withSharedMemAndNumpy(){
+    label_type=LabelEncoding.SPARSE
+
+    features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    labels,label_map=Dataset.enumfyDatasetLabels(labels)
+    labels,label_map_2=Dataset.encodeDatasetLabels(labels,label_type)
+    features,scale=Dataset.normalizeDatasetFeatures(features)
+    features,labels=Dataset.shuffleDataset(features,labels)
+    train,test=Dataset.splitDataset(features,labels,.7)
+    groups=[[0,2],[2,-1]]
+    train[0]=Dataset.divideFeaturesIntoMultipleGroups(train[0],groups)
+    test[0]=Dataset.divideFeaturesIntoMultipleGroups(test[0],groups)
+
+    train[0]=NeuralNetwork.createSharedNumpyArray(train[0]) # put array in shared memory
+    train[1]=NeuralNetwork.createSharedNumpyArray(train[1]) # put array in shared memory
+
+    amount_of_networks=3
+    input_size=[len(train[0][i][0]) for i in range(len(train[0]))]
+    intermediary_size=[2,1]
+    output_size=len(train[1][0])
+    layers=[2,2,2]
+    dropouts=[0,0,0]
+    bias=[True,True,True]
+    layer_sizes=[[3,intermediary_size[0]],[3,intermediary_size[1]],[4,output_size]]
+    node_types=[[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.TANH],[NodeType.TANH,NodeType.SOFTMAX]]
+    batch_size=5
+    alpha=[0.01,0.01,0.01]
+    shuffle=True
+    optimizer=[Optimizers.SGD,Optimizers.SGD,Optimizers.SGD]
+    patience_epochs=15
+    max_epochs=100
+    loss=[Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY,Loss.CATEGORICAL_CROSSENTROPY]
+    monitor_metric=Metric.RAW_LOSS
+    hyperparameters=Hyperparameters(batch_size, alpha, shuffle, optimizer, label_type, layers, layer_sizes, node_types, dropouts, patience_epochs, max_epochs, bias, loss,monitor_metric=monitor_metric,amount_of_networks=amount_of_networks)
+
+    enn=EnhancedNeuralNetwork(hyperparameters,name='iris',verbose=True)
+    enn.buildModel(input_size=input_size)
+    enn.saveModelSchemaToFile()
+    # enn.train(train[0],train[1])
+    enn.trainKFolds(train[0],train[1],8)
+    enn.trainRollingForecast(train[0],train[1]) # just to test numpy arrays
+    enn.trainNoValidation(train[0],train[1]) # just to test numpy arrays
+    enn.restoreCheckpointWeights()
+    enn.setWeights(enn.getWeights())
+    history=enn.history
+    preds,activations=enn.predict(test[0],True,True)
+    print('Predicted[0]:',Dataset.translateLabelFromOutput(preds[0],label_map,label_map_2))
+    eval_res=enn.eval(test[0],test[1])
+    del enn
+    Utils.printDict(eval_res,'Eval')
+    Dataset.compareAndPrintLabels(preds,activations,test[1],show_positives=False,equivalence_table_1=label_map,equivalence_table_2=label_map_2,logger=None)
+    Utils.printDict(Dataset.statisticalAnalysis(preds,test[1]),'Statistical Analysis')
+}
+
 def runGenExperimentsOnMath(){
     results=[]
     mutation_rates=(0.1,0.2)
@@ -1044,4 +1223,6 @@ def runGenExperimentsOnMath(){
 # testParallelGeneticallyTunedNN()
 # testEnhGeneticStats()
 # runParallelGeneticallyTuneGeneticEnhancedAlgorithm()
+# testParallelGeneticallyTunedNN_withSharedMemAndNumpy()
+# testEnhancedNN_MultiNet_withSharedMemAndNumpy()
 runGenExperimentsOnMath()
