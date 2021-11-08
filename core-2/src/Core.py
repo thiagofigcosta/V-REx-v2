@@ -16,6 +16,8 @@ from Hyperparameters import Hyperparameters
 from Enums import CrossValidation,Metric,LabelEncoding,GeneticAlgorithmType,NodeType,Loss,Optimizers,NeuralNetworkType
 from Genome import Genome
 from Dataset import Dataset
+import tensorflow as tf
+import gc 
 
 class Core(object){
 	# 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -192,6 +194,8 @@ class Core(object){
 				}
 				Core.LOGGER.info('\tStored population...OK')
 			}
+			tf.keras.backend.clear_session() # TODO experimental stuff
+			gc.collect() # TODO experimental stuff
 		}
 
 		self.clearResultOnGeneticSimulation(simulation_id)

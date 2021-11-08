@@ -15,6 +15,8 @@ from Dataset import Dataset
 from Enums import NodeType
 from abc import ABC, abstractmethod
 from pathos.helpers import mp as pmp
+import multiprocessing as mp
+import multiprocessing.sharedctypes
 
 class NeuralNetwork(ABC){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -91,7 +93,8 @@ class NeuralNetwork(ABC){
         if type(first_el) in (int,np.int,np.int32,np.int64){
             dtype='i'
         }
-        shared_array=pmp.RawArray(dtype, total_size)
+        # shared_array=pmp.RawArray(dtype, total_size) # pathos
+        shared_array=mp.sharedctypes.RawArray(dtype, total_size)
         np_shared_array=np.frombuffer(shared_array,dtype=dtype,count=total_size).reshape(shape)
         np.copyto(np_shared_array, array)
         # RawArray is not thread safe, to write on it we need to do as following:

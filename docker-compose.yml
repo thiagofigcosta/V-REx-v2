@@ -12,7 +12,7 @@ services:
         networks:
             - mongo-network
         environment:
-          VREX_PARALLELISM: "8"
+            VREX_PARALLELISM: "0"
         deploy:
             replicas: 1
             resources:

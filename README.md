@@ -158,6 +158,27 @@ awk '{u=$2+$4; t=$2+$4+$5; if (NR==1){u1=u; t1=t;} else print ($2+$4-u1) * 100 /
 ```
 { ps -aux | head -n 1 ; ps -aux | grep -E "S|Rl" | grep -v -E "keep-alive" | grep -E "python3 .tmp_pythoN" ;} | awk 'NR>1 {$5=int($5/1024)"M";}{ print;}'
 ```
+or
+```
+top
+```
+
+
+## To profile memory
+Import the lib `from memory_profiler import profile` and put the anotation over the function to be analyzed `@profile`.
+Run the profiler, e.g.:
+```
+mprof run -M Pytho\{N\}.py src/test.py ; mprof plot
+```
+Or use the location of mprof, something like:
+```
+python3 ~/.local/lib/python3.6/site-packages/mprof.py run -M Pytho\{N\}.py src/test.py ; python3 ~/.local/lib/python3.6/site-packages/mprof.py plot
+```
+Or run the code manually, e.g.:
+```
+python3 -m memory_profiler Pytho\{N\}.py src/test.py
+```
+
 
 ## Web Interfaces:
 >- Mongo-Express: http://localhost:8081/

@@ -18,6 +18,8 @@ from StandardGeneticAlgorithm import StandardGeneticAlgorithm
 from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 from PopulationManager import PopulationManager
 
+from memory_profiler import profile
+
 TMP_FOLDER='tmp/core/'
 Utils.createFolderIfNotExists(TMP_FOLDER)
 LOGGER=Logger(TMP_FOLDER,name='core')
@@ -999,9 +1001,10 @@ def runParallelGeneticallyTuneGeneticEnhancedAlgorithm(){
     PopulationManager.SIMULTANEOUS_EVALUATIONS=bkp
 }
 
+@profile
 def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
     bkp=PopulationManager.SIMULTANEOUS_EVALUATIONS
-    PopulationManager.SIMULTANEOUS_EVALUATIONS=1
+    PopulationManager.SIMULTANEOUS_EVALUATIONS=0
 
     metric=Metric.ACCURACY
     search_space=SearchSpace()
@@ -1024,7 +1027,14 @@ def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
 
     Genome.CACHE_WEIGHTS=False
 
+    dataset_increase_factor=5
+    
     features,labels=Dataset.readLabeledCsvDataset(Utils.getResource(Dataset.getDataset('iris.data')))
+    for i in range(dataset_increase_factor){
+        features+=features
+        labels+=labels
+    }
+
     features,labels=Dataset.filterDataset(features,labels,'Iris-setosa')
     labels,label_map=Dataset.enumfyDatasetLabels(labels)
     features,labels=Dataset.balanceDataset(features,labels)
@@ -1043,7 +1053,6 @@ def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
 
     train_features=NeuralNetwork.createSharedNumpyArray(train_features) # put array in shared memory
     train_labels=NeuralNetwork.createSharedNumpyArray(train_labels) # put array in shared memory
-
     print('train_features',train_features.shape)
     print('train_labels',train_labels.shape)
 
@@ -1077,8 +1086,8 @@ def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
 
     verbose_natural_selection=True
     verbose_population_details=True
-    population_start_size_enh=5
-    max_gens=3
+    population_start_size_enh=20
+    max_gens=4
     max_age=5
     max_children=2
     mutation_rate=0.1

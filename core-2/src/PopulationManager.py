@@ -10,9 +10,11 @@ from EnhancedGeneticAlgorithm import EnhancedGeneticAlgorithm
 from functools import partial
 import ray
 import multiprocessing
+import pathos
 import pathos.pools as pp
 import psutil
 
+# from memory_profiler import profile
 
 class PopulationManager(object){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
@@ -23,6 +25,9 @@ class PopulationManager(object){
     RAY_ON=False # uses ray instead of multiprocessing or pathos
     CPU_AFFINITY=False # assign each process for a single cpu when using multiprocessing
     USE_POOL=True # use pathos when ray is not on
+    USE_PATHOS=True # use pathos pool instead of vanilla multiprocessing pool
+    USE_PATHOS_POOL_THREADING=True # use thread instead of process
+    USE_PATHOS_POOL_VANILLA_PROCESS=False
     
     def __init__(self,genetic_algorithm,search_space,eval_callback,population_start_size,neural_genome=False,print_deltas=False,after_gen_callback=None,force_sequential=False){
         self.genetic_algorithm=genetic_algorithm
@@ -118,6 +123,7 @@ class PopulationManager(object){
         }
     }
 
+    # @profile
     def naturalSelection(self, gens, verbose=False, verbose_generations=None){
         mean_delta=0.0
         self.last_run_population_sizes=[]
@@ -171,25 +177,52 @@ class PopulationManager(object){
                         if verbose{
                             Utils.LazyCore.info('\t\tProgress track is disabled due to parallelism!')
                         }
-                        self.multiprocessing_pool=pp.ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS) # pathos uses dill as serializer which is way better than pickle
-                        # self.multiprocessing_pool=multiprocessing.Pool(processes=PopulationManager.SIMULTANEOUS_EVALUATIONS) # raises can't pickle exception
-                        _evaluateIndividualPartial=partial(PopulationManager._evaluateIndividual, g=g)
-                        outputs=self.multiprocessing_pool.map(_evaluateIndividualPartial, self.population)
-                        self.multiprocessing_pool.close()
-                        self.multiprocessing_pool.join() 
-                        self.multiprocessing_pool.clear()
+                        maxtasksperchild=None # default is None, otherwise is the amount of iterations per process before creating a new one
+                        if PopulationManager.USE_PATHOS { # pathos uses dill as serializer which is way better than pickle
+                            if PopulationManager.USE_PATHOS_POOL_THREADING{ 
+                                with pp.ThreadPool(PopulationManager.SIMULTANEOUS_EVALUATIONS,maxtasksperchild=maxtasksperchild) as pool{
+                                    outputs=pool.map(PopulationManager._evaluateIndividual, self.population, [g]*len(self.population))
+                                }
+                            }else{
+                                if PopulationManager.USE_PATHOS_POOL_VANILLA_PROCESS{
+                                    self.multiprocessing_pool=pp._ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS,maxtasksperchild=maxtasksperchild) # same as multiprocessing but using dill
+                                    _evaluateIndividualPartial=partial(PopulationManager._evaluateIndividual, g=g)
+                                    outputs=self.multiprocessing_pool.map(_evaluateIndividualPartial, self.population)
+                                    self.multiprocessing_pool.close()
+                                    self.multiprocessing_pool.join() 
+                                    self.multiprocessing_pool.terminate() 
+                                }else{
+                                    # self.multiprocessing_pool=pp.ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS,maxtasksperchild=maxtasksperchild) 
+                                    # outputs=self.multiprocessing_pool.map(PopulationManager._evaluateIndividual, self.population, [g]*len(self.population))
+                                    # self.multiprocessing_pool.close()
+                                    # self.multiprocessing_pool.join() 
+                                    # pathos.helpers.shutdown()
+                                    # self.multiprocessing_pool.clear()
+                                    with pp.ProcessPool(PopulationManager.SIMULTANEOUS_EVALUATIONS,maxtasksperchild=maxtasksperchild) as pool{
+                                        outputs=pool.map(PopulationManager._evaluateIndividual, self.population, [g]*len(self.population))
+                                    }
+                                }
+                            }
+                       }else{
+                            self.multiprocessing_pool=multiprocessing.Pool(processes=PopulationManager.SIMULTANEOUS_EVALUATIONS,maxtasksperchild=maxtasksperchild) # raises can't pickle exception
+                            _evaluateIndividualPartial=partial(PopulationManager._evaluateIndividual, g=g)
+                            outputs=self.multiprocessing_pool.map(_evaluateIndividualPartial, self.population)
+                            self.multiprocessing_pool.close()
+                            self.multiprocessing_pool.join() 
+                        }
                     }else{
                         t_id=0
                         parallel_tasks=[]
                         ret_vals=[]
-                        parallel_args=[[] for _ in range(PopulationManager.SIMULTANEOUS_EVALUATIONS)]
+                        new_processes=PopulationManager.SIMULTANEOUS_EVALUATIONS-1
+                        parallel_args=[[] for _ in range(new_processes)]
                         for individual in self.population{
                             parallel_args[t_id].append(individual)
-                            if len(parallel_args[t_id])>=int(len(self.population)/PopulationManager.SIMULTANEOUS_EVALUATIONS) and t_id+1<PopulationManager.SIMULTANEOUS_EVALUATIONS{
+                            if len(parallel_args[t_id])>=int(len(self.population)/new_processes) and t_id+1<new_processes{
                                 t_id+=1
                             }
                         }
-                        for t_id in range(PopulationManager.SIMULTANEOUS_EVALUATIONS){
+                        for t_id in range(new_processes){
                             ret_val=self.multiprocessing_manager.list()
                             p=multiprocessing.Process(target=PopulationManager._evaluateIndividualMulti,args=(parallel_args[t_id],g,ret_val,t_id,))
                             parallel_tasks.append(p)

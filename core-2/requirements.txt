@@ -10,3 +10,4 @@ ray==1.7.0
 pathos==0.2.8
 psutil==5.8.0
 keras
+memory_profiler
