@@ -785,11 +785,19 @@ class Core(object){
 	}
 
 	def appendIndividualToHallOfFame(self,hall_of_fame_id,taylor_swift,now_str,write_weights=True){
-		# Pytho{\}: Start regular Python
-		query_fetch={'_id':self.mongo.getObjectId(hall_of_fame_id)}
-		query_update={'$set':{'updated_at':now_str},'$push':{'neural_genomes':self.genomeToDict(taylor_swift,write_weights=write_weights)}}
-		# Pytho{\}: End regular Python
-		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'hall_of_fame',query_fetch,query_update,verbose=False,ignore_lock=False)
+		try{
+			# Pytho{\}: Start regular Python
+			query_fetch={'_id':self.mongo.getObjectId(hall_of_fame_id)}
+			query_update={'$set':{'updated_at':now_str},'$push':{'neural_genomes':self.genomeToDict(taylor_swift,write_weights=write_weights)}}
+			# Pytho{\}: End regular Python
+			self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'hall_of_fame',query_fetch,query_update,verbose=False,ignore_lock=False)
+		}except Exception as exception_e{
+			if write_weights {
+				self.appendIndividualToHallOfFame(hall_of_fame_id,taylor_swift,now_str,write_weights=False)
+			}else{
+				Core.LOGGER.exception(e)
+			}
+		}
 	}
 
 	def clearHallOfFameIndividuals(self,hall_of_fame_id,now_str){
