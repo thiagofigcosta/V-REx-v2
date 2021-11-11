@@ -297,8 +297,8 @@ class Genome(object){
                     enriched_search_space.add(layer_sizes.min_value,layer_sizes.max_value,layer_sizes.data_type,layer_sizes.name[:-1]+'_{}'.format(l))
                     enriched_search_space.add(node_types.min_value,node_types.max_value,node_types.data_type,node_types.name[:-1]+'_{}'.format(l))
                 }else{
-                    enriched_search_space.add(0,0,layer_sizes.data_type,'out_layer-size')
-                    enriched_search_space.add(0,0,node_types.data_type,'out_layer-type')
+                    enriched_search_space.add(-1,-1,layer_sizes.data_type,'out_layer-size') # -1 is a unkown value for enum
+                    enriched_search_space.add(-1,-1,node_types.data_type,'out_layer-type') # -1 is a unkown value for enum
                 }
                 enriched_search_space.add(dropouts.min_value,dropouts.max_value,dropouts.data_type,dropouts.name[:-1]+'_{}'.format(l))
                 enriched_search_space.add(bias.min_value,bias.max_value,bias.data_type,bias.name+'_{}'.format(l))
@@ -400,8 +400,8 @@ class Genome(object){
                         enriched_search_space.add(layer_sizes[n].min_value,layer_sizes[n].max_value,layer_sizes[n].data_type,layer_sizes[n].name[:-2]+'_{}-{}'.format(n,l))
                         enriched_search_space.add(node_types[n].min_value,node_types[n].max_value,node_types[n].data_type,node_types[n].name[:-2]+'_{}-{}'.format(n,l))
                     }else{
-                        enriched_search_space.add(0,0,layer_sizes[n].data_type,'out_layer-size')
-                        enriched_search_space.add(0,0,node_types[n].data_type,'out_layer-type')
+                        enriched_search_space.add(-1,-1,layer_sizes[n].data_type,'out_layer-size') # -1 is a unkown value for enum
+                        enriched_search_space.add(-1,-1,node_types[n].data_type,'out_layer-type') # -1 is a unkown value for enum
                     }
                     enriched_search_space.add(dropouts[n].min_value,dropouts[n].max_value,dropouts[n].data_type,dropouts[n].name[:-2]+'_{}-{}'.format(n,l))
                     enriched_search_space.add(bias[n].min_value,bias[n].max_value,bias[n].data_type,bias[n].name[:-2]+'_{}-{}'.format(n,l))
