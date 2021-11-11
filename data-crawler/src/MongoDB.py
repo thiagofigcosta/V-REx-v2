@@ -264,20 +264,24 @@ class MongoDB(object){
                 }else{
                     status='RUNNING'
                     locked_at=job['locked_at']
-                    end_date=locked_at+datetime.timedelta(0,self.queues[queue_name].timeout+3)
-                    if end_date<datetime.datetime.now(){
-                        query={"_id": job['_id']}
-                        if job['attempts'] >= self.queues[queue_name].max_attempts{
-                            status='FAILED ALL ATTEMPS'
-                            queue.remove(query)
-                        }else{
-                            status='FAILED'
-                        }
-                        time_failed=datetime.datetime.now()-end_date
-                        if datetime.timedelta(hours=2)<time_failed{
-                            status='CANCELING'
-                            update={"$set": {"locked_by": None, "locked_at": None},"$inc": {"attempts": 1}}
-                            queue.find_and_modify(query,update=update)
+                    if type(locked_at) is str {
+                        status=locked_at
+                    }else{
+                        end_date=locked_at+datetime.timedelta(0,self.queues[queue_name].timeout+3)
+                        if end_date<datetime.datetime.now(){
+                            query={"_id": job['_id']}
+                            if job['attempts'] >= self.queues[queue_name].max_attempts{
+                                status='FAILED ALL ATTEMPS'
+                                queue.remove(query)
+                            }else{
+                                status='FAILED'
+                            }
+                            time_failed=datetime.datetime.now()-end_date
+                            if datetime.timedelta(hours=2)<time_failed{
+                                status='CANCELING'
+                                update={"$set": {"locked_by": None, "locked_at": None},"$inc": {"attempts": 1}}
+                                queue.find_one_and_update(query,update)
+                            }
                         }
                     }
                 }
