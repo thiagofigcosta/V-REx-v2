@@ -16,6 +16,7 @@ import base64
 import json
 import sys
 import uuid
+import errno
 import socket
 from pympler.asizeof import asizeof
 import random as rd
@@ -87,7 +88,13 @@ class Utils(){
     @staticmethod
     def createFolderIfNotExists(path){
         if not os.path.exists(path){
-            os.makedirs(path)
+            try{
+                os.makedirs(path)
+            }except OSError as e{
+                if e.errno != errno.EEXIST{
+                    raise e
+                }
+            }
         }
     }
 
