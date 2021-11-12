@@ -64,6 +64,7 @@ class NeuralNetworkType(Enum){
 
 class NodeType(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
+    UNKNOWN = -1
     RELU = 0
     SOFTMAX = 1
     SIGMOID = 2
@@ -96,6 +97,8 @@ class NodeType(Enum){
             return 'exponential'
         }elif self == NodeType.LINEAR{
             return 'linear'
+        }elif self == NodeType.UNKNOWN{
+            raise Exception('Unknown node type')
         }
         return None
     }
