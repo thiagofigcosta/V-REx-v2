@@ -10,6 +10,7 @@ from datetime import datetime
 import gzip
 import json
 import sys
+import errno
 from pympler.asizeof import asizeof
 import random as rd
 from bson.json_util import dumps as bdumps
@@ -32,7 +33,13 @@ class Utils(object){
     @staticmethod
     def createFolderIfNotExists(path){
         if not os.path.exists(path){
-            os.makedirs(path, exist_ok=True)
+            try{
+                os.makedirs(path)
+            }except OSError as e{
+                if e.errno != errno.EEXIST{
+                    raise e
+                }
+            }
         }
     }
 
