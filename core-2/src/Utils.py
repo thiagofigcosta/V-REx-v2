@@ -4,7 +4,6 @@
 import shutil
 import re
 import os
-import time
 import codecs
 import zipfile
 from datetime import datetime
@@ -25,6 +24,22 @@ from bson.json_util import dumps as bdumps
 from bson.json_util import loads as bloads
 from numpy.random import Generator, MT19937
 
+try{
+    # if Python >= 3.3 use new high-res counter
+    from time import perf_counter as time_time
+}except ImportError{
+    # else select highest available resolution counter
+    if sys.platform[:3] == 'win'{
+        from time import clock as time_time
+    }else{
+        from time import time_time
+    }
+}
+
+def now(){
+    return time_time()
+}
+
 class Utils(){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'
     
@@ -39,12 +54,17 @@ class Utils(){
 	FIRST_DATE='01/01/1970'
     TMP_FOLDER=None
     LOGGER=None
-    RNG=Generator(MT19937(int(time.time()*rd.random())))
+    RNG=Generator(MT19937(int(now()*rd.random())))
 
     def __init__(self,tmp_folder,logger){
         Utils.LOGGER=logger
 		Utils.TMP_FOLDER=tmp_folder
         Utils.createFolderIfNotExists(Utils.RESOURCES_FOLDER)
+    }
+
+    @staticmethod
+    def now(){
+        return now()
     }
 
     @staticmethod

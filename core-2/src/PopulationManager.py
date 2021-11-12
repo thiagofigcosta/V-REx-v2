@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import time
 from Genome import Genome
 from Utils import Utils
 from StandardGeneticAlgorithm import StandardGeneticAlgorithm
@@ -132,7 +131,7 @@ class PopulationManager(object){
             Utils.LazyCore.info('Using multiprocessing({})!'.format(PopulationManager.SIMULTANEOUS_EVALUATIONS))
         }
         for g in range(1,gens+1){
-            t1=time.time()
+            t1=Utils.now()
             self.genetic_algorithm.startGen()
             if self.genetic_algorithm.looking_highest_fitness{
                 best_out=float('-inf')
@@ -312,7 +311,7 @@ class PopulationManager(object){
                 self.population.sort()
             }
             self.genetic_algorithm.finishGen(self.population,verbose=verbose)
-            t2=time.time()
+            t2=Utils.now()
             delta=t2-t1
             mean_delta+=delta
             self.last_run_population_sizes.append(len(self.population))
