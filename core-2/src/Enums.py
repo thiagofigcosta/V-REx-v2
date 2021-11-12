@@ -3,6 +3,7 @@
 
 from enum import Enum
  
+# I'm considering negative ENUMs as invalid or special cases
 
 class CrossValidation(Enum){
     # 'Just':'to fix vscode coloring':'when using pytho{\}'

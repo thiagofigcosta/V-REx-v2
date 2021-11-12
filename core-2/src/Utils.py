@@ -524,11 +524,32 @@ class Utils(){
     }
 
     @staticmethod
-    def getEnumBorder(enum,max_instead_of_min=False){
-        if max_instead_of_min{
-            return enum(list(enum._member_map_.items())[-1][1]).value
+    def getEnumBorder(enum,max_instead_of_min=False,only_pos=True){
+        if not only_pos {
+            if max_instead_of_min{
+                return enum(list(enum._member_map_.items())[-1][1]).value
+            }else{
+                return enum(list(enum._member_map_.items())[0][1]).value
+            }
         }else{
-            return enum(list(enum._member_map_.items())[0][1]).value
+            enum_list=list(enum._member_map_.items())
+            if max_instead_of_min{
+                pointer=len(enum_list)-1
+                direction=-1
+            }else{
+                pointer=0
+                direction=1
+            }
+            while True {
+                value=enum(enum_list[pointer][1]).value
+                if value >= 0 {
+                    return value
+                }
+                pointer=pointer+direction
+                if pointer >= len(enum_list) or pointer < 0 {
+                    break
+                }
+            }
         }
     }
 
