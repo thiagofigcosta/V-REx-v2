@@ -32,7 +32,7 @@ try{
     if sys.platform[:3] == 'win'{
         from time import clock as time_time
     }else{
-        from time import time_time
+        from time import time as time_time
     }
 }
 
