@@ -271,24 +271,30 @@ class MongoDB(object){
                         job_dict['args']=job['payload']['args']
                     }
                 }
-                if job['locked_by'] is None and job['locked_at'] is None and job['attempts'] < self.queues[queue_name].max_attempts{
+                if job['locked_by'] is None and job['locked_at'] is None {
                     if job['attempts']==0{
                         status='WAITING'
-                    }else{
+                    }elif job['attempts'] < self.queues[queue_name].max_attempts{
                         status='FAILED PREVIOUSLY'
+                    }else{
+                        status='FAILED ALL ATTEMPTS'
+                        # queue.remove(query) # let errors to debug
                     }
                 }else{
                     status='RUNNING'
                     locked_at=job['locked_at']
-                    if type(locked_at) is str {
-                        status=locked_at
+                    if locked_at is None {
+                        status='UNKOWN STATUS'
+                        self.logger.info('Error on job {}...'.format(job))
+                    }elif type(locked_at) is str {
+                        status=locked_at # this only happens when the jobs are manually edited
                     }else{
                         end_date=locked_at+datetime.timedelta(0,self.queues[queue_name].timeout+3)
                         if end_date<datetime.datetime.now(){
                             query={"_id": job['_id']}
                             if job['attempts'] >= self.queues[queue_name].max_attempts{
-                                status='FAILED ALL ATTEMPS'
-                                queue.remove(query)
+                                status='FAILED ALL ATTEMPTS'
+                                # queue.remove(query) # let errors to debug
                             }else{
                                 status='FAILED'
                             }
