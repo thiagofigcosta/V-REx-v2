@@ -84,7 +84,7 @@ To Stop run:
 docker-compose stop
 ```
 
-## Running without Docker compose
+## Running with Docker
 
 ### Build docker images
 
@@ -131,6 +131,32 @@ docker run front-end:v1.0.0
 #### Core V2
 ```
 docker run core:v2.0.0
+```
+
+## Running locally
+
+To set up virtual env
+```
+pip3 install virtualenv
+python3 -m virtualenv -p python3 venv
+```
+
+To activate virtual env
+```
+source venv/bin/activate
+```
+
+Deploy mongo on docker or on host machine then install dependencies and run the application on the activated enviroment!
+
+To deactivate virtual env
+```
+deactivate
+```
+
+To delete venv:
+```
+rm -rf venv
+```f venv
 ```
 
 ## Cleanup docker compose volumes

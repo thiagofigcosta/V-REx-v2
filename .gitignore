@@ -21,3 +21,4 @@ core-2/res/saved_plots/
 core-2/neural_genome_cache/
 *.dat
 core-2/*.dat
+venv/

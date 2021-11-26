@@ -77,32 +77,54 @@ class NeuralNetwork(ABC){
         if type(array) is not np.ndarray{
 			array=NeuralNetwork.FormatData(array)
 		}
+		# RawArray is not thread safe, to write on it we need to do as following:
+		# arr_lock = pmp.Lock()
+		# with arr_lock {
+		#     np_shared_array[0]=2
+		# }
 		if type(array) is np.ndarray{
         	shape=array.shape
-		}else{ # multi net
-			shape=(len(array),)+array[0].shape
+			dimensions=len(shape)
+			first_el=array
+			total_size=1
+			for i in range(dimensions){
+				total_size*=shape[i]
+				first_el=first_el[0]
+			}
+			dtype='f'
+			if type(first_el) in (int,np.int,np.int32,np.int64){
+				dtype='i'
+			}
+			# shared_array=pmp.RawArray(dtype, total_size) # pathos
+			shared_array=mp.sharedctypes.RawArray(dtype, total_size)
+			np_shared_array=np.frombuffer(shared_array,dtype=dtype,count=total_size).reshape(shape)
+			np.copyto(np_shared_array, array)
+			return np_shared_array
+		}else{ # multi net, must return a list of shared arrays because each one can have different dimensions
+			shapes=[array_el.shape for array_el in array]
+			dimensions=1+len(shapes[0])
+			first_el=array
+			for i in range(dimensions){
+				first_el=first_el[0]
+			}
+			dtype='f'
+			if type(first_el) in (int,np.int,np.int32,np.int64){
+				dtype='i'
+			}
+			np_shared_arrays=[]
+			for s,shape in enumerate(shapes){
+				total_size=1
+				for l_shape in shape{
+					total_size*=l_shape
+				}
+				# shared_array=pmp.RawArray(dtype, total_size) # pathos
+				shared_array=mp.sharedctypes.RawArray(dtype, total_size)
+				np_shared_array=np.frombuffer(shared_array,dtype=dtype,count=total_size).reshape(shape)
+				np.copyto(np_shared_array, array[s])
+				np_shared_arrays.append(np_shared_array)
+			}
+			return np_shared_arrays
 		}
-        dimensions=len(shape)
-        first_el=array
-        total_size=1
-        for i in range(dimensions){
-            total_size*=shape[i]
-            first_el=first_el[0]
-        }
-        dtype='f'
-        if type(first_el) in (int,np.int,np.int32,np.int64){
-            dtype='i'
-        }
-        # shared_array=pmp.RawArray(dtype, total_size) # pathos
-        shared_array=mp.sharedctypes.RawArray(dtype, total_size)
-        np_shared_array=np.frombuffer(shared_array,dtype=dtype,count=total_size).reshape(shape)
-        np.copyto(np_shared_array, array)
-        # RawArray is not thread safe, to write on it we need to do as following:
-        # arr_lock = pmp.Lock()
-        # with arr_lock {
-        #     np_shared_array[0]=2
-        # }
-        return np_shared_array
     }
 
 	@staticmethod
