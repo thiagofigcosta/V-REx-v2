@@ -22,13 +22,13 @@ def loopOnQueue(core){
             try{
                 LOGGER.info('Running job {}-{}...'.format(task,job.job_id))
                 if task=='Genetic'{
-                    core.runGeneticSimulation(payload['args']['simulation_id'])
+                    core.runGeneticSimulation(payload['args']['simulation_id'],job=job)
                 }elif task=='Train SNN'{
                     # core.trainNeuralNetwork(payload['args']['independent_net_id'],False,True) # V1 way
                     # core.trainNeuralNetwork(payload['args']['independent_net_id'],True,False) # V1 way
-                    core.trainNeuralNetwork(payload['args']['independent_net_id'],False,False)
+                    core.trainNeuralNetwork(payload['args']['independent_net_id'],False,False,job=job)
                 }elif task=='Eval SNN'{
-                    core.predictNeuralNetwork(payload['args']['independent_net_id'],payload['args']['result_id'],payload['args']['eval_data'])
+                    core.predictNeuralNetwork(payload['args']['independent_net_id'],payload['args']['result_id'],payload['args']['eval_data'],job=job)
                 }
                 if job{
                     job.complete()

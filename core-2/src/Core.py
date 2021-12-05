@@ -45,7 +45,7 @@ class Core(object){
 		}
 	}
 
-	def runGeneticSimulation(self,simulation_id){
+	def runGeneticSimulation(self,simulation_id,job=None){
 		Core.LOGGER.info('Running genetic simulation {}...'.format(simulation_id))
 		Core.LOGGER.info('Loading simulation...')
 		genetic_metadata=self.fetchGeneticSimulationData(simulation_id)
@@ -115,7 +115,7 @@ class Core(object){
 			Core.LOGGER.info('Moved dataset to shared memory...OK')
 		}
 		def train_callback(genome){
-			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks,nn_type
+			nonlocal train_features,train_labels,cross_validation,output_layer_node_type,multiple_networks,nn_type,job
 			preserve_weights=False # TODO fix when true, to avoid nan outputs
 			if multiple_networks {
 				input_size=[len(train_features[i][0]) for i in range(len(train_features))]
@@ -147,6 +147,13 @@ class Core(object){
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
+			if job is not None{
+				try{
+					job.progress()
+				}except{
+					pass
+				}
+			}
 			if hyperparameters.model_checkpoint{
 				try{
 					nn.restoreCheckpointWeights()
@@ -171,13 +178,20 @@ class Core(object){
 		}
 
 		def after_gen_callback(args_list){
-			nonlocal max_gens
+			nonlocal max_gens,job
 			pop_size=args_list[0]
 			g=args_list[1]
 			best_out=args_list[2]
 			timestamp_s=args_list[3]
 			population=args_list[4]
 			hall_of_fame=args_list[5]
+			if job is not None{
+				try{
+					job.progress()
+				}except{
+					pass
+				}
+			}
 			if hall_of_fame is not None{
 				Core.LOGGER.info('\tStoring Hall of Fame Best Individuals...')
 				self.updateBestOnGeneticSimulation(simulation_id,hall_of_fame.best,Utils.getTodayDatetime())
@@ -233,7 +247,7 @@ class Core(object){
 		}
 	}
 
-	def trainNeuralNetwork(self,independent_net_id,load=False,just_train=False){
+	def trainNeuralNetwork(self,independent_net_id,load=False,just_train=False,job=None){
 		continue_str='*continue ' if load and not just_train else ''
 		Core.LOGGER.info('Training neural network {}{}...'.format(continue_str,independent_net_id))
 		Core.LOGGER.info('Parsing train settings...')
@@ -309,6 +323,13 @@ class Core(object){
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
+			if job is not None{
+				try{
+					job.progress()
+				}except{
+					pass
+				}
+			}
 			if hyperparameters.model_checkpoint{
 				nn.restoreCheckpointWeights()
 			}
@@ -382,7 +403,7 @@ class Core(object){
 		Core.LOGGER.info('Trained neural network {}{}...OK'.format(continue_str,independent_net_id))
 	}
 
-	def predictNeuralNetwork(self,independent_net_id,result_id,eval_data){
+	def predictNeuralNetwork(self,independent_net_id,result_id,eval_data,job=None){
 		Core.LOGGER.info('Evaluating neural network {}...'.format(independent_net_id))
 		Core.LOGGER.info('Parsing evaluate settings...')
 		independent_net_metadata = self.fetchNeuralNetworkMetadata(independent_net_id)

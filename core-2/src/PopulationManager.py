@@ -325,7 +325,7 @@ class PopulationManager(object){
                 break
             }
             if verbose_generations or self.print_deltas {
-                Utils.LazyCore.info('Generation {} of {}, size: {} takes: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
+                Utils.LazyCore.info('Generation {} of {}, size: {} took: {}'.format(g,gens,len(self.population),Utils.timestampByExtensive(delta)))
             }
         }
         return mean_delta/gens
