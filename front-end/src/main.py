@@ -71,19 +71,40 @@ def inputArrayNumber(is_float=False,greater_or_eq=0,lower_or_eq=None){
     return out
 }
 
+import_mongo=True
+
 def main(argv){
-    HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--count-features]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]'
+    global import_mongo
+    HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--count-features]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]\n\t[--no-server]'
     args=[]
     zombie=False
     global ITERATIVE
     to_run=[]
     try{ 
-        opts, args = getopt.getopt(argv,"hq",["keep-alive-as-zombie","download-source=","download-all-sources","check-jobs","quit","get-queue-names","empty-queue=","empty-all-queues","get-all-db-names","dump-db=","restore-db=","run-processor-pipeline","run-flattern-and-simplify-all","run-flattern-and-simplify=","run-filter-exploits","run-transform-all","run-transform=","run-enrich","run-analyze","run-filter-and-normalize","run-merge-cve","create-genetic-env","list-genetic-envs","rm-genetic-env=","run-genetic","show-genetic-results","create-neural-hyperparams","list-neural-hyperparams","rm-neural-hyperparams=","train-neural","eval-neural","parse-dna-to-hyperparams","count-features"])
+        opts, args = getopt.getopt(argv,"hq",["keep-alive-as-zombie","download-source=","download-all-sources","check-jobs","quit","get-queue-names","empty-queue=","empty-all-queues","get-all-db-names","dump-db=","restore-db=","run-processor-pipeline","run-flattern-and-simplify-all","run-flattern-and-simplify=","run-filter-exploits","run-transform-all","run-transform=","run-enrich","run-analyze","run-filter-and-normalize","run-merge-cve","create-genetic-env","list-genetic-envs","rm-genetic-env=","run-genetic","show-genetic-results","create-neural-hyperparams","list-neural-hyperparams","rm-neural-hyperparams=","train-neural","eval-neural","parse-dna-to-hyperparams","count-features","no-server"])
     }except getopt.GetoptError{
         print (HELP_STR)
         if not ITERATIVE {
             sys.exit(2)
         }
+    }
+    if import_mongo {
+        for opt, arg in opts{
+            if '--no-server' ==opt{
+                import_mongo=False
+            }
+        }
+    }
+    if import_mongo{
+        if Utils.runningOnDockerContainer(){
+            mongo_addr='mongo'
+        }else{
+            mongo_addr='127.0.0.1'
+        }
+        mongo=MongoDB(mongo_addr,27017,LOGGER,user='root',password='123456')
+        mongo.startQueue(id=0)
+        LOGGER.info('Started Front end...OK')
+        LOGGER.info('Writting on queue as {}'.format(mongo.getQueueConsumerId()))
     }
     try{
         for opt, arg in opts{ 
@@ -168,13 +189,30 @@ def main(argv){
                     dna=''
                     while not_filled {
                         dna=input().strip().replace('[','',1).replace(']','',1).strip()
-                        if re.match(r'^(:?([0-9\.]|True|False)* ?)*$',dna){
+                        # re.match(r'^(:?([0-9\.]|True|False)* ?)*$',dna) # too slow for multi-net
+                        try{
+                            dna=dna.split()
                             not_filled=False
-                        }else{
-                            print('ERROR - Wrong DNA format')
+                            for gene in dna{
+                                is_bool = gene.lower() in ('true','false','f','t','y','n')
+                                is_number = True
+                                try{
+                                    float(gene)
+                                }except{
+                                    is_number = False
+                                }
+                                if not (is_bool or is_number){
+                                    not_filled=True
+                                    break
+                                }
+                            }
+                            if not_filled{
+                                print('ERROR - Wrong DNA format')
+                            }
+                        }except{
+                            pass
                         }
                     }
-                    dna=dna.split()
                     for s,gene in enumerate(dna){
                         if '.' in gene {
                             dna[s]=float(gene)
@@ -1515,14 +1553,5 @@ def main(argv){
 
 if __name__ == "__main__"{
     LOGGER.info('Starting Front end...')
-    if Utils.runningOnDockerContainer(){
-        mongo_addr='mongo'
-    }else{
-        mongo_addr='127.0.0.1'
-    }
-    mongo=MongoDB(mongo_addr,27017,LOGGER,user='root',password='123456')
-    mongo.startQueue(id=0)
-    LOGGER.info('Started Front end...OK')
-    LOGGER.info('Writting on queue as {}'.format(mongo.getQueueConsumerId()))
     main(sys.argv[1:])
 }
