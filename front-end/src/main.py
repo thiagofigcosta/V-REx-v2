@@ -12,7 +12,7 @@ ITERATIVE=False
 Utils.createFolderIfNotExists(TMP_FOLDER)
 LOGGER=Logger(TMP_FOLDER,name='front')
 Utils(TMP_FOLDER,LOGGER)
-
+mongo=None
 def inputNumber(is_float=False,greater_or_eq=0,lower_or_eq=None){
     out=0
     converted=False
@@ -74,9 +74,10 @@ def inputArrayNumber(is_float=False,greater_or_eq=0,lower_or_eq=None){
 import_mongo=True
 
 def main(argv){
-    global import_mongo
+    global import_mongo, mongo
     HELP_STR='main.py [-h]\n\t[--check-jobs]\n\t[--create-genetic-env]\n\t[--list-genetic-envs]\n\t[--run-genetic]\n\t[--show-genetic-results]\n\t[--rm-genetic-env <env name>]\n\t[--parse-dna-to-hyperparams]\n\t[--create-neural-hyperparams]\n\t[--list-neural-hyperparams]\n\t[--rm-neural-hyperparams <hyper name>]\n\t[--train-neural]\n\t[--eval-neural]\n\t[--get-queue-names]\n\t[--get-all-db-names]\n\t[-q | --quit]\n\t[--run-processor-pipeline]\n\t[--run-merge-cve]\n\t[--run-flattern-and-simplify-all]\n\t[--run-flattern-and-simplify [cve|oval|capec|cwe]]\n\t[--run-filter-exploits]\n\t[--run-transform-all]\n\t[--run-transform [cve|oval|capec|cwe|exploits]]\n\t[--run-enrich]\n\t[--run-analyze]\n\t[--run-filter-and-normalize]\n\t[--download-source <source ID>]\n\t[--download-all-sources]\n\t[--empty-queue <queue name>]\n\t[--empty-all-queues]\n\t[--count-features]\n\t[--dump-db <db name>#<folder path to export> | --dump-db <db name> {saves on default tmp folder} \n\t\te.g. --dump-db queue#/home/thiago/Desktop]\n\t[--restore-db <file path to import>#<db name> | --restore-db <file path to import> {saves db under file name} \n\t\te.g. --restore-db /home/thiago/Desktop/queue.zip#restored_queue]\n\t[--keep-alive-as-zombie]\n\t[--no-server]'
     args=[]
+    opts=[]
     zombie=False
     global ITERATIVE
     to_run=[]
@@ -95,7 +96,7 @@ def main(argv){
             }
         }
     }
-    if import_mongo{
+    if import_mongo and mongo is None{
         if Utils.runningOnDockerContainer(){
             mongo_addr='mongo'
         }else{
@@ -105,6 +106,7 @@ def main(argv){
         mongo.startQueue(id=0)
         LOGGER.info('Started Front end...OK')
         LOGGER.info('Writting on queue as {}'.format(mongo.getQueueConsumerId()))
+        import_mongo=False
     }
     try{
         for opt, arg in opts{ 
@@ -587,8 +589,12 @@ def main(argv){
                                 tmp_node_types.append(inputNumber(lower_or_eq=9))
                             }
                             node_types[n]=tmp_node_types
-                            print('Should we use the same dropouts for every layer of this network instead of specify one for each? (0 [False] - 1 [True]):')
-                            use_same_dropouts=inputNumber(lower_or_eq=1)==1
+                            if layers[n] > 1{
+                                print('Should we use the same dropouts for every layer of this network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_dropouts=inputNumber(lower_or_eq=1)==1
+                            }else{
+                                use_same_dropouts=False
+                            }
                             tmp_dropouts=[]
                             for i in range(layers[n]){
                                 if not use_same_dropouts or len(tmp_dropouts)==0{
@@ -599,8 +605,12 @@ def main(argv){
                                 }
                             }
                             dropouts[n]=tmp_dropouts
-                            print('Should we use the same bias for every layer of this network instead of specify one for each? (0 [False] - 1 [True]):')
-                            use_same_bias=inputNumber(lower_or_eq=1)==1
+                            if layers[n] > 1{
+                                print('Should we use the same bias for every layer of this network instead of specify one for each? (0 [False] - 1 [True]):')
+                                use_same_bias=inputNumber(lower_or_eq=1)==1
+                            }else{
+                                use_same_bias=False
+                            }
                             tmp_bias=[]
                             for i in range(layers[n]){
                                 if not use_same_bias or len(tmp_bias)==0{
@@ -1550,7 +1560,7 @@ def main(argv){
     }
 }
 
-
+mongo=None
 if __name__ == "__main__"{
     LOGGER.info('Starting Front end...')
     main(sys.argv[1:])

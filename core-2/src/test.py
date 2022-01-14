@@ -477,7 +477,7 @@ def testGeneticallyTunedNN(){
         input_size=len(train_features[0])
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
-        search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+        search_maximum=hyperparameters.monitor_metric.isMaxMetric(hyperparameters.loss)
         nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size=input_size)
         nn.setWeights(genome.getWeights())
@@ -507,7 +507,7 @@ def testGeneticallyTunedNN(){
     recycle_rate=0.13
     sex_rate=0.7
     max_notables=5
-    search_maximum=metric!=Metric.RAW_LOSS
+    search_maximum=metric.isMaxMetric()
     enh_elite=HallOfFame(max_notables, search_maximum)
     en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
@@ -726,7 +726,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
         input_size=[len(train_features[i][0]) for i in range(len(train_features))]
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX,multi_net_enhanced_nn=True)
-        search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+        search_maximum=hyperparameters.monitor_metric.isMaxMetric(hyperparameters.loss)
         enn=EnhancedNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         enn.buildModel(input_size=input_size)
         enn.saveModelSchemaToFile('population_nets')
@@ -757,7 +757,7 @@ def testGeneticallyTunedEnhancedNN_MultiNet(){
     recycle_rate=0.13
     sex_rate=0.7
     max_notables=5
-    search_maximum=metric!=Metric.RAW_LOSS
+    search_maximum=metric.isMaxMetric()
     enh_elite=HallOfFame(max_notables, search_maximum)
     en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)
@@ -1063,7 +1063,7 @@ def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
         input_size=len(train_features[0])
         output_size=len(train_labels[0])
         hyperparameters=genome.toHyperparameters(output_size,NodeType.SOFTMAX)
-        search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+        search_maximum=hyperparameters.monitor_metric.isMaxMetric(hyperparameters.loss)
         nn=StandardNeuralNetwork(hyperparameters,name='iris_{}'.format(genome.id),verbose=False)
         nn.buildModel(input_size=input_size)
         nn.setWeights(genome.getWeights())
@@ -1094,7 +1094,7 @@ def testParallelGeneticallyTunedNN_withSharedMemAndNumpy(){
     recycle_rate=0.13
     sex_rate=0.7
     max_notables=3
-    search_maximum=metric!=Metric.RAW_LOSS
+    search_maximum=metric.isMaxMetric()
     enh_elite=HallOfFame(max_notables, search_maximum)
     en_ga=EnhancedGeneticAlgorithm(search_maximum,max_children,max_age,mutation_rate,sex_rate,recycle_rate)
     enh_population=PopulationManager(en_ga,search_space,train_callback,population_start_size_enh,neural_genome=True,print_deltas=verbose_population_details)

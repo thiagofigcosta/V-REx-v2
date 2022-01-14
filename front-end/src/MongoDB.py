@@ -18,7 +18,7 @@ class MongoDB(object){
     RAW_DATA_DB_NAME='raw_data'
     PROCESSED_DATA_DB_NAME='processed_data'
     DUMMY_FOLDER='tmp/front/DummyMongo/'
-    QUEUE_TIMEOUT_WITHOUT_PROGRESS=1500
+    QUEUE_TIMEOUT_WITHOUT_PROGRESS=6000
 
 	def __init__(self, address, port=27017, logger=None, user=None,password=None){
         if logger is None{

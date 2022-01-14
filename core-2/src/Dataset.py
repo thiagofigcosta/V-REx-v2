@@ -193,9 +193,19 @@ class Dataset(object){
     }
 
     @staticmethod
-    def splitDataset(features,labels,percentage){
+    def splitDataset(features,labels,percentage,groupedDataset=False){
         firstSize=int(len(labels)*percentage)
-        return [features[:firstSize],labels[:firstSize]],[features[firstSize:],labels[firstSize:]]
+        if not groupedDataset{
+            return [features[:firstSize],labels[:firstSize]],[features[firstSize:],labels[firstSize:]]
+        }else{
+            first_features=[]
+            last_features=[]
+            for i,feature in enumerate(features){
+                first_features.append(feature[:firstSize])
+                last_features.append(feature[firstSize:])
+            }
+            return [first_features,labels[:firstSize]],[last_features,labels[firstSize:]]
+        }
     }
 
     @staticmethod

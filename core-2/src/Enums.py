@@ -35,6 +35,28 @@ class Metric(Enum){
         }
         return None
     }
+
+    def isMaxMetric(self,loss=None){
+        if self == Metric.RAW_LOSS{
+            if loss is None{
+                return False
+            }else{
+                if type(loss) is list{
+                    return loss[-1].isMaxMetric()
+                }
+                return loss.isMaxMetric()
+            }
+        }elif self == Metric.F1{
+            return True
+        }elif self == Metric.RECALL{
+            return True
+        }elif self == Metric.ACCURACY{
+            return True
+        }elif self == Metric.PRECISION{
+            return True
+        }
+        raise Exception('Unknown metric '+str(self))
+    }
 }
 
 class LabelEncoding(Enum){
@@ -131,6 +153,20 @@ class Loss(Enum){
             return 'mean_absolute_error'
         }
         return None
+    }
+
+
+    def isMaxMetric(self){
+        if self == Loss.BINARY_CROSSENTROPY{
+            return False
+        }elif self == Loss.CATEGORICAL_CROSSENTROPY{
+            return False
+        }elif self == Loss.MEAN_SQUARED_ERROR{
+            return False
+        }elif self == Loss.MEAN_ABSOLUTE_ERROR{
+            return False
+        }
+        raise Exception('Unknown loss '+str(self))
     }
 }
 

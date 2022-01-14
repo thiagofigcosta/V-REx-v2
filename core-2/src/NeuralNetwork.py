@@ -12,7 +12,7 @@ import tensorflow as tf
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 from Utils import Utils
 from Dataset import Dataset
-from Enums import NodeType
+from Enums import NodeType, Metric
 from abc import ABC, abstractmethod
 from pathos.helpers import mp as pmp
 import multiprocessing as mp
@@ -28,7 +28,7 @@ class NeuralNetwork(ABC){
 	NO_PATIENCE_LEFT_STR='Stop Epochs - No patience left'
 	USE_MANUAL_METRICS=False # manual metrics are slower
 	MANUAL_METRICS_ONLY_ON_VALIDATION=True # makes manual metrics faster when enabled
-	CLASSES_THRESHOLD=.5
+	SIGMOID_CLASSES_THRESHOLD=.5
 	CLIP_NORM_INSTEAD_OF_VALUE=True
 	USE_LEAKY_RELU=True
 
@@ -492,18 +492,19 @@ class NeuralNetwork(ABC){
 		if val_labels is not None and epochs_wo_improvement is not None{
 			if best_val is not None{
 				save_checkpoint=False
-				if best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]{ # TODO be careful for when the monitor metric best value is the biggest one
-					if self.verbose{
-						Utils.LazyCore.info('val_{} did not improve from {:.5f}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
-					}
-					epochs_wo_improvement+=1
-				}else{
+				search_maximum=self.hyperparameters.monitor_metric.isMaxMetric(self.hyperparameters.loss)
+				if (search_maximum and best_val<=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]) or (not search_maximum and best_val>=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]) {
 					epochs_wo_improvement=0
 					if self.verbose{
 						Utils.LazyCore.info('val_{} improved from {:.5f} to {:.5f}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val,val_metrics[self.hyperparameters.monitor_metric.toKerasName()]))
 					}
 					best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
 					save_checkpoint=True
+				}else{
+					if self.verbose{
+						Utils.LazyCore.info('val_{} did not improve from {:.5f}'.format(self.hyperparameters.monitor_metric.toKerasName(),best_val))
+					}
+					epochs_wo_improvement+=1
 				}
 			}else{
 				best_val=val_metrics[self.hyperparameters.monitor_metric.toKerasName()]
@@ -670,7 +671,7 @@ class NeuralNetwork(ABC){
 				row_class=[]
 				if self.hyperparameters.node_types[-1]!=NodeType.SOFTMAX{
 					for val in row{
-						if float(val)>=NeuralNetwork.CLASSES_THRESHOLD{
+						if float(val)>=NeuralNetwork.SIGMOID_CLASSES_THRESHOLD{
 							row_class.append(1)
 						}else{
 							row_class.append(0)

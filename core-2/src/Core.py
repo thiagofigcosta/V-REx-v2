@@ -23,6 +23,8 @@ class Core(object){
 	# 'Just':'to fix vscode coloring':'when using pytho{\}'
 
 	LOGGER=Logger.DEFAULT()
+	BALANCE_DATASET=True
+	CREATE_NEW_NETWORK_FOR_TEST_AFTER_TRAIN=False
 	FREE_MEMORY_MANUALLY=True
 	CACHE_WEIGHTS=False
 	STORE_GEN_POP_ONLY_ON_LAST=False
@@ -39,7 +41,7 @@ class Core(object){
 		Core.LOGGER=logger
 		self.mongo=mongo
 		if self.mongo is not None{
-			NeuralNetwork.CLASSES_THRESHOLD=Core.THRESHOLD
+			NeuralNetwork.SIGMOID_CLASSES_THRESHOLD=Core.THRESHOLD
 			Core.PARALLELISM=int(os.getenv('VREX_PARALLELISM',default=str(Core.PARALLELISM)))
 			PopulationManager.SIMULTANEOUS_EVALUATIONS=Core.PARALLELISM
 		}
@@ -67,7 +69,7 @@ class Core(object){
 		algorithm=genetic_metadata[15] 
 		label_type=genetic_metadata[16] 
 		nn_type=genetic_metadata[17] 
-		search_maximum=metric_mode!=Metric.RAW_LOSS
+		search_maximum=metric_mode.isMaxMetric()
 		Core.LOGGER.info('Genetic metadata')
 		Core.LOGGER.info('\t{}: {}'.format('environment_name',environment_name))
 		Core.LOGGER.info('\t{}: {}'.format('cve_years',cve_years))
@@ -100,7 +102,11 @@ class Core(object){
 		}else{
 			train_data_ids,train_features,train_labels=self.loadDataset(cve_years,train_data_limit)
 		}
-		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels,multiple_networks)
+		if Core.BALANCE_DATASET{
+			Core.LOGGER.info('Balancing dataset...')
+			train_features,train_labels=Dataset.balanceDataset(train_features,train_labels,multiple_networks)
+			Core.LOGGER.info('Balanced dataset...OK')
+		}
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
@@ -124,7 +130,7 @@ class Core(object){
 			}
 			output_size=len(train_labels[0])
 			hyperparameters=genome.toHyperparameters(output_size,output_layer_node_type,multi_net_enhanced_nn=multiple_networks)
-			search_maximum=hyperparameters.monitor_metric!=Metric.RAW_LOSS
+			search_maximum=hyperparameters.monitor_metric.isMaxMetric(hyperparameters.loss)
 			if nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
 				nn=EnhancedNeuralNetwork(hyperparameters,name='core_gen_{}'.format(genome.uid),verbose=False)
 			}else{
@@ -142,8 +148,8 @@ class Core(object){
 			}elif cross_validation==CrossValidation.KFOLDS{
 				nn.trainKFolds(train_features,train_labels,Core.K_FOLDS)
 			}elif cross_validation==CrossValidation.FIXED_PERCENT{
-				train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT)
-				nn.trainCustomValidation(train[0],train[1],test[0],test[1])
+				train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT,multiple_networks)
+				nn.trainCustomValidation(train[0],train[1],val[0],val[1])
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
@@ -284,12 +290,17 @@ class Core(object){
 		}else{
 			train_data_ids,train_features,train_labels=self.loadDataset(cve_years_train,train_data_limit)
 		}
-		train_features,train_labels=Dataset.balanceDataset(train_features,train_labels,multiple_networks)
+		if Core.BALANCE_DATASET{
+			Core.LOGGER.info('Balancing dataset...')
+			train_features,train_labels=Dataset.balanceDataset(train_features,train_labels,multiple_networks)
+			Core.LOGGER.info('Balanced dataset...OK')
+		}
 		train_labels,labels_equivalence=Dataset.encodeDatasetLabels(train_labels,hyperparameters.label_type)
 		# train_features,scale=Dataset.normalizeDatasetFeatures(train_features) # already normalized
 		Core.LOGGER.info('Loaded dataset...OK')
 		self.claimNeuralNetTrain(independent_net_id,Utils.getTodayDatetime(),Utils.getHostname())
 		trained_weights=None
+		nn=None
 		if load {
 			Core.LOGGER.info('Loading weights...')
 			trained_weights=self.loadWeightsFromNeuralNet(independent_net_id)
@@ -318,8 +329,8 @@ class Core(object){
 			}elif cross_validation==CrossValidation.KFOLDS{
 				nn.trainKFolds(train_features,train_labels,Core.K_FOLDS)
 			}elif cross_validation==CrossValidation.FIXED_PERCENT{
-				train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT)
-				nn.trainCustomValidation(train[0],train[1],test[0],test[1])
+				train,val=Dataset.splitDataset(train_features,train_labels,1-Core.FIXED_VALIDATION_PERCENT,multiple_networks)
+				nn.trainCustomValidation(train[0],train[1],val[0],val[1])
 			}else{
 				raise Exception('Unknown cross validation method {}'.format(cross_validation))
 			}
@@ -340,12 +351,12 @@ class Core(object){
 			self.appendTMetricsOnNeuralNet(independent_net_id,train_metrics)
 			self.saveWeightsOnNeuralNet(independent_net_id,trained_weights)
 			Core.LOGGER.info('Wrote weights...OK')
-			if Utils.LazyCore.freeMemManually(){
+			if Utils.LazyCore.freeMemManually() and Core.CREATE_NEW_NETWORK_FOR_TEST_AFTER_TRAIN{
 				del nn
 			}
 		}
 		if not just_train {
-			Core.LOGGER.info('Loading dataset...')
+			Core.LOGGER.info('Loading test dataset...')
 			if len(cve_years_test)>0{
 				if multiple_networks {
 					test_data_ids,test_features,test_labels=self.loadDatasetMultiNet(cve_years_test,test_data_limit)
@@ -356,29 +367,39 @@ class Core(object){
 				test_labels,labels_equivalence=Dataset.encodeDatasetLabels(test_labels,hyperparameters.label_type)
 				# test_features,scale=Dataset.normalizeDatasetFeatures(test_features) # already normalized
 			}
-			Core.LOGGER.info('Loaded dataset...OK')
-			Core.LOGGER.info('Creating test network...')
-			if multiple_networks {
-				input_size=[len(train_features[i][0]) for i in range(len(train_features))]
-			}else{
-				input_size=len(train_features[0])
+			Core.LOGGER.info('Loaded test dataset...OK')
+			if Core.CREATE_NEW_NETWORK_FOR_TEST_AFTER_TRAIN or nn is None {
+				Core.LOGGER.info('Creating test network...')
+				if multiple_networks {
+					input_size=[len(train_features[i][0]) for i in range(len(train_features))]
+				}else{
+					input_size=len(train_features[0])
+				}
+				output_size=len(train_labels[0])
+				hyperparameters.setLastLayerOutputSize(output_size)
+				if hyperparameters.nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
+					nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+				}else{
+					nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
+				}
+				nn.buildModel(input_size=input_size)
+				Core.LOGGER.info('Created test network...OK')
+				Core.LOGGER.info('Setting test network weights...OK')
+				nn.setWeights(Genome.decodeWeights(trained_weights))
+				Core.LOGGER.info('Set test network weights...OK')
 			}
-			output_size=len(train_labels[0])
-			hyperparameters.setLastLayerOutputSize(output_size)
-			if hyperparameters.nn_type==NeuralNetworkType.ENHANCED or multiple_networks{
-				nn=EnhancedNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
-			}else{
-				nn=StandardNeuralNetwork(hyperparameters,name='core_train-p2_{}'.format(independent_net_id),verbose=True)
-			}
-			nn.buildModel(input_size=input_size)
-			nn.setWeights(Genome.decodeWeights(trained_weights))
-			Core.LOGGER.info('Created test network...OK')
 			Core.LOGGER.info('Evaluating network...')
 			train_eval_res=nn.eval(train_features,train_labels)
 			train_eval_res=train_eval_res[train_metric.toKerasName()]
+			# TODO extra step, this is basically the evaluate neural
+			train_classes=nn.predict(train_features)
+			train_statistics=Dataset.statisticalAnalysis(train_classes,train_labels)	
 			if len(cve_years_test)>0{
 				test_eval_res=nn.eval(test_features,test_labels)
 				test_eval_res=test_eval_res[test_metric.toKerasName()]
+				# TODO extra step, this is basically the evaluate neural
+				test_classes=nn.predict(test_features)
+				test_statistics=Dataset.statisticalAnalysis(test_classes,test_labels)
 			}else{
 				test_eval_res=None
 			}
@@ -390,9 +411,13 @@ class Core(object){
 				Core.LOGGER.info('\t'+str(test_eval_res))
 			}
 			Core.LOGGER.info('Writing results...')
-			self.appendStatsOnNeuralNet(independent_net_id,'train_stats',train_eval_res,train_metric.toKerasName())
+			self.setMetricOnNeuralNet(independent_net_id,'eval_train_metrics',train_eval_res,train_metric.toKerasName())
 			if test_eval_res is not None{
-				self.appendStatsOnNeuralNet(independent_net_id,'test_stats',test_eval_res,test_metric.toKerasName())
+				self.setMetricOnNeuralNet(independent_net_id,'eval_test_metrics',test_eval_res,test_metric.toKerasName())
+			}
+			self.setStatsOnNeuralNet(independent_net_id,'eval_train_stats',train_statistics)
+			if test_statistics is not None{
+				self.setStatsOnNeuralNet(independent_net_id,'eval_test_stats',test_statistics)
 			}
 			Core.LOGGER.info('Wrote results...OK')
 			if Utils.LazyCore.freeMemManually(){
@@ -454,7 +479,7 @@ class Core(object){
 		Core.LOGGER.logDict(statistics,'Statistics')
 		Dataset.compareAndPrintLabels(classes,activations,test_labels,show_positives=True,equivalence_table_1=labels_equivalence,logger=Core.LOGGER)
 		Core.LOGGER.info('Writing results...')
-		self.storeEvalNeuralNetResult(result_id,test_data_ids,classes,activations,test_labels,statistics)
+		self.storeEvalNeuralNetResult(result_id,test_data_ids,classes,activations,test_labels,statistics,independent_net_id)
 		Core.LOGGER.info('Wrote results...OK')
 		if Utils.LazyCore.freeMemManually(){
 			del nn
@@ -832,7 +857,7 @@ class Core(object){
 	def appendTMetricsOnNeuralNet(self,independent_net_id,train_metrics){
 		# Pytho{\}: Start regular Python
 		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
-		query_update={'$set':{'train_metrics':train_metrics}}
+		query_update={'$set':{'val_or_train_metric':train_metrics}}
 		# Pytho{\}: End regular Python
 		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
 	}
@@ -856,7 +881,7 @@ class Core(object){
 		return None
 	}
 
-	def appendStatsOnNeuralNet(self,independent_net_id,name,res,metric){
+	def setMetricOnNeuralNet(self,independent_net_id,name,res,metric){
         # Pytho{\}: Start regular Python
 		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
 		query_update={'$set':{name:{'metric':metric,'values':res}}}
@@ -864,7 +889,15 @@ class Core(object){
 		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
 	}
 
-	def storeEvalNeuralNetResult(self,result_id,test_data_ids,classes,activations,test_labels,statistics,log_result=True){
+	def setStatsOnNeuralNet(self,independent_net_id,name,stats){
+        # Pytho{\}: Start regular Python
+		query_fetch={'_id':self.mongo.getObjectId(independent_net_id)}
+		query_update={'$set':{name:stats}}
+		# Pytho{\}: End regular Python
+		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'independent_net',query_fetch,query_update,verbose=False,ignore_lock=False)
+	}
+
+	def storeEvalNeuralNetResult(self,result_id,test_data_ids,classes,activations,test_labels,statistics,independent_net_id,log_result=True){
         correct=0
         results=[]
         if log_result {
@@ -878,13 +911,13 @@ class Core(object){
             confidence=activations[i][0]*100.0
             result='{}: Label: {} | Predicted Exploit: {} | Conficende {:.2f}% | Prediction Match: {}'.format(test_data_ids[i],test_labels[i][0],classes[i][0],confidence,match)
             if log_result {
-                Core.LOGGER.info('\t'+log_result)
+                Core.LOGGER.info('\t'+result)
             }
             results.append(result)
         }
         # Pytho{\}: Start regular Python
 		query_fetch={'_id':self.mongo.getObjectId(result_id)}
-		query_update={'$set':{'result_stats':statistics,'total_test_cases':len(test_data_ids),'matching_preds':correct,'results':results}}
+		query_update={'$set':{'independent_net_id':independent_net_id,'result_stats':statistics,'total_test_cases':len(test_data_ids),'matching_preds':correct,'results':results}}
 		# Pytho{\}: End regular Python
 		self.mongo.updateDocumentOnDB(self.mongo.getNeuralDB(),'eval_results',query_fetch,query_update,verbose=False,ignore_lock=False)
 	}

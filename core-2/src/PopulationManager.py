@@ -283,7 +283,7 @@ class PopulationManager(object){
                 }
                 self.hall_of_fame.update(self.population,g)
                 if verbose{
-                    Utils.LazyCore.info('\tSetted hall of fame...OK')
+                    Utils.LazyCore.info('\tSet hall of fame...OK')
                 }
             }
             if g<gens{
