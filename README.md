@@ -8,6 +8,9 @@ Prototype of a genetically tuned neural network to predict probability of exploi
 Neural network with parts of the code from: 
 >- https://github.com/kapilt/mongoqueue
 
+Raw dataset:
+>- https://mega.nz/file/H4wzwKpb#ONvpbhR_GDy3vxKEabHZQHqvA-5EM4WWBbwlbDzBTt4
+
 ## To run commands
 
 Access the front-end container and use one of the following commands:
