@@ -11,6 +11,15 @@ Neural network with parts of the code from:
 Raw dataset:
 >- https://mega.nz/file/H4wzwKpb#ONvpbhR_GDy3vxKEabHZQHqvA-5EM4WWBbwlbDzBTt4
 
+Data sources:
+>- https://cve.mitre.org/
+>- https://cwe.mitre.org/index.html
+>- https://nvd.nist.gov/
+>- https://www.exploit-db.com/
+>- http://capec.mitre.org/
+>- https://oval.cisecurity.org/repository/search
+>- https://www.cvedetails.com/
+
 ## To run commands
 
 Access the front-end container and use one of the following commands:
