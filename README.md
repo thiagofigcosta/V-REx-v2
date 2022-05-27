@@ -1,4 +1,4 @@
-# V-REx-v2
+# V-REx-v2 ICNN
 Vulnerabilities' Risk of Exploitation
 
 Improved version of https://github.com/thiagofigcosta/V-REx
