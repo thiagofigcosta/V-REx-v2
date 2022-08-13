@@ -133,6 +133,7 @@ tests = [
 	{'name': '2018', 'neg':15690, 'pos':855},
 	{'name': '2019', 'neg':15706, 'pos':612},
 	{'name': '2020', 'neg':15088, 'pos':218},
+	{'name': '50/50', 'neg':10000, 'pos':10000},
 ]
 tests_dict_base = {}
 for el in tests:
