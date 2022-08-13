@@ -91,18 +91,24 @@ def printDict(the_dict,name='Some dict'):
 	for k,v in the_dict.items():
 		print(f'\t{k}: {v}')
 
-def meanDicts(a,b):
-	mean={}
+def sumDicts(a,b):
+	sum_d={}
 	for k,v in a.items():
 		if k in b:
-			mean[k] = (v+b[k])/2
+			sum_d[k] = v+b[k]
 		else:
-			mean[k] = v
-	return mean
+			sum_d[k] = v
+	return sum_d
+
+def divDict(a,val):
+	divided={}
+	for k,v in a.items():
+		divided[k]=v/val
+	return divided
 
 seedRandom()
 
-amount_of_tests = 10
+amount_of_tests = 100
 tests = [
 	{'name': 'All data', 'neg':135677, 'pos':21341},
 	{'name': '1999', 'neg':1176, 'pos':403},
@@ -130,7 +136,7 @@ tests = [
 ]
 tests_dict_base = {}
 for el in tests:
-    tests_dict_base[el['name']]=el
+	tests_dict_base[el['name']]=el
 
 tests.append({'name': 'HDL vs ICNN', 'neg':tests_dict_base['2019']['neg'], 'pos':tests_dict_base['2019']['pos']})
 tests.append({'name': 'vs CVSS+', 'neg':tests_dict_base['2018']['neg'], 'pos':tests_dict_base['2018']['pos']})
@@ -142,7 +148,8 @@ for test in tests:
 	stats={}
 	for _ in range(amount_of_tests):
 		pred = predict(len(ground_truth))
-		stats = meanDicts(statisticalAnalysis(pred,ground_truth),stats)
+		stats = sumDicts(statisticalAnalysis(pred,ground_truth),stats)
+	stats = divDict(stats,amount_of_tests)
 		
 	printDict(stats,test['name'])
 	print(f'\tPositive %: {round((test["pos"]/len(ground_truth))*100,2)}')
