@@ -47,8 +47,6 @@ for graph_to_build in graphs_to_build:
     title = f'V-REx ROC Curve (AUC: {round(roc_auc,3)})'
     print(title)
     print(f'{graph_to_build["baseline"]} ROC AUC: {baseline_roc_auc}')
-    fig = plt.gcf()
-    fig.canvas.manager.set_window_title(title+' vs '+graph_to_build["baseline"])
     plt.plot(false_pos, true_pos, linestyle='--', label='V-REx')
     plt.plot(baseline_roc_curve['x_coords'], smooth(baseline_roc_curve['y_coords'],graph_to_build['smooth']), label='baseline') # graph_to_build['baseline']
     plt.title(title)
@@ -57,6 +55,8 @@ for graph_to_build in graphs_to_build:
     plt.xticks(ticks)
     plt.yticks(ticks)
     plt.legend()
+    fig = plt.gcf()
+    fig.canvas.manager.set_window_title(title+' vs '+graph_to_build["baseline"])
     plt.show()
     print()
     
@@ -67,16 +67,16 @@ for graph_to_build in graphs_to_build:
     title = f'V-REx PR Curve (AUC: {round(pr_auc,3)})'
     print(title)
     print(f'{graph_to_build["baseline"]} PR AUC: {baseline_pr_auc}')
-    fig = plt.gcf()
-    fig.canvas.manager.set_window_title(title+' vs '+graph_to_build["baseline"])
     plt.plot(recall,precision, linestyle='--', label='V-REx')
     plt.plot(baseline_pr_curve['x_coords'], smooth(baseline_pr_curve['y_coords'],graph_to_build['smooth']), label='baseline') # graph_to_build['baseline']
+    plt.title(title)
     plt.xlabel('Recall (Coverage)')
     plt.ylabel('Precision (Efficiency)')
     plt.xticks(ticks)
     plt.yticks(ticks)
     plt.legend()
+    fig = plt.gcf()
+    fig.canvas.manager.set_window_title(title+' vs '+graph_to_build["baseline"])
     plt.show()
     print()
     print()
-    
